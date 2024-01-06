@@ -26,7 +26,6 @@ namespace Hikaria.AdminSystem.Features.Player
         public override string Group => EntryPoint.Groups.Player;
 
         public static Dictionary<ulong, GodModeEntry> GodModeLookup { get; set; } = new();
-
         [FeatureConfig]
         public static GodModeSettings Settings { get; set; }
 

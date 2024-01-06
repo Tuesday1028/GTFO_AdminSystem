@@ -293,8 +293,7 @@ namespace Hikaria.AdminSystem.Features.Resource
                 //获取SentryGun实例
                 SentryGunInstance core = __instance.m_core.Cast<SentryGunInstance>();
                 SNet_Player player = core.Owner.Owner;
-                ulong lookup = player.Lookup;
-                if (!InfResourceLookup[player.Lookup].InfResource)
+                if (!InfResourceLookup.TryGetValue(player.Lookup, out var entry) || !entry.InfResource)
                 {
                     return;
                 }
@@ -318,11 +317,11 @@ namespace Hikaria.AdminSystem.Features.Resource
                     return;
                 }
                 SNet.TryGetPlayer(data.PlayerLookup, out SNet_Player player);
-                if (!PlayerBackpackManager.TryGetBackpack(player, out PlayerBackpack playerBackpack))
+                if (!PlayerBackpackManager.TryGetBackpack(player, out PlayerBackpack playerBackpack) || !InfResourceLookup.TryGetValue(player.Lookup, out var entry))
                 {
                     return;
                 }
-                if (InfResourceLookup[player.Lookup].InfResource)
+                if (entry.InfResource)
                 {
                     data.standardAmmo.Set(playerBackpack.AmmoStorage.StandardAmmo.AmmoMaxCap + playerBackpack.AmmoStorage.StandardAmmo.BulletClipSize * playerBackpack.AmmoStorage.StandardAmmo.CostOfBullet, 500f);
                     data.specialAmmo.Set(playerBackpack.AmmoStorage.SpecialAmmo.AmmoMaxCap + playerBackpack.AmmoStorage.SpecialAmmo.BulletClipSize * playerBackpack.AmmoStorage.SpecialAmmo.CostOfBullet, 500f);
@@ -330,7 +329,7 @@ namespace Hikaria.AdminSystem.Features.Resource
                     data.resourcePackAmmo.Set(playerBackpack.AmmoStorage.ResourcePackAmmo.AmmoMaxCap, 500f);
                     data.consumableAmmo.Set(playerBackpack.AmmoStorage.ConsumableAmmo.AmmoMaxCap, 500f);
                 }
-                else if (InfResourceLookup[player.Lookup].NoResource)
+                else if (entry.NoResource)
                 {
                     data.standardAmmo.Set(-500f, 500f);
                     data.specialAmmo.Set(-500f, 500f);
@@ -384,7 +383,7 @@ namespace Hikaria.AdminSystem.Features.Resource
                 {
                     return;
                 }
-                if (InfResourceLookup[__instance.m_agent.Owner.Lookup].ForceDeploy && data.wieldedSlot != InventorySlot.None)
+                if (InfResourceLookup.TryGetValue(__instance.m_agent.Owner.Lookup, out var entry) && entry.ForceDeploy && data.wieldedSlot != InventorySlot.None)
                 {
                     __instance.WantsToWieldSlot(InventorySlot.None);
                 }

@@ -86,6 +86,15 @@ namespace Hikaria.AdminSystem.Features.Item
             }
         }
 
+        [ArchivePatch(typeof(SNet_SyncManager), nameof(SNet_SyncManager.OnRecallDone))]
+        private class SNet_SyncManager__OnRecallDone__Patch
+        {
+            private static void Postfix()
+            {
+                ItemMarker.ReloadItemMarker();
+            }
+        }
+
         [ArchivePatch(typeof(PlayerAgent), nameof(PlayerAgent.CourseNode), null, ArchivePatch.PatchMethodType.Setter)]
         private class PlayerAgent__CourseNode__Patch
         {
@@ -415,7 +424,7 @@ namespace Hikaria.AdminSystem.Features.Item
             {
                 if (current == eGameStateName.InLevel)
                 {
-                    LoadingItem();
+                    CoroutineManager.Current.StartCoroutine(LoadingItem());
                 }
             }
 
@@ -483,8 +492,14 @@ namespace Hikaria.AdminSystem.Features.Item
                 }
             }
 
-            public static void LoadingItem()
+            public static IEnumerator LoadingItem()
             {
+                var yielder = new WaitForFixedUpdate();
+                while (SNet.LocalPlayer.IsOutOfSync)
+                {
+                    yield return yielder;
+                }
+
                 RegisterItemInLevelInCourseNodes();
 
                 foreach (var item in _FixedItemMarkers)
@@ -679,7 +694,7 @@ namespace Hikaria.AdminSystem.Features.Item
                 foreach (var smallPickupItem in smallPickupItems)
                 {
                     if (smallPickupItem == null || smallPickupItem.ItemDataBlock == null)
-                        return;
+                        continue;
                     var marker = Place(smallPickupItem, ItemType.SmallPickupItems);
                     marker.SetColor(ColorType.Objective);
                     marker.SetTitle(smallPickupItem.m_terminalItem);

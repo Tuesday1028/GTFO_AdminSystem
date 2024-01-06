@@ -1,9 +1,5 @@
-﻿using Enemies;
-using Globals;
+﻿using Globals;
 using Hikaria.DevConsoleLite;
-using SNetwork;
-using System;
-using System.Collections.Generic;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -35,10 +31,6 @@ namespace Hikaria.AdminSystem.Features.Enemy
                 set
                 {
                     Global.EnemyPlayerDetectionEnabled = !value;
-                    foreach (var enemy in EnemyLookup.EnemiesInLevel)
-                    {
-                        SetEnemyHibernate(enemy, Global.EnemyPlayerDetectionEnabled);
-                    }
                 }
             }
         }
@@ -59,37 +51,5 @@ namespace Hikaria.AdminSystem.Features.Enemy
                 DevConsole.LogVariable("禁用敌人检测", Settings.DisableEnemyPlayerDetection);
             }));
         }
-
-        [ArchivePatch(typeof(EnemySync), nameof(EnemySync.OnSpawn))]
-        private class EnemySync_OnSpawn_Patch
-        {
-            private static void Postfix(EnemySync __instance, pEnemySpawnData spawnData)
-            {
-                SetEnemyHibernate(__instance.m_agent, Global.EnemyPlayerDetectionEnabled);
-            }
-        }
-
-
-        private static void SetEnemyHibernate(EnemyAgent enemy, bool enable)
-        {
-            if (SNet.IsMaster)
-            {
-                if (enable)
-                {
-                    enemy.Locomotion.Hibernate.MasterStartDetection();
-                }
-                else
-                {
-                    enemy.Locomotion.Hibernate.MasterEndDetection();
-                }
-            }
-            else
-            {
-                detectData.detectOn = enable;
-                enemy.Locomotion.Hibernate.m_detectPacket.Send(detectData, SNet_ChannelType.GameNonCritical);
-            }
-        }
-
-        private static pES_DetectData detectData;
     }
 }
