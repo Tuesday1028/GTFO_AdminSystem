@@ -6,7 +6,6 @@ using Gear;
 using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Utilities;
 using Hikaria.DevConsoleLite;
-using Il2CppInterop.Runtime.Attributes;
 using LevelGeneration;
 using Player;
 using SNetwork;
@@ -18,6 +17,7 @@ using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.FeaturesAPI.Components;
 using TheArchive.Core.FeaturesAPI.Settings;
+using TheArchive.Loader;
 using UnityEngine;
 
 namespace Hikaria.AdminSystem.Features.Item
@@ -77,12 +77,26 @@ namespace Hikaria.AdminSystem.Features.Item
             {
                 DevConsole.LogVariable("物品标记", Settings.EnableItemMarker);
             }));
+
+            LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<ItemMarkerHandler>();
         }
         public override void OnButtonPressed(ButtonSetting setting)
         {
             if (setting.ButtonID == "重载物品标记")
             {
                 ItemMarker.ReloadItemMarker();
+            }
+        }
+
+        [ArchivePatch(typeof(LocalPlayerAgent), nameof(LocalPlayerAgent.Setup))]
+        private class LocalPlayerAgent__Setup__Patch
+        {
+            private static void Postfix(LocalPlayerAgent __instance)
+            {
+                if (__instance.gameObject.GetComponent<ItemMarkerHandler>() == null)
+                {
+                    __instance.gameObject.AddComponent<ItemMarkerHandler>();
+                }
             }
         }
 
@@ -161,6 +175,15 @@ namespace Hikaria.AdminSystem.Features.Item
             private static LG_Zone lastEnteredZone;
 
             private static LG_Zone currentZone;
+        }
+
+        private class ItemMarkerHandler : MonoBehaviour
+        {
+            public static ItemMarkerHandler Instance { get; private set; }
+            private void Awake()
+            {
+                Instance = this;
+            }
         }
 
         private class ItemMarker
@@ -424,7 +447,7 @@ namespace Hikaria.AdminSystem.Features.Item
             {
                 if (current == eGameStateName.InLevel)
                 {
-                    CoroutineManager.Current.StartCoroutine(LoadingItem());
+                    ItemMarkerHandler.Instance.StartCoroutine(LoadingItem());
                 }
             }
 
@@ -494,8 +517,8 @@ namespace Hikaria.AdminSystem.Features.Item
 
             public static IEnumerator LoadingItem()
             {
-                var yielder = new WaitForFixedUpdate();
-                while (SNet.LocalPlayer.IsOutOfSync)
+                var yielder = new WaitForSecondsRealtime(3f);
+                if (!SNet.IsMaster)
                 {
                     yield return yielder;
                 }

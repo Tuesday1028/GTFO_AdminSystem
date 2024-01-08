@@ -217,7 +217,7 @@ namespace Hikaria.AdminSystem.Features.Environment
             {
                 try
                 {
-                    item.Key.ChangeIntensity(item.Value.Item1 * multi);
+                    item.Key.ChangeIntensity(item.EffectValue.Item1 * multi);
                 }
                 catch
                 {
@@ -235,11 +235,11 @@ namespace Hikaria.AdminSystem.Features.Environment
                     C_Light c_Light = item.Key.GetC_Light();
                     if (c_Light != null)
                     {
-                        if (item.Value.Item2 == -1f)
+                        if (item.EffectValue.Item2 == -1f)
                         {
-                            Lights[item.Key] = new(item.Value.Item1, c_Light.m_unityLight.range);
+                            Lights[item.Key] = new(item.EffectValue.Item1, c_Light.m_unityLight.range);
                         }
-                        c_Light.m_unityLight.range = item.Value.Item2 * multi;
+                        c_Light.m_unityLight.range = item.EffectValue.Item2 * multi;
                     }
                 }
                 catch

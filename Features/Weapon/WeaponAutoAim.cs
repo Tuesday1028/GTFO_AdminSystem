@@ -12,6 +12,8 @@ using Player;
 using SNetwork;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -125,9 +127,13 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
         public override void OnGameStateChanged(int state)
         {
-            if (state == (int)eGameStateName.AfterLevel || state == (int)eGameStateName.NoLobby || state == (int)eGameStateName.Lobby)
+            var stateName = (eGameStateName)state;
+            if (stateName == eGameStateName.AfterLevel || stateName == eGameStateName.NoLobby || stateName == eGameStateName.Lobby || stateName == eGameStateName.ExpeditionFail)
             {
-                WeaponAutoAimHandler.Current?.DoAfterLevelClear();
+                foreach (var autoaim in WeaponAutoAimHandler.AllAutoAimInstances)
+                {
+                    autoaim?.DoAfterLevelClear();
+                }
             }
         }
 
@@ -307,6 +313,18 @@ namespace Hikaria.AdminSystem.Features.Weapon
             private void Awake()
             {
                 Current = this;
+                AllAutoAimInstances.Add(this);
+            }
+
+            private void OnDestroy()
+            {
+                AllAutoAimInstances.Remove(this);
+                if (m_Reticle != null)
+                    m_Reticle.SetVisible(false, false);
+                m_HasTarget = false;
+                m_Target = null;
+                m_Reticle.SafeDestroy();
+                m_ReticleHolder.SafeDestroy();
             }
 
             public void Setup(BulletWeapon weapon, PlayerAgent owner, FPSCamera camera)
@@ -319,15 +337,12 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     SetupReticle();
                 }
                 enabled = Settings.EnableAutoAim;
-
             }
 
             public void DoClear()
             {
                 if (m_Reticle != null)
-                {
-                    m_Reticle.SetVisible(false, false);
-                }
+                    m_Reticle?.SetVisible(false, false);
                 m_HasTarget = false;
                 m_Target = null;
                 Unregister(m_BulletWeapon.ArchetypeData.persistentID);
@@ -336,10 +351,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
             public void DoAfterLevelClear()
             {
                 DoClear();
-                if (m_Reticle != null)
-                    m_Reticle.SafeDestroy();
-                if (m_ReticleHolder != null)
-                    m_ReticleHolder.SafeDestroy();
+                m_Reticle.SafeDestroy();
+                m_ReticleHolder.SafeDestroy();
                 this.SafeDestroy();
             }
 
@@ -602,6 +615,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
             private float fireTimer;
 
             public static Dictionary<uint, WeaponAutoAimHandler> AutoAimInstances { get; private set; } = new();
+            public static HashSet<WeaponAutoAimHandler> AllAutoAimInstances { get; private set; } = new();
 
             private float updateTick = 0.05f;
 

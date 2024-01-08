@@ -5,8 +5,6 @@ using Hikaria.AdminSystem.Managers;
 using SNetwork;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics.Contracts;
 using System.Linq;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
@@ -30,12 +28,11 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public class GiveBoosterSetting
         {
-            [FSInline]
             [FSDisplayName("玩家设置")]
-            public List<GiveBoosterEntry> GiveBoosterEntries { get => GiveBoosterEntryLookup.Values.ToList(); set { } }
+            public List<ModifyBoosterEntry> ModifyBoosterEntries { get => ModifyBoosterEntryLookup.Values.ToList(); set { } }
         }
 
-        public class GiveBoosterEntry
+        public class ModifyBoosterEntry
         {
             [FSSeparator]
             [FSReadOnly]
@@ -51,7 +48,7 @@ namespace Hikaria.AdminSystem.Features.Player
             [FSDisplayName("修改强化剂")]
             public FButton ModifyBooster { get; set; }
 
-            public GiveBoosterEntry(SNet_Player player)
+            public ModifyBoosterEntry(SNet_Player player)
             {
                 Owner = player;
                 CustomBoosterImplants.Owner = player;
@@ -68,11 +65,18 @@ namespace Hikaria.AdminSystem.Features.Player
             private SNet_Player Owner;
         }
 
-        private static Dictionary<ulong, GiveBoosterEntry> GiveBoosterEntryLookup = new();
+        private static Dictionary<ulong, ModifyBoosterEntry> ModifyBoosterEntryLookup = new();
+        private static Dictionary<BoosterCondition, BoosterImplantConditionDataBlock> BoosterConditionDataBlockLookup = new();
 
         public override void Init()
         {
             GameEventManager.RegisterSelfInGameEventManager(this);
+        }
+
+        public override void OnDatablocksReady()
+        {
+            BoosterConditionDataBlockLookup.Clear();
+            BoosterConditionDataBlockLookup = BoosterImplantConditionDataBlock.GetAllBlocksForEditor().ToDictionary(p => p.Condition);
         }
 
         public class CustomBoosterImplantsWithOwner
@@ -146,46 +150,86 @@ namespace Hikaria.AdminSystem.Features.Player
 
             public void ModifyBooster()
             {
-                pBoosterImplantsWithOwner data = GetBoosterImplantsWithOwner();
+                pBoosterImplantsWithOwner data = GetModifiedBoosterImplantsWithOwner();
 
                 SNet_ReplicatedPlayerData<pBoosterImplantsWithOwner>.s_singleton.m_syncPacket.Send(data, SNet_ChannelType.SessionOrderCritical);
-                SNet_ReplicatedPlayerData<pBoosterImplantsWithOwner>.s_singleton.m_syncPacket.ReceiveAction.Invoke(data);
-
-                if (Owner.IsLocal)
-                {
-                    BoosterImplantManager.Current.OnSyncBoosterImplants(SNet.LocalPlayer, data);
-                }
+                BoosterImplantManager.Current.OnSyncBoosterImplants(Owner, data);
             }
 
-            public pBoosterImplantsWithOwner GetBoosterImplantsWithOwner()
+            public pBoosterImplantsWithOwner GetModifiedBoosterImplantsWithOwner()
             {
-                pBoosterImplantsWithOwner data = new();
+                var Data = Owner.Load<pBoosterImplantsWithOwner>();
 
-                data.PlayerData = new();
-                data.PlayerData.SetPlayer(Owner);
+                if (Data.BasicImplant != null)
+                {
+                    if (Data.BasicImplant.BoosterEffectDatas != null)
+                    {
+                        var effects = BasicImplant.GetBoosterEffectDataArray();
+                        for (int i = 0; i < Data.BasicImplant.BoosterEffectDatas.Count; i++)
+                        {
+                            Data.BasicImplant.BoosterEffectDatas[i] = effects[i];
+                        }
+                        Data.BasicImplant.BoosterEffectCount = BasicImplant.BoosterEffectCount;
+                    }
+                    if (Data.BasicImplant.Conditions != null)
+                    {
+                        var Conditions = BasicImplant.GetConditionArray();
+                        for (int i = 0; i < Data.BasicImplant.Conditions.Count; i++)
+                        {
+                            Data.BasicImplant.Conditions[i] = Conditions[i];
+                        }
+                        Data.BasicImplant.ConditionCount = BasicImplant.ConditionCount;
+                    }
+                    Data.BasicImplant.UseCount = BasicImplant.UseCount;
+                }
 
-                data.BasicImplant.BoosterImplantID = BasicImplant.BoosterImplantID;
-                data.BasicImplant.BoosterEffectDatas = new(BasicImplant.GetBoosterEffectDataArray());
-                data.BasicImplant.BoosterEffectCount = BasicImplant.BoosterEffectCount;
-                data.BasicImplant.Conditions = new(BasicImplant.GetConditionArray());
-                data.BasicImplant.ConditionCount = BasicImplant.ConditionCount;
-                data.BasicImplant.UseCount = BasicImplant.UseCount;
+                if (Data.AdvancedImplant != null)
+                {
+                    if (Data.AdvancedImplant.BoosterEffectDatas != null)
+                    {
+                        var effects = AdvancedImplant.GetBoosterEffectDataArray();
+                        for (int i = 0; i < Data.AdvancedImplant.BoosterEffectDatas.Count; i++)
+                        {
+                            Data.AdvancedImplant.BoosterEffectDatas[i] = effects[i];
+                        }
+                        Data.AdvancedImplant.BoosterEffectCount = AdvancedImplant.BoosterEffectCount;
+                    }
+                    if (Data.AdvancedImplant.Conditions != null)
+                    {
+                        var Conditions = AdvancedImplant.GetConditionArray();
+                        for (int i = 0; i < Data.AdvancedImplant.Conditions.Count; i++)
+                        {
+                            Data.AdvancedImplant.Conditions[i] = Conditions[i];
+                        }
+                        Data.AdvancedImplant.ConditionCount = AdvancedImplant.ConditionCount;
+                    }
+                    Data.AdvancedImplant.UseCount = AdvancedImplant.UseCount;
+                }
 
-                data.AdvancedImplant.BoosterImplantID = AdvancedImplant.BoosterImplantID;
-                data.AdvancedImplant.BoosterEffectDatas = new(AdvancedImplant.GetBoosterEffectDataArray());
-                data.AdvancedImplant.BoosterEffectCount = AdvancedImplant.BoosterEffectCount;
-                data.AdvancedImplant.Conditions = new(AdvancedImplant.GetConditionArray());
-                data.AdvancedImplant.ConditionCount = AdvancedImplant.ConditionCount;
-                data.AdvancedImplant.UseCount = AdvancedImplant.UseCount;
+                if (Data.SpecializedImplant != null)
+                {
+                    if (Data.SpecializedImplant.BoosterEffectDatas != null)
+                    {
+                        var effects = SpecializedImplant.GetBoosterEffectDataArray();
+                        for (int i = 0; i < Data.SpecializedImplant.BoosterEffectDatas.Count; i++)
+                        {
+                            Data.SpecializedImplant.BoosterEffectDatas[i] = effects[i];
+                        }
+                        Data.SpecializedImplant.BoosterEffectCount = SpecializedImplant.BoosterEffectCount;
+                    }
+                    if (Data.SpecializedImplant.Conditions != null)
+                    {
+                        var Conditions = SpecializedImplant.GetConditionArray();
+                        for (int i = 0; i < Data.SpecializedImplant.Conditions.Count; i++)
+                        {
+                            Data.SpecializedImplant.Conditions[i] = Conditions[i];
+                        }
+                        Data.SpecializedImplant.ConditionCount = SpecializedImplant.ConditionCount;
+                    }
+                    Data.SpecializedImplant.UseCount = SpecializedImplant.UseCount;
+                }
 
-                data.SpecializedImplant.BoosterImplantID = SpecializedImplant.BoosterImplantID;
-                data.SpecializedImplant.BoosterEffectDatas = new(SpecializedImplant.GetBoosterEffectDataArray());
-                data.SpecializedImplant.BoosterEffectCount = SpecializedImplant.BoosterEffectCount;
-                data.SpecializedImplant.Conditions = new(SpecializedImplant.GetConditionArray());
-                data.SpecializedImplant.ConditionCount = SpecializedImplant.ConditionCount;
-                data.SpecializedImplant.UseCount = SpecializedImplant.UseCount;
-
-                return data;
+                return Data;
             }
 
             public void LoadFromPlayer()
@@ -214,12 +258,19 @@ namespace Hikaria.AdminSystem.Features.Player
                         int count = 1;
                         foreach (var effect in boosterImplantData.BoosterEffectDatas)
                         {
-                            customBoosterImplantData.BoosterEffectDatas.Add(new(count, (AgentModifier)effect.BoosterEffectID, effect.EffectValue));
+                            customBoosterImplantData.BoosterEffectDatas.Add(new(count, effect.BoosterEffectID, effect.EffectValue));
                             count++;
                         }
                         for (; count <= pBoosterImplantData.IMPLANT_EFFECT_SYNC_COUNT; count++)
                         {
-                            customBoosterImplantData.BoosterEffectDatas.Add(new(count, AgentModifier.None, 1f));
+                            customBoosterImplantData.BoosterEffectDatas.Add(new(count, 0U, 1f));
+                        }
+                    }
+                    else
+                    {
+                        for (int i = 1; i <= pBoosterImplantData.IMPLANT_EFFECT_SYNC_COUNT; i++)
+                        {
+                            customBoosterImplantData.BoosterEffectDatas.Add(new(i, 0U, 1f));
                         }
                     }
 
@@ -231,12 +282,20 @@ namespace Hikaria.AdminSystem.Features.Player
                         int count = 1;
                         foreach (var condition in boosterImplantData.Conditions)
                         {
-                            customBoosterImplantData.Conditions.Add(new(count, (BoosterCondition)condition));
+                            BoosterImplantConditionDataBlock block = GameDataBlockBase<BoosterImplantConditionDataBlock>.GetBlock(condition);
+                            customBoosterImplantData.Conditions.Add(new(count, block == null ? BoosterCondition.None : block.Condition));
                             count++;
                         }
                         for (; count <= pBoosterImplantData.IMPLANT_CONDITION_SYNC_COUNT; count++)
                         {
                             customBoosterImplantData.Conditions.Add(new(count, BoosterCondition.None));
+                        }
+                    }
+                    else
+                    {
+                        for (int i = 1; i <= pBoosterImplantData.IMPLANT_CONDITION_SYNC_COUNT; i++)
+                        {
+                            customBoosterImplantData.Conditions.Add(new(i, BoosterCondition.None));
                         }
                     }
 
@@ -252,29 +311,22 @@ namespace Hikaria.AdminSystem.Features.Player
             [FSReadOnly]
             [FSHeader("强化剂详情")]
             [FSDisplayName("强化剂ID")]
-            public uint BoosterImplantID { get; set; } = 0;
+            public uint BoosterImplantID { get; set; }
 
             [FSDisplayName("效果列表")]
-            public List<CustomBoosterEffectData> BoosterEffectDatas { get; set; } = new()
-            {
-                new(1, 0, 1f), new(2, 0, 1f), new(3, 0, 1f), new(4, 0, 1f), new(5, 0, 1f),
-                new(6, 0, 1f), new(7, 0, 1f), new(8, 0, 1f), new(9, 0, 1f), new(10, 0, 1f)
-            };
+            public List<CustomBoosterEffectData> BoosterEffectDatas { get; set; } = new();
 
             [FSDisplayName("效果数量")]
-            public int BoosterEffectCount { get; set; } = 0;
+            public int BoosterEffectCount { get; set; }
 
             [FSDisplayName("条件列表")]
-            public List<CustomBoosterCondition> Conditions { get; set; } = new()
-            {
-                new(1, 0), new(2, 0), new(3, 0), new(4, 0), new(5, 0)
-            };
+            public List<CustomBoosterCondition> Conditions { get; set; } = new();
 
             [FSDisplayName("条件数量")]
-            public int ConditionCount { get; set; } = 0;
+            public int ConditionCount { get; set; }
 
             [FSDisplayName("剩余次数")]
-            public int UseCount { get; set; } = 0;
+            public int UseCount { get; set; }
 
             public pBoosterEffectData[] GetBoosterEffectDataArray()
             {
@@ -291,7 +343,12 @@ namespace Hikaria.AdminSystem.Features.Player
                 List<uint> result = new();
                 foreach (var condition in Conditions)
                 {
-                    result.Add((uint)condition.Condition);
+                    uint id = 0;
+                    if (BoosterConditionDataBlockLookup.TryGetValue(condition.Condition, out var block))
+                    {
+                        id = block.persistentID;
+                    }
+                    result.Add(id);
                 }
                 return result.ToArray();
             }
@@ -308,15 +365,15 @@ namespace Hikaria.AdminSystem.Features.Player
             [FSSeparator]
             [FSReadOnly]
             [FSDisplayName("索引")]
-            public int Index { get; set; } = 0;
+            public int Index { get; set; }
 
             [FSDisplayName("条件")]
-            public BoosterCondition Condition { get; set; } = BoosterCondition.None;
+            public BoosterCondition Condition { get; set; }
         }
 
         public class CustomBoosterEffectData
         {
-            public CustomBoosterEffectData(int index, AgentModifier effectID, float effectValue)
+            public CustomBoosterEffectData(int index, uint effectID, float effectValue)
             {
                 Index = index;
                 BoosterEffectID = effectID;
@@ -326,33 +383,35 @@ namespace Hikaria.AdminSystem.Features.Player
             [FSSeparator]
             [FSReadOnly]
             [FSDisplayName("索引")]
-            public int Index { get; set; } = 0;
+            public int Index { get; set; }
 
             [FSDisplayName("类型")]
-            public AgentModifier BoosterEffectID { get; set; } = AgentModifier.None;
+            public uint BoosterEffectID { get; set; }
 
             [FSDisplayName("数值")]
-            public float EffectValue { get; set; } = 0;
+            public float EffectValue { get; set; }
 
             public pBoosterEffectData GetBoosterEffectData()
             {
-                return new() { BoosterEffectID = (uint)BoosterEffectID, EffectValue = EffectValue };
+                return new() { BoosterEffectID = BoosterEffectID, EffectValue = EffectValue };
             }
         }
 
 
         public void OnSessionMemberChanged(SNet_Player player, SessionMemberEvent playerEvent)
         {
+            if (player.IsBot)
+                return;
             switch (playerEvent)
             {
                 case SessionMemberEvent.JoinSessionHub:
-                    GiveBoosterEntryLookup.TryAdd(player.Lookup, new(player));
+                    ModifyBoosterEntryLookup.TryAdd(player.Lookup, new(player));
                     break;
                 case SessionMemberEvent.LeftSessionHub:
                     if (player.IsLocal)
-                        GiveBoosterEntryLookup.Clear();
+                        ModifyBoosterEntryLookup.Clear();
                     else
-                        GiveBoosterEntryLookup.Remove(player.Lookup);
+                        ModifyBoosterEntryLookup.Remove(player.Lookup);
                     break;
             }
         }
