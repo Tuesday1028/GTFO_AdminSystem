@@ -4,8 +4,10 @@ using GameData;
 using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Utilities;
 using Hikaria.DevConsoleLite;
+using Il2CppSystem;
 using LevelGeneration;
 using System.Collections.Generic;
+using System.Linq;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -439,13 +441,10 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
             DevConsole.AddCommand(Command.Create<string>("ItemQuery", "查询物品", "查询物品", Parameter.Create("itemName", "物品名称"), QueryItem));
             DevConsole.AddCommand(Command.Create<string>("ItemPing", "标记物品", "标记物品", Parameter.Create("itemName", "物品名称"), PingItem));
-            DevConsole.AddCommand(Command.Create<string, string?>("ItemList", "列出物品", "列出物品", Parameter.Create("Param", "参数"), Parameter.Create("Param", "参数"), (p1, p2) =>
+            DevConsole.AddCommand(Command.Create<string>("ItemList", "列出物品", "列出物品", Parameter.Create("Param", "参数"), p =>
             {
-                if (p2 == null)
-                {
-                    p2 = string.Empty;
-                }
-                ListItem(p1, p2);
+                var input = p.Split(',');
+                ListItem(input[0], input.Length > 1 ? input[1] : string.Empty);
             }));
         }
 
@@ -468,7 +467,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
                 }
                 var terminalEntry = Settings.TargetTerminal[0];
                 uint syncID = TerminalsInLevel[terminalEntry.ID].m_syncID;
-                string inputstring = terminalEntry.CommandParams.ToUpper(System.Globalization.CultureInfo.CurrentCulture);
+                string inputstring = terminalEntry.CommandParams.ToUpper();
                 LG_ComputerTerminalManager.WantToChangeTerminalState(syncID, TERM_State.Awake, AdminUtils.LocalPlayerAgent);
                 if (!TerminalsInLevel[terminalEntry.ID].m_command.TryGetCommand(inputstring, out TERM_Command term_Command, out string text, out string text2))
                 {
@@ -607,7 +606,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
         private static void SendCommandToTerminal(int id, string inputstring)
         {
             uint syncID = TerminalsInLevel[id].m_syncID;
-            inputstring = inputstring.ToUpper(System.Globalization.CultureInfo.CurrentCulture);
+            inputstring = inputstring.ToUpper();
             LG_ComputerTerminalManager.WantToChangeTerminalState(syncID, TERM_State.Awake, AdminUtils.LocalPlayerAgent);
             if (!TerminalsInLevel[id].m_command.TryGetCommand(inputstring, out TERM_Command term_Command, out string text, out string text2))
             {
@@ -651,7 +650,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         private static void PingItem(string itemName)
         {
-            itemName = itemName.ToUpper(System.Globalization.CultureInfo.CurrentCulture);
+            itemName = itemName.ToUpper();
             if (!LG_LevelInteractionManager.TryGetTerminalInterface(itemName, AdminUtils.LocalPlayerAgent.DimensionIndex, out iTerminalItem iTerminalItem))
             {
                 DevConsole.LogError($"不存在名为 {itemName} 的物品");
@@ -662,7 +661,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         private static void QueryItem(string itemName)
         {
-            itemName = itemName.ToUpper(System.Globalization.CultureInfo.CurrentCulture);
+            itemName = itemName.ToUpper();
             eDimensionIndex dimensionIndex = AdminUtils.LocalPlayerAgent.DimensionIndex;
             if (!LG_LevelInteractionManager.TryGetTerminalInterface(itemName, dimensionIndex, out iTerminalItem iTerminalItem))
             {
@@ -688,7 +687,6 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         private static void ListItem(string param1, string param2 = "")
         {
-            Il2CppSystem.Collections.Generic.Dictionary<string, iTerminalItem> allTerminalInterfaces = LG_LevelInteractionManager.GetAllTerminalInterfaces();
             List<string> list = new();
             bool flag2 = param1 == "";
             bool flag3 = param1 != "";
@@ -700,11 +698,16 @@ namespace Hikaria.AdminSystem.Features.InLevel
             }
             list.Add("-----------------------------------------------------------------------------------");
             list.Add("ID                       物品类型             物品状态              位置");
-            foreach (Il2CppSystem.Collections.Generic.KeyValuePair<string, iTerminalItem> keyValuePair in allTerminalInterfaces)
+            foreach (var keyValuePair in LG_LevelInteractionManager.Current.m_terminalItemsByKeyString)
             {
-                iTerminalItem terminalItem = keyValuePair.Value;
-                if (terminalItem.ShowInFloorInventory)
+                if (keyValuePair.Value.ShowInFloorInventory)
                 {
+                    var terminalItem = keyValuePair.Value;
+                    string locationInfo = terminalItem.FloorItemLocation;
+                    if (AIG_CourseNode.TryGetCourseNode(terminalItem.LocatorBeaconPosition.GetDimension().DimensionIndex, terminalItem.LocatorBeaconPosition, 1f, out var node))
+                    {
+                        locationInfo += $" Area_{node.m_area.m_navInfo.Suffix}";
+                    }
                     string text2 = string.Concat(new object[]
                     {
                         terminalItem.TerminalItemKey,
@@ -717,13 +720,13 @@ namespace Hikaria.AdminSystem.Features.InLevel
                         " ",
                         eFloorInventoryObjectBeaconStatus.NoBeacon.ToString()
                     });
-                    bool flag5 = flag3 && text2.ToUpper(System.Globalization.CultureInfo.CurrentCulture).Contains(param1.ToUpper(System.Globalization.CultureInfo.CurrentCulture));
-                    bool flag6 = flag4 && text2.ToUpper(System.Globalization.CultureInfo.CurrentCulture).Contains(param2.ToUpper(System.Globalization.CultureInfo.CurrentCulture));
+                    bool flag5 = flag3 && text2.ToUpper().Contains(param1.ToUpper());
+                    bool flag6 = flag4 && text2.ToUpper().Contains(param2.ToUpper());
                     bool flag7 = !flag3 && !flag4;
                     bool flag8 = (!flag3 || flag5) && (!flag4 || flag6);
                     if (flag7 || flag8)
                     {
-                        list.Add(terminalItem.TerminalItemKey.FormatInLength(25) + terminalItem.FloorItemType.ToString().FormatInLength(20) + terminalItem.FloorItemStatus.ToString().FormatInLength(20) + terminalItem.FloorItemLocation);
+                        list.Add(terminalItem.TerminalItemKey.FormatInLength(25) + terminalItem.FloorItemType.ToString().FormatInLength(20) + terminalItem.FloorItemStatus.ToString().FormatInLength(20) + locationInfo);
                     }
                 }
             }
