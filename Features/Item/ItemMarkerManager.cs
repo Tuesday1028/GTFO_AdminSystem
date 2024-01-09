@@ -44,6 +44,11 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public class ItemMarkerSettings
         {
+            public ItemMarkerSettings()
+            {
+                ReloadItemMarker = new FButton("重载", "重载物品标记", () => { ItemMarker.LoadingItem(); });
+            }
+
             [FSDisplayName("启用物品标记")]
             public bool EnableItemMarker
             {
@@ -59,7 +64,7 @@ namespace Hikaria.AdminSystem.Features.Item
 
             [FSDisplayName("重载物品标记")]
             [FSDescription("点击按钮来修正物品标记错误")]
-            public FButton ReloadItemMarker { get; set; } = new FButton("重载", "重载物品标记");
+            public FButton ReloadItemMarker { get; set; } 
         }
 
         public override void Init()
@@ -80,22 +85,17 @@ namespace Hikaria.AdminSystem.Features.Item
 
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<ItemMarkerHandler>();
         }
-        public override void OnButtonPressed(ButtonSetting setting)
-        {
-            if (setting.ButtonID == "重载物品标记")
-            {
-                ItemMarker.ReloadItemMarker();
-            }
-        }
 
         [ArchivePatch(typeof(LocalPlayerAgent), nameof(LocalPlayerAgent.Setup))]
         private class LocalPlayerAgent__Setup__Patch
         {
             private static void Postfix(LocalPlayerAgent __instance)
             {
-                if (__instance.gameObject.GetComponent<ItemMarkerHandler>() == null)
+                if (ItemMarkerHandler.Instance == null)
                 {
-                    __instance.gameObject.AddComponent<ItemMarkerHandler>();
+                    GameObject obj = new();
+                    GameObject.DontDestroyOnLoad(obj);
+                    obj.AddComponent<ItemMarkerHandler>();
                 }
             }
         }
@@ -447,6 +447,7 @@ namespace Hikaria.AdminSystem.Features.Item
             {
                 if (current == eGameStateName.InLevel)
                 {
+                    ItemMarkerHandler.Instance.enabled = true;
                     ItemMarkerHandler.Instance.StartCoroutine(LoadingItem());
                 }
             }
@@ -515,10 +516,10 @@ namespace Hikaria.AdminSystem.Features.Item
                 }
             }
 
-            public static IEnumerator LoadingItem()
+            public static IEnumerator LoadingItem(bool forceLoad = false)
             {
                 var yielder = new WaitForSecondsRealtime(3f);
-                if (!SNet.IsMaster)
+                if (!SNet.IsMaster && !forceLoad)
                 {
                     yield return yielder;
                 }
@@ -1089,7 +1090,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     DevConsole.LogError("不在游戏中");
                     return;
                 }
-                LoadingItem();
+                LoadingItem(true);
             }
 
             public static Color GetUnityColor(ColorType markerColor)
