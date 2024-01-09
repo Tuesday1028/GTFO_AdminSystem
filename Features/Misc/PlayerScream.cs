@@ -16,6 +16,8 @@ internal class PlayerScream : Feature, IOnPlayerEvent
 {
     public override string Name => "鬼叫";
 
+    public override string Group => EntryPoint.Groups.Misc;
+
     [FeatureConfig]
     public static PlayerScreamSetting Settings { get; set; }
 
