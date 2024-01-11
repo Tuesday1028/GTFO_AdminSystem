@@ -84,6 +84,9 @@
     <Reference Include="Utils-ASM">
       <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\GTFO\BepInEx\interop\Utils-ASM.dll</HintPath>
     </Reference>
+    <Reference Include="Wwise-ASM">
+      <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\GTFO\BepInEx\interop\Wwise-ASM.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
