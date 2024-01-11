@@ -105,7 +105,10 @@ namespace Hikaria.AdminSystem.Features.Item
         {
             private static void Postfix()
             {
-                ItemMarker.ReloadItemMarker();
+                if (CurrentGameState == (int)eGameStateName.InLevel)
+                {
+                    ItemMarker.ReloadItemMarker();
+                }
             }
         }
 
