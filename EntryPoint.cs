@@ -1,80 +1,88 @@
 ﻿using BepInEx;
 using BepInEx.Unity.IL2CPP;
 using Hikaria.AdminSystem.Utilities;
+using System.Collections.Generic;
 using TheArchive;
 using TheArchive.Core;
 using TheArchive.Core.Attributes;
-using static TheArchive.Core.FeaturesAPI.FeatureGroups;
+using TheArchive.Core.FeaturesAPI;
+using TheArchive.Core.Localization;
 
 [assembly: ModDefaultFeatureGroupName("Admin System")]
-namespace Hikaria.AdminSystem
+
+namespace Hikaria.AdminSystem;
+
+[BepInDependency("Hikaria.DevConsole", BepInDependency.DependencyFlags.HardDependency)]
+[BepInDependency(ArchiveMod.GUID, BepInDependency.DependencyFlags.HardDependency)]
+[BepInPlugin(PluginInfo.GUID, PluginInfo.NAME, PluginInfo.VERSION)]
+public class EntryPoint : BasePlugin, IArchiveModule
 {
-    [BepInDependency("Hikaria.DevConsole", BepInDependency.DependencyFlags.HardDependency)]
-    [BepInDependency(ArchiveMod.GUID, BepInDependency.DependencyFlags.HardDependency)]
-    [BepInPlugin(PluginInfo.GUID, PluginInfo.NAME, PluginInfo.VERSION)]
-    public class EntryPoint : BasePlugin, IArchiveModule
+    public override void Load()
     {
-        public override void Load()
-        {
-            Instance = this;
+        Instance = this;
 
-            ArchiveMod.RegisterModule(typeof(EntryPoint));
+        ArchiveMod.RegisterArchiveModule(typeof(EntryPoint));
 
-            Logs.LogMessage("OK");
-        }
+        Logs.LogMessage("OK");
+    }
 
-        public override bool Unload()
-        {
-            ArchiveMod.UnpatchModule(Instance);
+    public override bool Unload()
+    {
+        ArchiveMod.UnpatchModule(Instance);
 
-            return base.Unload();
-        }
+        return base.Unload();
+    }
 
-        public void Init()
-        {
-        }
+    public void Init()
+    {
+    }
 
-        public void OnSceneWasLoaded(int buildIndex, string sceneName)
-        {
-        }
+    public void OnSceneWasLoaded(int buildIndex, string sceneName)
+    {
+    }
 
-        public void OnLateUpdate()
-        {
-        }
+    public void OnLateUpdate()
+    {
+    }
 
-        public void OnExit()
-        {
-        }
+    public void OnExit()
+    {
+    }
 
-        public static EntryPoint Instance { get; private set; }
+    public static EntryPoint Instance { get; private set; }
 
-        public bool ApplyHarmonyPatches => false;
+    public bool ApplyHarmonyPatches => false;
 
-        public bool UsesLegacyPatches => false;
+    public bool UsesLegacyPatches => false;
 
-        public ArchiveLegacyPatcher Patcher { get; set; }
+    public ArchiveLegacyPatcher Patcher { get; set; }
 
-        public static class Groups
-        {
-            public static Group Item => GetOrCreate("Admin System | Item");
+    public string ModuleGroup => Groups.ModuleGroup;
 
-            public static Group Weapon => GetOrCreate("Admin System | Weapon");
+    public Dictionary<Language, string> ModuleGroupLanguages => new();
 
-            public static Group Player => GetOrCreate("Admin System | Player");
+    public static class Groups
+    {
+        public static FeatureGroup ModuleGroup => FeatureGroups.GetOrCreateModuleGroup("Admin System");
 
-            public static Group Door => GetOrCreate("Admin System | Door");
+        public static FeatureGroup Item => ModuleGroup.GetOrCreateSubGroup("Item");
 
-            public static Group Enemy => GetOrCreate("Admin System | Enemy");
+        public static FeatureGroup Weapon => ModuleGroup.GetOrCreateSubGroup("Weapon");
 
-            public static Group Resource => GetOrCreate("Admin System | Resource");
+        public static FeatureGroup Player => ModuleGroup.GetOrCreateSubGroup("Player");
 
-            public static Group Misc => GetOrCreate("Admin System | Misc");
+        public static FeatureGroup Door => ModuleGroup.GetOrCreateSubGroup("Door");
 
-            public static Group Security => GetOrCreate("Admin System | Security");
+        public static FeatureGroup Enemy => ModuleGroup.GetOrCreateSubGroup("Enemy");
 
-            public static Group Environment => GetOrCreate("Admin System | Environment");
+        public static FeatureGroup Resource => ModuleGroup.GetOrCreateSubGroup("Resource");
 
-            public static Group InLevel => GetOrCreate("Admin System | InLevel");
-        }
+        public static FeatureGroup Misc => ModuleGroup.GetOrCreateSubGroup("Misc");
+
+        public static FeatureGroup Security => ModuleGroup.GetOrCreateSubGroup("Security");
+
+        public static FeatureGroup Environment => ModuleGroup.GetOrCreateSubGroup("Environment");
+
+        public static FeatureGroup InLevel => ModuleGroup.GetOrCreateSubGroup("InLevel");
     }
 }

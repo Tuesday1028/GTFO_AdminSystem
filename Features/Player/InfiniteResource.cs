@@ -12,7 +12,7 @@ using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using static Hikaria.AdminSystem.Interfaces.IOnSessionMemberChanged;
 
-namespace Hikaria.AdminSystem.Features.Resource
+namespace Hikaria.AdminSystem.Features.Player
 {
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
@@ -21,7 +21,7 @@ namespace Hikaria.AdminSystem.Features.Resource
     {
         public override string Name => "无限资源";
 
-        public override string Group => EntryPoint.Groups.Resource;
+        public override FeatureGroup Group => EntryPoint.Groups.Player;
 
         [FeatureConfig]
         public static InfiniteResourceSettings Settings { get; set; }
@@ -316,8 +316,7 @@ namespace Hikaria.AdminSystem.Features.Resource
                 {
                     return;
                 }
-                SNet.TryGetPlayer(data.PlayerLookup, out SNet_Player player);
-                if (!PlayerBackpackManager.TryGetBackpack(player, out PlayerBackpack playerBackpack) || !InfResourceLookup.TryGetValue(player.Lookup, out var entry))
+                if (!SNet.TryGetPlayer(data.PlayerLookup, out SNet_Player player) || !PlayerBackpackManager.TryGetBackpack(player, out PlayerBackpack playerBackpack) || !InfResourceLookup.TryGetValue(player.Lookup, out var entry))
                 {
                     return;
                 }
@@ -412,7 +411,7 @@ namespace Hikaria.AdminSystem.Features.Resource
                 PlayerBackpackManager.LocalBackpack.AmmoStorage.SetStorageData(ref data);
             }
         }
-        
+
         public override void OnGameStateChanged(int state)
         {
             eGameStateName current = (eGameStateName)state;

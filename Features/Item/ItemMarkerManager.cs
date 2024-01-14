@@ -16,7 +16,6 @@ using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.FeaturesAPI.Components;
-using TheArchive.Core.FeaturesAPI.Settings;
 using TheArchive.Loader;
 using UnityEngine;
 
@@ -31,7 +30,7 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public override string Description => "对游戏内主要物品进行标记";
 
-        public override string Group => EntryPoint.Groups.Item;
+        public override FeatureGroup Group => EntryPoint.Groups.Item;
 
         [FeatureConfig]
         public static ItemMarkerSettings Settings { get; set; }
@@ -83,6 +82,14 @@ namespace Hikaria.AdminSystem.Features.Item
                 DevConsole.LogVariable("物品标记", Settings.EnableItemMarker);
             }));
 
+            SNet_Events.OnRecallComplete += new Action<eBufferType>((p) =>
+            {
+                if (CurrentGameState == (int)eGameStateName.InLevel)
+                {
+                    ItemMarker.ReloadItemMarker();
+                }
+            });
+
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<ItemMarkerHandler>();
         }
 
@@ -96,18 +103,6 @@ namespace Hikaria.AdminSystem.Features.Item
                     GameObject obj = new();
                     GameObject.DontDestroyOnLoad(obj);
                     obj.AddComponent<ItemMarkerHandler>();
-                }
-            }
-        }
-
-        [ArchivePatch(typeof(SNet_SyncManager), nameof(SNet_SyncManager.OnRecallDone))]
-        private class SNet_SyncManager__OnRecallDone__Patch
-        {
-            private static void Postfix()
-            {
-                if (CurrentGameState == (int)eGameStateName.InLevel)
-                {
-                    ItemMarker.ReloadItemMarker();
                 }
             }
         }
@@ -1093,7 +1088,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     DevConsole.LogError("不在游戏中");
                     return;
                 }
-                LoadingItem(true);
+                LoadingItem(false);
             }
 
             public static Color GetUnityColor(ColorType markerColor)

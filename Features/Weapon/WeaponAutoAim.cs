@@ -33,7 +33,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
         public override string Description => "使用枪械时启用自瞄";
 
-        public override string Group => EntryPoint.Groups.Weapon;
+        public override FeatureGroup Group => EntryPoint.Groups.Weapon;
 
         [FeatureConfig]
         public static WeaponAutoAimSettings Settings { get; set; }

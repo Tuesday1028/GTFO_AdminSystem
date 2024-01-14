@@ -27,7 +27,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
 
         public override string Description => "实时显示敌人类别、位置、血量、状态和距离信息";
 
-        public override string Group => EntryPoint.Groups.Enemy;
+        public override FeatureGroup Group => EntryPoint.Groups.Enemy;
 
         [FeatureConfig]
         public static EnemyMarkerSettings Settings { get; set; }

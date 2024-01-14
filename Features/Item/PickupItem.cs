@@ -22,7 +22,7 @@ namespace Hikaria.AdminSystem.Features.Item
     {
         public override string Name => "物品";
 
-        public override string Group => EntryPoint.Groups.Item;
+        public override FeatureGroup Group => EntryPoint.Groups.Item;
 
         [FeatureConfig]
         public static ItemSettings Settings { get; set; }

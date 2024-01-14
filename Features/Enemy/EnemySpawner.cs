@@ -27,7 +27,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
     {
         public override string Name => "刷怪";
 
-        public override string Group => EntryPoint.Groups.Enemy;
+        public override FeatureGroup Group => EntryPoint.Groups.Enemy;
 
         [FeatureConfig]
         public static EnemySpawnerSettings Settings { get; set; }

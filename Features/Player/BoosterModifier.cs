@@ -21,7 +21,7 @@ namespace Hikaria.AdminSystem.Features.Player
     {
         public override string Name => "修改强化剂";
 
-        public override string Group => EntryPoint.Groups.Player;
+        public override FeatureGroup Group => EntryPoint.Groups.Player;
 
         [FeatureConfig]
         public static GiveBoosterSetting Settings { get; set; }

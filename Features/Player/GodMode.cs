@@ -23,7 +23,7 @@ namespace Hikaria.AdminSystem.Features.Player
     {
         public override string Name => "无敌模式";
 
-        public override string Group => EntryPoint.Groups.Player;
+        public override FeatureGroup Group => EntryPoint.Groups.Player;
 
         public static Dictionary<ulong, GodModeEntry> GodModeLookup { get; set; } = new();
         [FeatureConfig]

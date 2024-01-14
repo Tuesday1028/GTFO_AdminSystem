@@ -22,7 +22,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
     {
         public override string Name => "干死敌人";
 
-        public override string Group => EntryPoint.Groups.Enemy;
+        public override FeatureGroup Group => EntryPoint.Groups.Enemy;
 
         [FeatureConfig]
         public static FuckEnemySettings Settings { get; set; }

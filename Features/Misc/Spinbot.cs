@@ -23,7 +23,7 @@ namespace Hikaria.AdminSystem.Features.Misc
 
         public override string Description => "类似于CSGO的陀螺";
 
-        public override string Group => EntryPoint.Groups.Misc;
+        public override FeatureGroup Group => EntryPoint.Groups.Misc;
 
         [FeatureConfig]
         public static SpinbotSetting Settings { get; private set; }

@@ -13,7 +13,7 @@ namespace Hikaria.AdminSystem.Features.Player
     {
         public override string Name => "空中开枪";
 
-        public override string Group => EntryPoint.Groups.Player;
+        public override FeatureGroup Group => EntryPoint.Groups.Player;
 
         [FeatureConfig]
         public static ShotInAirSettings Settings { get; set; }

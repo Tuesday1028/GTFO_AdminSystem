@@ -16,7 +16,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
         public override string Description => "射击时枪械弹夹容量始终为满";
 
-        public override string Group => EntryPoint.Groups.Weapon;
+        public override FeatureGroup Group => EntryPoint.Groups.Weapon;
 
         [FeatureConfig]
         public static InfiniteClipSettings Settings { get; set; }

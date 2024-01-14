@@ -28,7 +28,7 @@ namespace Hikaria.AdminSystem.Features.Misc
 
         public override string Description => "杂项指令";
 
-        public override string Group => EntryPoint.Groups.Misc;
+        public override FeatureGroup Group => EntryPoint.Groups.Misc;
 
         public override void Init()
         {

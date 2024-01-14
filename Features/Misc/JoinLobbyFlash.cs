@@ -19,7 +19,7 @@ namespace Hikaria.AdminSystem.Features.Misc
 
         public override string Description => "启用后进入大厅会发出对应位置玩家颜色的闪光";
 
-        public override string Group => EntryPoint.Groups.Misc;
+        public override FeatureGroup Group => EntryPoint.Groups.Misc;
 
         [FeatureConfig]
         public static JoinLobbyFlashSettings Settings { get; set; }

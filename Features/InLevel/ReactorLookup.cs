@@ -14,7 +14,7 @@ namespace Hikaria.AdminSystem.Features.WardenObjective
     {
         public override string Name => "反应堆";
 
-        public override string Group => EntryPoint.Groups.InLevel;
+        public override FeatureGroup Group => EntryPoint.Groups.InLevel;
 
         public static Dictionary<int, LG_WardenObjective_Reactor> ReactorsInLevel { get; set; } = new();
 

@@ -18,7 +18,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
         public override string Description => "增强武器属性";
 
-        public override string Group => EntryPoint.Groups.Weapon;
+        public override FeatureGroup Group => EntryPoint.Groups.Weapon;
 
         [FeatureConfig]
         public static WeaponEnhanceSettings Settings { get; set; }

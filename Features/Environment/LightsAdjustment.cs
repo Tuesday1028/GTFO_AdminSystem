@@ -19,7 +19,7 @@ namespace Hikaria.AdminSystem.Features.Environment
     {
         public override string Name => "灯光调节";
 
-        public override string Group => EntryPoint.Groups.Environment;
+        public override FeatureGroup Group => EntryPoint.Groups.Environment;
 
         [FeatureConfig]
         public static LightSettings Settings { get; set; }

@@ -27,7 +27,7 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public override string Description => "传送玩家";
 
-        public override string Group => EntryPoint.Groups.Player;
+        public override FeatureGroup Group => EntryPoint.Groups.Player;
 
         public static Dictionary<string, WarpStorePosEntry> WarpStoresLookup { get; set; } = new();
 

@@ -13,7 +13,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
     {
         public override string Name => "敌人行为";
 
-        public override string Group => EntryPoint.Groups.Enemy;
+        public override FeatureGroup Group => EntryPoint.Groups.Enemy;
 
         [FeatureConfig]
         public static EnemyBehaviorSettings Settings { get; set; }

@@ -27,7 +27,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         public override string Description => base.Description;
 
-        public override string Group => EntryPoint.Groups.InLevel;
+        public override FeatureGroup Group => EntryPoint.Groups.InLevel;
 
         public static TerminalLookup Instance { get; private set; }
 

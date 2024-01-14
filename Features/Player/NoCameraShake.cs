@@ -14,7 +14,7 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public override string Description => "禁用受到伤害时视角抖动";
 
-        public override string Group => EntryPoint.Groups.Player;
+        public override FeatureGroup Group => EntryPoint.Groups.Player;
 
         [FeatureConfig]
         public static NoCameraShakeSettings Settings { get; set; }

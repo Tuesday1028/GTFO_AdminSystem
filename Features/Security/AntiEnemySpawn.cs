@@ -18,7 +18,7 @@ namespace Hikaria.AdminSystem.Features.Security
 
         public override string Description => "阻止玩家刷怪并给予惩罚";
 
-        public override string Group => EntryPoint.Groups.Security;
+        public override FeatureGroup Group => EntryPoint.Groups.Security;
 
         public static new IArchiveLogger FeatureLogger { get; set; }
 

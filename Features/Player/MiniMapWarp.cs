@@ -27,7 +27,7 @@ namespace Hikaria.AdminSystem.Features.Player
             public bool EnableMiniMapWarp { get; set; }
         }
 
-        public override string Group => EntryPoint.Groups.Player;
+        public override FeatureGroup Group => EntryPoint.Groups.Player;
 
         public override void Init()
         {

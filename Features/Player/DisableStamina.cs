@@ -14,7 +14,7 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public override string Description => "启用以禁用心率系统";
 
-        public override string Group => EntryPoint.Groups.Player;
+        public override FeatureGroup Group => EntryPoint.Groups.Player;
 
         [FeatureConfig]
         public static DisableStaminaSettings Settings { get; private set; }
