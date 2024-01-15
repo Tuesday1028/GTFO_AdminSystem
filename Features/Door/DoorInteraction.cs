@@ -18,7 +18,7 @@ namespace Hikaria.AdminSystem.Features.Door
     {
         public override string Name => "操作门";
 
-        public override FeatureGroup Group => EntryPoint.Groups.Door;
+        public override FeatureGroup Group => EntryPoint.Groups.InLevel;
 
         [FeatureConfig]
         public static DoorInteractionSettings Settings { get; set; }
