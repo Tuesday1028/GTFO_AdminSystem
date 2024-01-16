@@ -82,7 +82,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
         {
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<EnemySpawnHandler>();
             DevConsole.AddCommand(Command.Create<uint, int, int>("SpawnEnemy", "生成敌人", "生成敌人", Parameter.Create("ID", "敌人的ID"), Parameter.Create("Count", "敌人的数量"), Parameter.Create("Mode", "AI的模式, 0: Off, 1: Agressive, 2: Patrolling, 3: Scout, 4: Hibernation"), SpawnEnemy));
-            DevConsole.AddCommand(Command.Create<int, uint, int>("PlayerSpawnChild", "玩家下崽子", "玩家下崽子", Parameter.Create("Slot", "槽位, 1-4"), Parameter.Create("ID", "敌人的ID"), Parameter.Create("Count", "敌人的数量"), PlayerSpawnChild));
+            DevConsole.AddCommand(Command.Create<int, uint, int>("PlayerGiveBirth", "玩家生敌人", "玩家生敌人", Parameter.Create("Slot", "槽位, 1-4"), Parameter.Create("ID", "敌人的ID"), Parameter.Create("Count", "敌人的数量"), PlayerGiveBirth));
         }
 
         public override void OnGameDataInitialized()
@@ -196,7 +196,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
             }
         }
 
-        private static void PlayerSpawnChild(int slot, uint id, int count = 1)
+        private static void PlayerGiveBirth(int slot, uint id, int count = 1)
         {
             EnemySpawnHandler.Instance.StartCoroutine(PlayerGiveBirthCoroutine(slot, id, count));
         }
