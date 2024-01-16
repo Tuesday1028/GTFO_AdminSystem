@@ -17,6 +17,7 @@ using TheArchive.Core.FeaturesAPI.Components;
 using TheArchive.Core.FeaturesAPI.Settings;
 using TheArchive.Loader;
 using UnityEngine;
+using static GameData.GD;
 
 namespace Hikaria.AdminSystem.Features.Enemy
 {
@@ -81,6 +82,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
         {
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<EnemySpawnHandler>();
             DevConsole.AddCommand(Command.Create<uint, int, int>("SpawnEnemy", "生成敌人", "生成敌人", Parameter.Create("ID", "敌人的ID"), Parameter.Create("Count", "敌人的数量"), Parameter.Create("Mode", "AI的模式, 0: Off, 1: Agressive, 2: Patrolling, 3: Scout, 4: Hibernation"), SpawnEnemy));
+            DevConsole.AddCommand(Command.Create<int, uint, int>("PlayerSpawnChild", "玩家下崽子", "玩家下崽子", Parameter.Create("Slot", "槽位, 1-4"), Parameter.Create("ID", "敌人的ID"), Parameter.Create("Count", "敌人的数量"), PlayerSpawnChild));
         }
 
         public override void OnGameDataInitialized()
@@ -192,6 +194,40 @@ namespace Hikaria.AdminSystem.Features.Enemy
             {
                 Instance = this;
             }
+        }
+
+        private static void PlayerSpawnChild(int slot, uint id, int count = 1)
+        {
+            EnemySpawnHandler.Instance.StartCoroutine(PlayerGiveBirthCoroutine(slot, id, count));
+        }
+
+        private static IEnumerator PlayerGiveBirthCoroutine(int slot, uint id, int count)
+        {
+            WaitForSecondsRealtime yielder = new(0.2f);
+            if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var player) || player.Owner.IsBot)
+            {
+                yield break;
+            }
+            uint dropSound = count > 15 ? 2806903738U : 3495940948U;
+            uint startSound = count > 15 ? 3461742098 : 1544195408U;
+            DevConsole.Log($"玩家 {player.Owner.NickName} 开始下崽子, 数量：{count} 只");
+            PlayerVoiceManager.WantToSayInternal(slot - 1, startSound, 0U, 0U, 0U);
+            yield return new WaitForSecondsRealtime(2.5f);
+            do
+            {
+                if (!player.Owner.IsInLobby || CurrentGameState != (int)eGameStateName.InLevel)
+                {
+                    yield break;
+                }
+                if (AIG_CourseNode.TryGetCourseNode(player.DimensionIndex, player.Position, 1f, out AIG_CourseNode node))
+                {
+                    PlayerVoiceManager.WantToSayInternal(slot - 1, dropSound, 0U, 0U, 0U);
+                    EnemyAgent.SpawnEnemy(id, player.Position, node, AgentMode.Agressive);
+                    count--;
+                }
+                yield return yielder;
+            }
+            while (count > 0);
         }
     }
 }
