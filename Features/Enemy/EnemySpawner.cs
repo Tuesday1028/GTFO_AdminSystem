@@ -19,8 +19,6 @@ using TheArchive.Core.FeaturesAPI.Settings;
 using TheArchive.Core.Localization;
 using TheArchive.Loader;
 using UnityEngine;
-using static GameData.GD;
-using static TenChambers.Backend;
 
 namespace Hikaria.AdminSystem.Features.Enemy
 {
@@ -59,14 +57,17 @@ namespace Hikaria.AdminSystem.Features.Enemy
                 get
                 {
                     List<EnemyDataEntry> result = new();
-                    foreach (var block in EnemyDataBlock.GetAllBlocksForEditor())
+                    if (GameDataInited)
                     {
-                        result.Add(new()
+                        foreach (var block in EnemyDataBlock.GetAllBlocksForEditor())
                         {
-                            ID = block.persistentID,
-                            Name = TranslateManager.EnemyName(block.persistentID),
-                            FullName = block.name
-                        });
+                            result.Add(new()
+                            {
+                                ID = block.persistentID,
+                                Name = TranslateManager.EnemyName(block.persistentID),
+                                FullName = block.name
+                            });
+                        }
                     }
                     return result;
                 }
