@@ -10,7 +10,6 @@ using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.FeaturesAPI.Components;
-using static Hikaria.AdminSystem.Interfaces.IOnSessionMemberChanged;
 
 namespace Hikaria.AdminSystem.Features.Player
 {

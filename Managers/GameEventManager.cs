@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Interfaces;
-using static Hikaria.AdminSystem.Interfaces.IOnSessionMemberChanged;
 
 namespace Hikaria.AdminSystem.Managers
 {
@@ -36,10 +35,9 @@ namespace Hikaria.AdminSystem.Managers
                     switch (playerEvent)
                     {
                         case SNet_PlayerEvent.PlayerLeftSessionHub:
-                        case SNet_PlayerEvent.PlayerAgentDeSpawned:
                             OnSessionMemberChanged(player, SessionMemberEvent.LeftSessionHub);
                             break;
-                        case SNet_PlayerEvent.PlayerAgentSpawned:
+                        case SNet_PlayerEvent.PlayerAgentDeSpawned:
                             OnSessionMemberChanged(player, SessionMemberEvent.JoinSessionHub);
                             break;
                     }
