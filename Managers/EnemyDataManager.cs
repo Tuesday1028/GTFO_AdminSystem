@@ -18,7 +18,7 @@ namespace Hikaria.AdminSystem.Managers
         public void Init()
         {
             EnemyDataBlockLookup.Clear();
-            foreach (EnemyDataBlock block in GameDataBlockBase<EnemyDataBlock>.GetAllBlocksForEditor())
+            foreach (EnemyDataBlock block in EnemyDataBlock.GetAllBlocksForEditor())
             {
                 EnemyDataBlockLookup.Add(block.persistentID, block);
             }

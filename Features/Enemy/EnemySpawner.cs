@@ -2,6 +2,7 @@
 using AIGraph;
 using BepInEx.Unity.IL2CPP.Utils;
 using Enemies;
+using GameData;
 using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Managers;
 using Hikaria.AdminSystem.Utilities;
@@ -15,9 +16,11 @@ using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.FeaturesAPI.Components;
 using TheArchive.Core.FeaturesAPI.Settings;
+using TheArchive.Core.Localization;
 using TheArchive.Loader;
 using UnityEngine;
 using static GameData.GD;
+using static TenChambers.Backend;
 
 namespace Hikaria.AdminSystem.Features.Enemy
 {
@@ -51,8 +54,28 @@ namespace Hikaria.AdminSystem.Features.Enemy
             [FSHeader("敌人数据查询")]
             [FSDisplayName("敌人信息表")]
             [FSReadOnly]
-            public List<EnemyDataEntry> EnemyDataLookup { get; set; } = new();
+            public List<EnemyDataEntry> EnemyDataLookup
+            {
+                get
+                {
+                    List<EnemyDataEntry> result = new();
+                    foreach (var block in EnemyDataBlock.GetAllBlocksForEditor())
+                    {
+                        result.Add(new()
+                        {
+                            ID = block.persistentID,
+                            Name = TranslateManager.EnemyName(block.persistentID),
+                            FullName = block.name
+                        });
+                    }
+                    return result;
+                }
+                set
+                {
+                }
+            }
 
+            [Localized]
             public enum AgentMode
             {
                 Off,
@@ -83,21 +106,6 @@ namespace Hikaria.AdminSystem.Features.Enemy
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<EnemySpawnHandler>();
             DevConsole.AddCommand(Command.Create<uint, int, int>("SpawnEnemy", "生成敌人", "生成敌人", Parameter.Create("ID", "敌人的ID"), Parameter.Create("Count", "敌人的数量"), Parameter.Create("Mode", "AI的模式, 0: Off, 1: Agressive, 2: Patrolling, 3: Scout, 4: Hibernation"), SpawnEnemy));
             DevConsole.AddCommand(Command.Create<int, uint, int>("PlayerGiveBirth", "玩家生敌人", "玩家生敌人", Parameter.Create("Slot", "槽位, 1-4"), Parameter.Create("ID", "敌人的ID"), Parameter.Create("Count", "敌人的数量"), PlayerGiveBirth));
-        }
-
-        public override void OnGameDataInitialized()
-        {
-            foreach (var item in EnemyDataManager.EnemyDataBlockLookup)
-            {
-                EnemyDataEntry entry = new()
-                {
-                    ID = item.Key,
-                    Name = TranslateManager.EnemyName(item.Key),
-                    FullName = item.Value.name
-                };
-                Settings.EnemyDataLookup.Add(entry);
-                //Settings.EnemyDataLookup = Settings.EnemyDataLookup.OrderBy(i => i.ID).ToList();
-            }
         }
 
         public override void OnButtonPressed(ButtonSetting setting)

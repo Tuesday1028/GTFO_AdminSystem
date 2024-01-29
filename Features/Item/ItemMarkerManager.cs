@@ -86,7 +86,7 @@ namespace Hikaria.AdminSystem.Features.Item
             {
                 if (CurrentGameState == (int)eGameStateName.InLevel)
                 {
-                    ItemMarker.ReloadItemMarker();
+                    ItemMarker.LoadingItem(true);
                 }
             });
 
