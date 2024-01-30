@@ -384,7 +384,6 @@ namespace Hikaria.AdminSystem.Features.Misc
                 }
                 catch
                 {
-
                 }
             }
 
@@ -393,14 +392,14 @@ namespace Hikaria.AdminSystem.Features.Misc
 
         private static void KickPlayer(int slot)
         {
-            if (!SNet.IsMaster)
-            {
-                DevConsole.LogError("只有房主可以踢人");
-                return;
-            }
             if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var agent))
             {
                 DevConsole.LogError("输入有误");
+                return;
+            }
+            if (!SNet.IsMaster && !agent.Owner.IsLocal)
+            {
+                DevConsole.LogError("只有房主可以踢人");
                 return;
             }
             TheArchive.Features.Security.PlayerLobbyManagement.KickPlayer(agent.Owner);
@@ -546,14 +545,12 @@ namespace Hikaria.AdminSystem.Features.Misc
             SNet.MasterManagement.OnMigrationReport(pMigrationReport);
             SNet.SessionHub.KickPlayer(master, SNet_PlayerEventReason.Kick_ByVote);
             SNet.MasterManagement.EndOnBadConnectionWithMaster();
+            if (CurrentGameState == (int)eGameStateName.ExpeditionFail || CurrentGameState == (int)eGameStateName.ExpeditionSuccess)
+                return;
             if (SNet.MasterManagement.TryFindBestCaptureBuffer(out var bestBufferSummary))
-            {
                 SNet.Sync.StartRecallWithAllSyncedPlayers(bestBufferSummary.bufferType, false);
-            }
             else
-            {
                 SNet.Sync.StartRecallWithAllSyncedPlayers(eBufferType.RestartLevel, false);
-            }
         }
 
 
