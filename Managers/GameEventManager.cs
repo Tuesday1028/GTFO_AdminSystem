@@ -35,9 +35,10 @@ namespace Hikaria.AdminSystem.Managers
                     switch (playerEvent)
                     {
                         case SNet_PlayerEvent.PlayerLeftSessionHub:
+                        case SNet_PlayerEvent.PlayerAgentDeSpawned:
                             OnSessionMemberChanged(player, SessionMemberEvent.LeftSessionHub);
                             break;
-                        case SNet_PlayerEvent.PlayerAgentDeSpawned:
+                        case SNet_PlayerEvent.PlayerAgentSpawned:
                             OnSessionMemberChanged(player, SessionMemberEvent.JoinSessionHub);
                             break;
                     }
