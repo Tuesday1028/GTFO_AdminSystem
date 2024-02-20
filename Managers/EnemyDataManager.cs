@@ -24,7 +24,7 @@ namespace Hikaria.AdminSystem.Managers
             }
         }
 
-        public static EnemyDamageData GetEnemyDamageData(EnemyAgent enemy)
+        public static EnemyDamageData GetOrGenerateEnemyDamageData(EnemyAgent enemy)
         {
             if (!EnemyDamageDataLookup.TryGetValue(enemy.EnemyDataID, out var data))
             {

@@ -12,6 +12,7 @@ using SNetwork;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -86,7 +87,7 @@ namespace Hikaria.AdminSystem.Features.Item
             {
                 if (CurrentGameState == (int)eGameStateName.InLevel)
                 {
-                    ItemMarker.LoadingItem(true);
+                    ItemMarker.LoadingItem(false);
                 }
             });
 
@@ -715,11 +716,17 @@ namespace Hikaria.AdminSystem.Features.Item
                 var smallPickupItems = UnityEngine.Object.FindObjectsOfType<GenericSmallPickupItem_Core>();
                 foreach (var smallPickupItem in smallPickupItems)
                 {
-                    if (smallPickupItem == null || smallPickupItem.ItemDataBlock == null)
-                        continue;
+                    var terminalItemName = smallPickupItem.m_terminalItem?.TerminalItemKey ?? string.Empty;
+                    var list = (smallPickupItem.m_terminalItemComp?.name ?? smallPickupItem.name).Replace('_', ' ').ToList();
+                    var parsedName = string.Empty;
+                    if (list.Count >= 2)
+                    {
+                        parsedName = $"{list[list.Count - 1]}_{list[list.Count - 2]}";
+                    }
+                    var name = string.IsNullOrEmpty(terminalItemName) ? parsedName : terminalItemName;
                     var marker = Place(smallPickupItem, ItemType.SmallPickupItems);
                     marker.SetColor(ColorType.Objective);
-                    marker.SetTitle(smallPickupItem.m_terminalItem);
+                    marker.SetTitle(name);
                     smallPickupItem.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>(delegate (ePickupItemStatus status, pPickupPlacement placement, PlayerAgent player, bool isRecall)
                     {
                         if (status == ePickupItemStatus.PickedUp)
@@ -730,7 +737,7 @@ namespace Hikaria.AdminSystem.Features.Item
                         {
                             marker = Place(smallPickupItem, ItemType.SmallPickupItems);
                             marker.SetColor(ColorType.Objective);
-                            marker.SetTitle(smallPickupItem.m_terminalItem, smallPickupItem.PublicName.IsNullOrEmptyOrWhiteSpace() ? smallPickupItem.ArchetypeName : smallPickupItem.PublicName);
+                            marker.SetTitle(smallPickupItem.m_terminalItem, name);
                         }
                     });
                 }

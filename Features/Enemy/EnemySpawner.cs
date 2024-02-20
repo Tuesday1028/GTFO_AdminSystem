@@ -222,7 +222,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
             DevConsole.Log($"玩家 {player.Owner.NickName} 开始下崽子, 数量：{count} 只");
             PlayerVoiceManager.WantToSayInternal(slot - 1, startSound, 0U, 0U, 0U);
             yield return new WaitForSecondsRealtime(2.5f);
-            while (count-- > 0)
+            while (count > 0)
             {
                 if (!player.Owner.IsInLobby || CurrentGameState != (int)eGameStateName.InLevel)
                 {

@@ -211,6 +211,15 @@ namespace Hikaria.AdminSystem.Features.Weapon
             }
         }
 
+        //[ArchivePatch(typeof(ItemEquippable), nameof(ItemEquippable.OnWield))]
+        //private class ItemEquippable__OnWield__Patch
+        //{
+        //    private static void Postfix(ItemEquippable __instance)
+        //    {
+        //        SetupClearSight(__instance.gameObject, Settings.ClearSight);
+        //    }
+        //}
+
         [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.OnWield))]
         private class BulletWeapon__OnWield__Patch
         {
@@ -302,37 +311,45 @@ namespace Hikaria.AdminSystem.Features.Weapon
             "falloff", "distortion", "dirt"
         };
 
+        private static List<string> ClearSightCompNames = new()
+        {
+            "thermal", "glass"
+        };
+
 
         private static void SetupClearSight(GameObject baseGO, bool enable)
         {
             foreach (var item in baseGO.GetComponentsInChildren<Transform>())
             {
                 string childName = item.name.ToLower(System.Globalization.CultureInfo.CurrentCulture);
-                if (childName.Contains("thermal") || childName.Contains("glass"))
+                foreach (var compName in ClearSightCompNames)
                 {
-                    MeshRenderer meshRenderer = item.gameObject.GetComponent<MeshRenderer>();
-                    if (meshRenderer != null)
+                    if (childName.Contains(compName))
                     {
-                        Material material = meshRenderer.material;
-                        Shader shader = meshRenderer.material.shader;
-                        for (int j = 0; j < shader.GetPropertyCount(); j++)
+                        MeshRenderer meshRenderer = item.gameObject.GetComponent<MeshRenderer>();
+                        if (meshRenderer != null)
                         {
-                            string propName = shader.GetPropertyName(j).ToLower(System.Globalization.CultureInfo.CurrentCulture);
-                            var type = shader.GetPropertyType(j);
-                            int nameId = shader.GetPropertyNameId(j);
-                            foreach (var name in ClearSightShaderProps)
+                            Material material = meshRenderer.material;
+                            Shader shader = meshRenderer.material.shader;
+                            for (int j = 0; j < shader.GetPropertyCount(); j++)
                             {
-                                if (propName.Contains(name))
+                                string propName = shader.GetPropertyName(j).ToLower(System.Globalization.CultureInfo.CurrentCulture);
+                                var type = shader.GetPropertyType(j);
+                                int nameId = shader.GetPropertyNameId(j);
+                                foreach (var name in ClearSightShaderProps)
                                 {
-                                    if (type == UnityEngine.Rendering.ShaderPropertyType.Float || type == UnityEngine.Rendering.ShaderPropertyType.Range)
+                                    if (propName.Contains(name))
                                     {
-                                        var value = enable ? 0 : shader.GetPropertyDefaultFloatValue(j);
-                                        material.SetFloat(nameId, value);
-                                    }
-                                    else if (type == UnityEngine.Rendering.ShaderPropertyType.Vector)
-                                    {
-                                        var value = enable ? Vector4.zero : shader.GetPropertyDefaultVectorValue(j);
-                                        material.SetVector(nameId, value);
+                                        if (type == UnityEngine.Rendering.ShaderPropertyType.Float || type == UnityEngine.Rendering.ShaderPropertyType.Range)
+                                        {
+                                            var value = enable ? 0 : shader.GetPropertyDefaultFloatValue(j);
+                                            material.SetFloat(nameId, value);
+                                        }
+                                        else if (type == UnityEngine.Rendering.ShaderPropertyType.Vector)
+                                        {
+                                            var value = enable ? Vector4.zero : shader.GetPropertyDefaultVectorValue(j);
+                                            material.SetVector(nameId, value);
+                                        }
                                     }
                                 }
                             }

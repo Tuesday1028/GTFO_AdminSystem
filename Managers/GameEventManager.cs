@@ -1,4 +1,5 @@
 ﻿using Hikaria.AdminSystem.Interfaces;
+using Player;
 using SNetwork;
 using System;
 using System.Collections.Generic;
@@ -66,6 +67,21 @@ namespace Hikaria.AdminSystem.Managers
             }
         }
 
+        private static void OnRecallComplete(eBufferType bufferType)
+        {
+            foreach (var instance in _instancesOnRecallDone)
+            {
+                try
+                {
+                    instance.OnRecallComplete(bufferType);
+                }
+                catch (Exception ex)
+                {
+                    FeatureLogger.Error(ex.ToString());
+                }
+            }
+        }
+
         private static void OnAfterLevel()
         {
             foreach (var instance in _instancesOnAfterLevel)
@@ -95,18 +111,23 @@ namespace Hikaria.AdminSystem.Managers
             private static void Postfix()
             {
                 SNet_Events.OnPlayerEvent += new Action<SNet_Player, SNet_PlayerEvent, SNet_PlayerEventReason>(OnPlayerEvent);
+                SNet_Events.OnRecallComplete += new Action<eBufferType>(OnRecallComplete);
             }
         }
 
         public static void RegisterSelfInGameEventManager<T>(T instance)
         {
             Type type = typeof(T);
-            if (typeof(IOnPlayerEvent).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract)
+            if (type.IsInterface || type.IsAbstract)
+                return;
+            if (typeof(IOnPlayerEvent).IsAssignableFrom(type))
                 _instancesOnPlayerEvent.Add((IOnPlayerEvent)instance);
-            if (typeof(IOnSessionMemberChanged).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract)
+            if (typeof(IOnSessionMemberChanged).IsAssignableFrom(type))
                 _instancesSessionMemberChanged.Add((IOnSessionMemberChanged)instance);
-            if (typeof(IOnAfterLevel).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract)
+            if (typeof(IOnAfterLevel).IsAssignableFrom(type))
                 _instancesOnAfterLevel.Add((IOnAfterLevel)instance);
+            if (typeof(IOnRecallComplete).IsAssignableFrom(type))
+                _instancesOnRecallDone.Add((IOnRecallComplete)instance);
         }
 
         private static readonly HashSet<IOnPlayerEvent> _instancesOnPlayerEvent = new();
@@ -114,5 +135,7 @@ namespace Hikaria.AdminSystem.Managers
         private static readonly HashSet<IOnSessionMemberChanged> _instancesSessionMemberChanged = new();
 
         private static readonly HashSet<IOnAfterLevel> _instancesOnAfterLevel = new();
+
+        private static readonly HashSet<IOnRecallComplete> _instancesOnRecallDone = new();
     }
 }

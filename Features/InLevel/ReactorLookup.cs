@@ -1,4 +1,5 @@
-﻿using LevelGeneration;
+﻿using Clonesoft.Json;
+using LevelGeneration;
 using System.Collections.Generic;
 using System.Linq;
 using TheArchive.Core.Attributes;
@@ -19,6 +20,7 @@ namespace Hikaria.AdminSystem.Features.WardenObjective
         public static Dictionary<int, LG_WardenObjective_Reactor> ReactorsInLevel { get; set; } = new();
 
         [FeatureConfig]
+        [JsonIgnore]
         public static ReactorLookupSettings Settings { get; set; }
 
         public class ReactorLookupSettings

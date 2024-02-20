@@ -5,6 +5,7 @@ using Gear;
 using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Features.Player;
 using Hikaria.AdminSystem.Managers;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.DevConsoleLite;
 using Player;
 using SNetwork;
@@ -128,7 +129,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 foreach (var autoaim in WeaponAutoAimHandler.AllAutoAimInstances)
                 {
-                    autoaim?.DoAfterLevelClear();
+                    if (autoaim != null)
+                        autoaim.DoAfterLevelClear();
                 }
             }
         }
@@ -220,16 +222,13 @@ namespace Hikaria.AdminSystem.Features.Weapon
         [ArchivePatch(typeof(global::Weapon), nameof(global::Weapon.CastWeaponRay))]
         public class Weapon__CastWeaponRay__Patch
         {
-            public static Type[] ParameterTypes()
+            public static Type[] ParameterTypes() => new Type[]
             {
-                return new Type[]
-                    {
-                        typeof(Transform),
-                        typeof(global::Weapon.WeaponHitData).MakeByRefType(),
-                        typeof(Vector3),
-                        typeof(int)
-                    };
-            }
+                typeof(Transform),
+                typeof(global::Weapon.WeaponHitData).MakeByRefType(),
+                typeof(Vector3),
+                typeof(int)
+            };
 
             private static void Prefix(ref global::Weapon.WeaponHitData weaponRayData)
             {
@@ -261,10 +260,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     return;
                 }
 
-                //防止距离过远导致射线检测不到直接设置为2000米
                 weaponRayData.maxRayDist = 2000f;
 
-                //修改子弹出膛方向
                 weaponRayData.fireDir = (weaponAutoAim.AimTargetPos - weaponRayData.owner.FPSCamera.Position).normalized;
             }
         }
@@ -440,7 +437,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     return;
                 }
 
-                EnemyDataManager.EnemyDamageData data = EnemyDataManager.GetEnemyDamageData(m_Target);
+                EnemyDataManager.EnemyDamageData data = EnemyDataManager.GetOrGenerateEnemyDamageData(m_Target);
 
                 if (data.IsImmortal)
                 {
@@ -565,11 +562,11 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             private void UpdateAroundEnemy()
             {
+                AroundEnemies.Clear();
                 if (PauseAutoAim)
                 {
                     return;
                 }
-                AroundEnemies.Clear();
                 foreach (EnemyAgent enemy in m_Owner.EnemyCollision.m_enemies)
                 {
                     if (Settings.WallHackAim || m_Owner.CanSeeEnemyPlus(enemy))

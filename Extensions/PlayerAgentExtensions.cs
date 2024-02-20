@@ -6,35 +6,29 @@ namespace Hikaria.AdminSystem.Extensions
 {
     public static class PlayerAgentExtensions
     {
-        public static bool CanSeePosition(this PlayerAgent player, Vector3 targetPos, int layerMask, out RaycastHit hitInfo)
+        public static bool Raycast(this PlayerAgent player, Vector3 target, int layerMask, out RaycastHit hit)
         {
-            Ray ray = default;
-            ray.origin = player.FPSCamera.Position;
-            Ray ray2 = ray;
-            Vector3 vector = targetPos - player.FPSCamera.Position;
+            Vector3 vector = target - player.FPSCamera.Position;
             float magnitude = vector.magnitude;
             vector /= magnitude;
-            ray2.direction = vector;
-            return !Physics.Raycast(ray2, out hitInfo, magnitude, layerMask);
+            return Physics.Raycast(player.FPSCamera.Position, vector, out hit, magnitude, layerMask);
         }
 
-        public static bool CanSeeObject(this PlayerAgent player, GameObject targetObj)
+        public static bool CanSeeObject(this PlayerAgent player, GameObject targetObj, out RaycastHit hit)
         {
-            Vector3 position = targetObj.transform.position;
-            return player.CanSeePosition(position, LayerManager.MASK_WORLD, out RaycastHit raycastHit) || !(raycastHit.transform.gameObject != targetObj) || raycastHit.transform.IsChildOf(targetObj.transform);
+            return player.Raycast(targetObj.transform.position, LayerManager.MASK_WORLD, out hit) && hit.collider.transform.IsChildOf(targetObj.transform);
         }
 
         public static bool CanSeeEnemyNormal(this PlayerAgent player, EnemyAgent enemy)
         {
-            Vector3 position = enemy.AimTarget.position;
-            return player.CanSeePosition(position, LayerManager.MASK_WORLD, out RaycastHit raycastHit) || !(raycastHit.transform.gameObject != enemy.gameObject) || raycastHit.transform.IsChildOf(enemy.gameObject.transform);
+            return !player.Raycast(enemy.AimTarget.position, LayerManager.MASK_WORLD, out _);
         }
 
         public static bool CanSeeEnemyPlus(this PlayerAgent player, EnemyAgent enemy)
         {
             foreach (var limb in enemy.Damage.DamageLimbs)
             {
-                if (player.CanSeePosition(limb.DamageTargetPos, LayerManager.MASK_WORLD, out RaycastHit raycastHit) || !(raycastHit.transform.gameObject != limb.gameObject) || raycastHit.transform.IsChildOf(limb.gameObject.transform))
+                if (!player.Raycast(limb.DamageTargetPos, LayerManager.MASK_WORLD, out _))
                 {
                     return true;
                 }
@@ -44,7 +38,7 @@ namespace Hikaria.AdminSystem.Extensions
 
         public static bool CanFireHitObject(this PlayerAgent player, GameObject targetObj)
         {
-            return !player.CanSeePosition(targetObj.transform.position, LayerManager.MASK_BULLETWEAPON_RAY, out RaycastHit raycastHit) && (raycastHit.transform.gameObject == targetObj || raycastHit.transform.IsChildOf(targetObj.transform));
+            return player.Raycast(targetObj.transform.position, LayerManager.MASK_BULLETWEAPON_RAY, out var hit) && hit.transform.IsChildOf(targetObj.gameObject.transform);
         }
     }
 }

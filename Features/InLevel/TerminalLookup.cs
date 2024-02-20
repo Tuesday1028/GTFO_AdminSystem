@@ -1,13 +1,12 @@
 ﻿using AIGraph;
 using BepInEx;
+using Clonesoft.Json;
 using GameData;
 using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Utilities;
 using Hikaria.DevConsoleLite;
-using Il2CppSystem;
 using LevelGeneration;
 using System.Collections.Generic;
-using System.Linq;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -32,6 +31,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
         public static TerminalLookup Instance { get; private set; }
 
         [FeatureConfig]
+        [JsonIgnore]
         public static TerminalSettings Settings { get; set; }
 
         private static Il2CppSystem.Collections.Generic.Dictionary<int, Il2CppSystem.Collections.Generic.List<TerminalUplinkPuzzleRound>> TerminalCodePuzzle = new();
@@ -42,15 +42,14 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         public class TerminalSettings
         {
-            [FSDisplayName("终端信息")]
-            [FSReadOnly]
-            public List<TerminalSettingsEntry> TargetTerminal { get; set; }
-
             [FSDisplayName("目标终端序列号")]
             public int TerminalID { get; set; }
 
             [FSDisplayName("查询终端信息")]
             public FButton SearchTerminal { get; set; } = new FButton("查询", "查询终端信息");
+            [FSDisplayName("终端信息")]
+            [FSReadOnly]
+            public List<TerminalSettingsEntry> TargetTerminal { get; set; }
         }
 
         public class TerminalSettingsEntry
@@ -467,7 +466,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
                 }
                 var terminalEntry = Settings.TargetTerminal[0];
                 uint syncID = TerminalsInLevel[terminalEntry.ID].m_syncID;
-                string inputstring = terminalEntry.CommandParams.ToUpper();
+                string inputstring = terminalEntry.CommandParams.ToUpperInvariant();
                 LG_ComputerTerminalManager.WantToChangeTerminalState(syncID, TERM_State.Awake, AdminUtils.LocalPlayerAgent);
                 if (!TerminalsInLevel[terminalEntry.ID].m_command.TryGetCommand(inputstring, out TERM_Command term_Command, out string text, out string text2))
                 {
@@ -661,7 +660,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         private static void QueryItem(string itemName)
         {
-            itemName = itemName.ToUpper();
+            itemName = itemName.ToUpperInvariant();
             eDimensionIndex dimensionIndex = AdminUtils.LocalPlayerAgent.DimensionIndex;
             if (!LG_LevelInteractionManager.TryGetTerminalInterface(itemName, dimensionIndex, out iTerminalItem iTerminalItem))
             {

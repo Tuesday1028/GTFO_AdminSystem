@@ -1,11 +1,13 @@
 ﻿using AIGraph;
 using BepInEx.Unity.IL2CPP.Utils;
 using Enemies;
+using Hikaria.AdminSystem.Interfaces;
 using Hikaria.AdminSystem.Managers;
 using Hikaria.AdminSystem.Utilities;
 using Hikaria.DevConsoleLite;
 using Il2CppInterop.Runtime.Attributes;
 using Player;
+using SNetwork;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -20,7 +22,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
     [DoNotSaveToConfig]
-    internal class EnemyMarker : Feature
+    internal class EnemyMarker : Feature, IOnSessionMemberChanged, IOnRecallComplete
     {
         public override string Name => "敌人标记";
 
@@ -45,7 +47,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
                     _enableEnemyMarker = value;
                     if (!value)
                     {
-                        EnemyMarkerHandler.SetDisabled();
+                        EnemyMarkerHandler.DoClear();
                     }
                 }
             }
@@ -58,6 +60,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
 
         public override void Init()
         {
+            GameEventManager.RegisterSelfInGameEventManager(this);
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<EnemyMarkerHandler>();
             DevConsole.AddCommand(Command.Create<bool?>("EnemyMarker", "敌人标记", "实时显示敌人类别、位置、血量、状态和距离信息", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
             {
@@ -83,6 +86,19 @@ namespace Hikaria.AdminSystem.Features.Enemy
                 {
                     __instance.gameObject.AddComponent<EnemyMarkerHandler>();
                 }
+            }
+        }
+
+        public void OnRecallComplete(eBufferType bufferType)
+        {
+            EnemyMarkerHandler.DoClear();
+        }
+
+        public void OnSessionMemberChanged(SNet_Player player, SessionMemberEvent playerEvent)
+        {
+            if (player.IsLocal && playerEvent == SessionMemberEvent.LeftSessionHub)
+            {
+                EnemyMarkerHandler.DoClear();
             }
         }
 
@@ -210,7 +226,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
                 }
             }
 
-            public static void SetDisabled()
+            public static void DoClear()
             {
                 foreach (var marker in MarkerLookup.Values)
                 {

@@ -1,45 +1,41 @@
 ﻿using GameData;
-using Hikaria.AdminSystem.Utilities;
 using System;
 using System.Collections.Generic;
-using TheArchive.Core;
-using TheArchive.Interfaces;
+using TheArchive.Core.ModulesAPI;
 
 namespace Hikaria.AdminSystem.Managers
 {
-    public class TranslateManager : InitSingletonBase<TranslateManager>, IInitAfterGameDataInitialized
+    public class TranslateManager
     {
         public static string EnemyName(uint id)
         {
-            if (!EnemyID2Name.TryGetValue(id, out string Name))
+            if (!EnemyID2NameLookup.TryGetValue(id, out string Name))
             {
                 Name = $"{EnemyDataBlock.GetBlock(id).name} [{id}]";
             }
             return Name;
         }
 
-        public static T GetRandom<T>(T[] arr)
-        {
-            int num = new Random().Next(arr.Length - 1);
-            return arr[num];
-        }
+        private static Dictionary<uint, string> EnemyID2NameLookup = new();
 
-        public void Init()
+        private static CustomSetting<List<EnemyIDNameData>> EnemyIDNames = new("EnemyIDNameLookup", new(), new Action<List<EnemyIDNameData>>((data) =>
         {
-            EnemyID2Name.Clear();
-            EnemyName2ID.Clear();
-            JsonHelper.TryRead(EnemyIDNamePath, EnemyIDNameFile, out List<EnemyIDName> enemyIDNames);
-            foreach (var item in enemyIDNames)
+            EnemyID2NameLookup.Clear();
+            foreach (var item in data)
             {
-                EnemyName2ID.Add(item.Name, item.IDs.ToArray());
                 foreach (var id in item.IDs)
                 {
-                    EnemyID2Name.Add(id, item.Name);
+                    EnemyID2NameLookup.TryAdd(id, item.Name);
                 }
             }
-        }
+        }));
 
-        private static Dictionary<uint, string> EnemyID2Name = new();
+        public class EnemyIDNameData
+        {
+            public List<uint> IDs { get; set; }
+
+            public string Name { get; set; }
+        }
 
         private static Dictionary<string, uint[]> EnemyName2ID = new();
 
@@ -49,9 +45,5 @@ namespace Hikaria.AdminSystem.Managers
 
             public string Name { get; set; }
         }
-
-        private static readonly string EnemyIDNamePath = string.Concat(BepInEx.Paths.ConfigPath, "\\Hikaria\\AdminSystem\\");
-
-        private static readonly string EnemyIDNameFile = "EnemyIDNames.json";
     }
 }

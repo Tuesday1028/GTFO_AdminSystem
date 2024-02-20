@@ -36,6 +36,9 @@
     <Reference Include="BepInEx.Unity.IL2CPP">
       <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\GTFO\BepInEx\core\BepInEx.Unity.IL2CPP.dll</HintPath>
     </Reference>
+    <Reference Include="CellSound-ASM">
+      <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\GTFO\BepInEx\interop\CellSound-ASM.dll</HintPath>
+    </Reference>
     <Reference Include="Clonesoft.Json">
       <HintPath>Resources\Clonesoft.Json.dll</HintPath>
     </Reference>

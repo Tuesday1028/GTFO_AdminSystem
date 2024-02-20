@@ -77,6 +77,9 @@ namespace Hikaria.AdminSystem.Features.Misc
             DevConsole.AddCommand(Command.Create<int, bool>("SetEnemyState", "设定敌人状态", "设定敌人状态", Parameter.Create("State", "状态, 0: 沉睡, 1: 战斗, 2: 死亡"), Parameter.Create("All", "True为所有敌人, False为惊醒的敌人"), SetEnemyState));
             DevConsole.AddCommand(Command.Create<int>("ListEnemyInZone", "统计地区中敌人数量", "统计地区中敌人数量", Parameter.Create("ZoneID", "地区ID"), ListEnemiesInZone));
             DevConsole.AddCommand(Command.Create("ListEnemyData", "列出敌人数据", "列出敌人数据", ListEnemyData));
+
+            DevConsole.AddCommand(Command.Create<int>("ChangeLookup", "修改唯一识别码", "修改唯一识别码", Parameter.Create("Slot", "槽位, 1-4"), ChangeLookup));
+            DevConsole.AddCommand(Command.Create("RestoreLookup", "恢复唯一识别码", "恢复唯一识别码", RestoreLookup));
         }
 
         private static void KillEnemies(int choice)
@@ -402,17 +405,19 @@ namespace Hikaria.AdminSystem.Features.Misc
                 DevConsole.LogError("只有房主可以踢人");
                 return;
             }
-            TheArchive.Features.Security.PlayerLobbyManagement.KickPlayer(agent.Owner);
+            if (agent.Owner.IsLocal)
+            {
+                SNet.SessionHub.KickPlayer(SNet.LocalPlayer, SNet_PlayerEventReason.Kick_ByVote);
+            }
+            else
+            {
+                TheArchive.Features.Security.PlayerLobbyManagement.KickPlayer(agent.Owner);
+            }
             DevConsole.LogSuccess($"已踢出玩家 {agent.Owner.NickName}");
         }
 
         private static void BanPlayer(int slot)
         {
-            if (!SNet.IsMaster)
-            {
-                DevConsole.LogError("只有房主可以封禁他人");
-                return;
-            }
             if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var agent))
             {
                 DevConsole.LogError("输入有误");
@@ -777,6 +782,19 @@ namespace Hikaria.AdminSystem.Features.Misc
             CheckpointManager.StoreCheckpoint(AdminUtils.LocalPlayerAgent.EyePosition);
             SNet.Capture.CaptureGameState(eBufferType.Checkpoint);
             DevConsole.LogSuccess("重生点已保存");
+        }
+
+        private static void ChangeLookup(int slot)
+        {
+            if (AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var player))
+            {
+                SNet.LocalPlayer.Lookup = player.Owner.Lookup;
+            }
+        }
+
+        private static void RestoreLookup()
+        {
+            SNet.LocalPlayer.Lookup = Steamworks.SteamUser.GetSteamID().m_SteamID;
         }
     }
 }

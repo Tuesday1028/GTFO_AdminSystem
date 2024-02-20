@@ -9,6 +9,7 @@ using System.Threading;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
+using TheArchive.Core.Localization;
 using TheArchive.Loader;
 using UnityEngine;
 
@@ -36,6 +37,7 @@ namespace Hikaria.AdminSystem.Features.Misc
             [FSDisplayName("大陀螺旋转速度")]
             public float SpinSpeed { get; set; } = 3.25f;
 
+            [Localized]
             public enum SpinMode
             {
                 Off,
@@ -206,13 +208,13 @@ namespace Hikaria.AdminSystem.Features.Misc
                         SendLocomotion(m_Player.Locomotion.m_currentStateEnum, m_Player.Position, vector.normalized, m_Player.Locomotion.VelFwdLocal, m_Player.Locomotion.VelRightLocal);
                         break;
                     case SpinbotSetting.SpinMode.BigSpin:
-                        if (!IsInWeaponFiring)
+                        if (WeaponAutoAim.WeaponAutoAimHandler.Current.HasTarget)
                         {
-                            SendLocomotion(m_Player.Locomotion.m_currentStateEnum, m_Player.Position, m_lookdir.normalized, m_Player.Locomotion.VelFwdLocal, m_Player.Locomotion.VelRightLocal);
+                            SendLocomotion(m_Player.Locomotion.m_currentStateEnum, m_Player.Position, WeaponAutoAim.WeaponAutoAimHandler.Current.AimTargetPos - m_Player.FPSCamera.Position, m_Player.Locomotion.VelFwdLocal, m_Player.Locomotion.VelRightLocal);
                         }
                         else
                         {
-                            SendLocomotion(m_Player.Locomotion.m_currentStateEnum, m_Player.Position, WeaponAutoAim.WeaponAutoAimHandler.Current.AimTargetPos - m_Player.FPSCamera.Position, m_Player.Locomotion.VelFwdLocal, m_Player.Locomotion.VelRightLocal);
+                            SendLocomotion(m_Player.Locomotion.m_currentStateEnum, m_Player.Position, m_lookdir.normalized, m_Player.Locomotion.VelFwdLocal, m_Player.Locomotion.VelRightLocal);
                         }
                         break;
                     default:
