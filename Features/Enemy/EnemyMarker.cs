@@ -124,7 +124,45 @@ namespace Hikaria.AdminSystem.Features.Enemy
                     {
                         try
                         {
-                            DoUpdateMarkers();
+                            if (Settings.EnableEnemyMarker)
+                            {
+                                if (player.CourseNode == null)
+                                {
+                                    continue;
+                                }
+                                foreach (var enemy in AIG_CourseGraph.GetReachableEnemiesInNodes(player.CourseNode, Settings.MaxDetectionNodeRange))
+                                {
+                                    if (MarkerLookup.ContainsKey(enemy.GlobalID))
+                                    {
+                                        continue;
+                                    }
+
+                                    GameObject markerAlign = enemy.ModelRef.m_markerTagAlign;
+                                    NavMarker marker = GuiManager.NavMarkerLayer.PlaceCustomMarker(NavMarkerOption.Title, markerAlign, "", 0, false);
+                                    marker.SetVisible(true);
+                                    marker.SetPinEnabled(true);
+                                    marker.m_titleSubObj.transform.localScale *= 2.0f;
+                                    MarkerLookup[enemy.GlobalID] = marker;
+
+                                    Coroutine coroutine = this.StartCoroutine(UpdateMarker(enemy, marker));
+                                    enemy.add_OnDeadCallback((Action)(() =>
+                                    {
+                                        MarkerLookup.Remove(enemy.GlobalID);
+                                        GuiManager.NavMarkerLayer.RemoveMarker(marker);
+                                    }));
+                                }
+                            }
+                            else if (!Settings.EnableEnemyMarker)
+                            {
+                                if (MarkerLookup.Count <= 0)
+                                    continue;
+
+                                foreach (var item in MarkerLookup)
+                                {
+                                    MarkerLookup.Remove(item.Key);
+                                    GuiManager.NavMarkerLayer.RemoveMarker(item.Value);
+                                }
+                            }
                         }
                         catch
                         {
@@ -132,50 +170,6 @@ namespace Hikaria.AdminSystem.Features.Enemy
                         }
                     }
                     yield return yielder;
-                }
-            }
-
-            [HideFromIl2Cpp]
-            private void DoUpdateMarkers()
-            {
-                if (Settings.EnableEnemyMarker)
-                {
-                    if (player.CourseNode == null)
-                    {
-                        return;
-                    }
-                    foreach (var enemy in AIG_CourseGraph.GetReachableEnemiesInNodes(player.CourseNode, Settings.MaxDetectionNodeRange))
-                    {
-                        if (MarkerLookup.ContainsKey(enemy.GlobalID))
-                        {
-                            continue;
-                        }
-
-                        GameObject markerAlign = enemy.ModelRef.m_markerTagAlign;
-                        NavMarker marker = GuiManager.NavMarkerLayer.PlaceCustomMarker(NavMarkerOption.Title, markerAlign, "", 0, false);
-                        marker.SetVisible(true);
-                        marker.SetPinEnabled(true);
-                        marker.m_titleSubObj.transform.localScale *= 2.0f;
-                        MarkerLookup[enemy.GlobalID] = marker;
-
-                        Coroutine coroutine = this.StartCoroutine(UpdateMarker(enemy, marker));
-                        enemy.add_OnDeadCallback((Action)(() =>
-                        {
-                            MarkerLookup.Remove(enemy.GlobalID);
-                            GuiManager.NavMarkerLayer.RemoveMarker(marker);
-                        }));
-                    }
-                }
-                else if (!Settings.EnableEnemyMarker)
-                {
-                    if (MarkerLookup.Count <= 0)
-                        return;
-
-                    foreach (var item in MarkerLookup)
-                    {
-                        MarkerLookup.Remove(item.Key);
-                        GuiManager.NavMarkerLayer.RemoveMarker(item.Value);
-                    }
                 }
             }
 

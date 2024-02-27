@@ -716,14 +716,8 @@ namespace Hikaria.AdminSystem.Features.Item
                 var smallPickupItems = UnityEngine.Object.FindObjectsOfType<GenericSmallPickupItem_Core>();
                 foreach (var smallPickupItem in smallPickupItems)
                 {
-                    var terminalItemName = smallPickupItem.m_terminalItem?.TerminalItemKey ?? string.Empty;
-                    var list = (smallPickupItem.m_terminalItemComp?.name ?? smallPickupItem.name).Replace('_', ' ').ToList();
-                    var parsedName = string.Empty;
-                    if (list.Count >= 2)
-                    {
-                        parsedName = $"{list[list.Count - 1]}_{list[list.Count - 2]}";
-                    }
-                    var name = string.IsNullOrEmpty(terminalItemName) ? parsedName : terminalItemName;
+                    var terminalItemName = smallPickupItem.m_terminalItem?.TerminalItemKey ?? smallPickupItem.PublicName;
+                    var name = string.IsNullOrEmpty(terminalItemName) ? smallPickupItem.ArchetypeName : terminalItemName;
                     var marker = Place(smallPickupItem, ItemType.SmallPickupItems);
                     marker.SetColor(ColorType.Objective);
                     marker.SetTitle(name);
