@@ -12,7 +12,6 @@ using SNetwork;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -46,7 +45,7 @@ namespace Hikaria.AdminSystem.Features.Item
         {
             public ItemMarkerSettings()
             {
-                ReloadItemMarker = new FButton("重载", "重载物品标记", () => { ItemMarker.LoadingItem(); });
+                ReloadItemMarker = new FButton("重载", "重载物品标记", () => { ItemMarkerHandler.Instance.StartCoroutine(ItemMarker.LoadingItem(true)); });
             }
 
             [FSDisplayName("启用物品标记")]
@@ -87,7 +86,7 @@ namespace Hikaria.AdminSystem.Features.Item
             {
                 if (CurrentGameState == (int)eGameStateName.InLevel)
                 {
-                    ItemMarker.LoadingItem(false);
+                    ItemMarkerHandler.Instance.StartCoroutine(ItemMarker.LoadingItem(false));
                 }
             });
 
@@ -1089,7 +1088,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     DevConsole.LogError("不在游戏中");
                     return;
                 }
-                LoadingItem(false);
+                LoadingItem(true);
             }
 
             public static Color GetUnityColor(ColorType markerColor)
