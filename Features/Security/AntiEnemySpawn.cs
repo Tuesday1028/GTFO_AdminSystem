@@ -4,6 +4,7 @@ using System;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
+using TheArchive.Core.Localization;
 using TheArchive.Features.Security;
 using TheArchive.Interfaces;
 using TheArchive.Utilities;
@@ -39,6 +40,7 @@ namespace Hikaria.AdminSystem.Features.Security
             [FSDescription("当玩家尝试刷怪时如何进行惩罚")]
             public PunishmentMode Punishment { get; set; } = PunishmentMode.Kick;
 
+            [Localized]
             public enum PunishmentMode
             {
                 NoneAndLog,
