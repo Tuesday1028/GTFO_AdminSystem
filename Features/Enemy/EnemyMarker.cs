@@ -5,7 +5,6 @@ using Hikaria.AdminSystem.Interfaces;
 using Hikaria.AdminSystem.Managers;
 using Hikaria.AdminSystem.Utilities;
 using Hikaria.DevConsoleLite;
-using Il2CppInterop.Runtime.Attributes;
 using Player;
 using SNetwork;
 using System;
@@ -114,7 +113,6 @@ namespace Hikaria.AdminSystem.Features.Enemy
                 this.StartCoroutine(UpdateMarkers());
             }
 
-            [HideFromIl2Cpp]
             private IEnumerator UpdateMarkers()
             {
                 var yielder = new WaitForSeconds(0.25f);
@@ -122,58 +120,56 @@ namespace Hikaria.AdminSystem.Features.Enemy
                 {
                     if (GameStateManager.CurrentStateName == eGameStateName.InLevel)
                     {
-                        try
+                        while (true)
                         {
-                            if (Settings.EnableEnemyMarker)
+                            try
                             {
-                                if (player.CourseNode == null)
+                                if (Settings.EnableEnemyMarker)
                                 {
-                                    continue;
-                                }
-                                foreach (var enemy in AIG_CourseGraph.GetReachableEnemiesInNodes(player.CourseNode, Settings.MaxDetectionNodeRange))
-                                {
-                                    if (MarkerLookup.ContainsKey(enemy.GlobalID))
+                                    if (player.CourseNode == null)
                                     {
-                                        continue;
+                                        break;
                                     }
-
-                                    GameObject markerAlign = enemy.ModelRef.m_markerTagAlign;
-                                    NavMarker marker = GuiManager.NavMarkerLayer.PlaceCustomMarker(NavMarkerOption.Title, markerAlign, "", 0, false);
-                                    marker.SetVisible(true);
-                                    marker.SetPinEnabled(true);
-                                    marker.m_titleSubObj.transform.localScale *= 2.0f;
-                                    MarkerLookup[enemy.GlobalID] = marker;
-
-                                    Coroutine coroutine = this.StartCoroutine(UpdateMarker(enemy, marker));
-                                    enemy.add_OnDeadCallback((Action)(() =>
+                                    foreach (var enemy in AIG_CourseGraph.GetReachableEnemiesInNodes(player.CourseNode, Settings.MaxDetectionNodeRange))
                                     {
-                                        MarkerLookup.Remove(enemy.GlobalID);
-                                        GuiManager.NavMarkerLayer.RemoveMarker(marker);
-                                    }));
-                                }
-                            }
-                            else if (!Settings.EnableEnemyMarker)
-                            {
-                                if (MarkerLookup.Count <= 0)
-                                    continue;
+                                        if (MarkerLookup.ContainsKey(enemy.GlobalID))
+                                        {
+                                            continue;
+                                        }
 
-                                foreach (var item in MarkerLookup)
+                                        GameObject markerAlign = enemy.ModelRef.m_markerTagAlign;
+                                        NavMarker marker = GuiManager.NavMarkerLayer.PlaceCustomMarker(NavMarkerOption.Title, markerAlign, string.Empty, 0, false);
+                                        marker.SetVisible(true);
+                                        marker.SetPinEnabled(true);
+                                        marker.m_titleSubObj.transform.localScale *= 2.0f;
+                                        MarkerLookup[enemy.GlobalID] = marker;
+
+                                        Coroutine coroutine = this.StartCoroutine(UpdateMarker(enemy, marker));
+                                        enemy.add_OnDeadCallback((Action)(() =>
+                                        {
+                                            MarkerLookup.Remove(enemy.GlobalID);
+                                            GuiManager.NavMarkerLayer.RemoveMarker(marker);
+                                        }));
+                                    }
+                                }
+                                else
                                 {
-                                    MarkerLookup.Remove(item.Key);
-                                    GuiManager.NavMarkerLayer.RemoveMarker(item.Value);
+                                    if (MarkerLookup.Count <= 0)
+                                        break;
+
+                                    DoClear();
                                 }
                             }
-                        }
-                        catch
-                        {
-
+                            catch
+                            {
+                            }
+                            break;
                         }
                     }
                     yield return yielder;
                 }
             }
 
-            [HideFromIl2Cpp]
             private IEnumerator UpdateMarker(EnemyAgent agent, NavMarker marker)
             {
                 var yielder = new WaitForSeconds(0.1f);

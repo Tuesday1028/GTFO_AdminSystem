@@ -1044,6 +1044,10 @@ namespace Hikaria.AdminSystem.Features.Item
             public static void SetVisible(bool active)
             {
                 MarkItems = active;
+                if (CurrentGameState != (int)eGameStateName.InLevel)
+                {
+                    return;
+                }
                 foreach (var marker in _FixedItemMarkers.Values)
                 {
                     marker.Marker.SetVisible(active);

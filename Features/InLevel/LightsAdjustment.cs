@@ -5,7 +5,7 @@ using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.FeaturesAPI.Components;
 using TheArchive.Core.FeaturesAPI.Settings;
 
-namespace Hikaria.AdminSystem.Features.Environment
+namespace Hikaria.AdminSystem.Features.InLevel
 {
     [EnableFeatureByDefault]
     [DisallowInGameToggle]

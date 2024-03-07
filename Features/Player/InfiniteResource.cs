@@ -289,7 +289,6 @@ namespace Hikaria.AdminSystem.Features.Player
                     return;
                 }
 
-                //获取SentryGun实例
                 SentryGunInstance core = __instance.m_core.Cast<SentryGunInstance>();
                 SNet_Player player = core.Owner.Owner;
                 if (!InfResourceLookup.TryGetValue(player.Lookup, out var entry) || !entry.InfResource)
@@ -315,7 +314,7 @@ namespace Hikaria.AdminSystem.Features.Player
                 {
                     return;
                 }
-                if (!SNet.TryGetPlayer(data.PlayerLookup, out SNet_Player player) || !PlayerBackpackManager.TryGetBackpack(player, out PlayerBackpack playerBackpack) || !InfResourceLookup.TryGetValue(player.Lookup, out var entry))
+                if (!SNet.TryGetPlayer(data.PlayerLookup, out var player) || !PlayerBackpackManager.TryGetBackpack(player, out var playerBackpack) || !InfResourceLookup.TryGetValue(player.Lookup, out var entry))
                 {
                     return;
                 }
@@ -378,6 +377,10 @@ namespace Hikaria.AdminSystem.Features.Player
             private static void Postfix(PlayerSync __instance, pInventoryStatus data)
             {
                 if (CurrentGameState != (int)eGameStateName.InLevel)
+                {
+                    return;
+                }
+                if (__instance.m_agent == null || __instance.m_agent.Owner == null)
                 {
                     return;
                 }

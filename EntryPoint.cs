@@ -4,7 +4,6 @@ using Hikaria.AdminSystem.Utilities;
 using System.Collections.Generic;
 using TheArchive;
 using TheArchive.Core;
-using TheArchive.Core.Attributes;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.Localization;
 

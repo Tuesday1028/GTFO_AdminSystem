@@ -27,7 +27,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         public class JoinLobbyFlashSettings
         {
             [FSDisplayName("进场特效")]
-            public bool EnableJoinLobbyFlash { get; set; }
+            public bool EnableJoinLobbyFlash { get; set; } = false;
         }
 
         public override void Init()

@@ -24,7 +24,7 @@ internal class PlayerScream : Feature, IOnPlayerEvent
     public class PlayerScreamSetting
     {
         [FSDisplayName("启用")]
-        public bool Enable { get; set; } = true;
+        public bool Enable { get; set; } = false;
         [FSDisplayName("EventID")]
         public uint eventID { get; set; } = 3184121378U;
     }

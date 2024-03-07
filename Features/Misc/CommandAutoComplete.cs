@@ -149,6 +149,10 @@ namespace Hikaria.AdminSystem.Features.Misc
                         input[1] = puzzle1.TerminalUplinkIP;
                         result = string.Join(' ', input);
                         return false;
+                    case TERM_Command.TryUnlockingTerminal:
+                        input[1] = terminal.m_password.ToUpperInvariant();
+                        result = string.Join(' ', input);
+                        return false;
                 }
                 break;
             }

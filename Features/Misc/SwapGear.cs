@@ -26,7 +26,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         public class SwapGearSettings
         {
             [FSDisplayName("游戏内更换装备")]
-            public bool EnableSwapGearInLevel { get; set; }
+            public bool EnableSwapGearInLevel { get; set; } = true;
         }
 
         public override void Init()

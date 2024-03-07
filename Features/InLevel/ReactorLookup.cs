@@ -1,7 +1,11 @@
 ﻿using Clonesoft.Json;
+using Hikaria.AdminSystem.Utilities;
+using Hikaria.DevConsoleLite;
 using LevelGeneration;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
+using System.Text;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -209,6 +213,28 @@ namespace Hikaria.AdminSystem.Features.WardenObjective
             {
                 ReactorsInLevel.Remove(__instance.m_serialNumber);
             }
+        }
+
+        public override void Init()
+        {
+            DevConsole.AddCommand(Command.Create<int>("ReactorGetCodes", "反应堆秘钥", "查询反应堆秘钥", Parameter.Create("ID", "反应堆编号"), ShowReactorCodes));
+        }
+
+        private static void ShowReactorCodes(int id)
+        {
+            if (!ReactorsInLevel.TryGetValue(id, out var reactor))
+            {
+                DevConsole.LogError($"不存在 REACTOR_{id}");
+                return;
+            }
+            var codes = reactor.GetOverrideCodes();
+            StringBuilder sb = new(200);
+            sb.AppendLine($"<color=orange>REACTOR_{id} 验证秘钥：</color>");
+            for (int i = 0; i < reactor.m_waveCountMax; i++)
+            {
+                sb.AppendLine($"{i + 1}. {codes[i]}");
+            }
+            DevConsole.Log(sb.ToString());
         }
     }
 }

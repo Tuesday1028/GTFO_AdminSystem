@@ -229,10 +229,12 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 {
                     return;
                 }
-                if (!IsWeaponOwner(__instance))
+                if (!IsWeaponOwner(__instance) || flag)
                 {
                     return;
                 }
+
+                flag = true;
 
                 //保存原始数值用于恢复
                 falloff = __instance.ArchetypeData.DamageFalloff;
@@ -279,7 +281,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 {
                     return;
                 }
-                if (!IsWeaponOwner(__instance))
+                if (!IsWeaponOwner(__instance) || !flag)
                 {
                     return;
                 }
@@ -290,8 +292,12 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 __instance.ArchetypeData.HipFireSpread = HipFireSpread;
                 __instance.ArchetypeData.ShotgunBulletSpread = ShotgunBulletSpread;
                 __instance.ArchetypeData.ShotgunConeSize = ShotgunConeSize;
+
+                flag = false;
             }
         }
+
+        private static bool flag = false;
 
         private static bool IsWeaponOwner(BulletWeapon bulletWeapon)
         {
@@ -333,7 +339,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                             Shader shader = meshRenderer.material.shader;
                             for (int j = 0; j < shader.GetPropertyCount(); j++)
                             {
-                                string propName = shader.GetPropertyName(j).ToLower(System.Globalization.CultureInfo.CurrentCulture);
+                                string propName = shader.GetPropertyName(j).ToLowerInvariant();
                                 var type = shader.GetPropertyType(j);
                                 int nameId = shader.GetPropertyNameId(j);
                                 foreach (var name in ClearSightShaderProps)

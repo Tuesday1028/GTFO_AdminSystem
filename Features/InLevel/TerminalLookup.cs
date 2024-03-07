@@ -499,9 +499,9 @@ namespace Hikaria.AdminSystem.Features.InLevel
                     if (!TerminalLogs.TryGetValue(__instance.m_serialNumber, out Dictionary<string, TerminalLogFileData> value))
                     {
                         Dictionary<string, TerminalLogFileData> fileName2DataDict = new()
-                    {
-                        { data.FileName, data }
-                    };
+                        {
+                            { data.FileName, data }
+                        };
                         value = fileName2DataDict;
                         TerminalLogs.Add(__instance.m_serialNumber, value);
                         return;
@@ -518,10 +518,6 @@ namespace Hikaria.AdminSystem.Features.InLevel
         {
             private static void Postfix(LG_ComputerTerminal __instance)
             {
-                if (!TerminalsInLevel.ContainsKey(__instance.m_serialNumber))
-                {
-                    TerminalsInLevel.Add(__instance.m_serialNumber, __instance);
-                }
                 TerminalsInLevel[__instance.m_serialNumber] = __instance;
             }
         }
@@ -540,12 +536,13 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         private static void GetTerminalPassword(int id)
         {
-            if (!TerminalsInLevel.TryGetValue(id, out var terminal))
+            if (!TerminalsInLevel.ContainsKey(id))
             {
-                DevConsole.LogError($"不存在TERMINAL_{id}");
+                DevConsole.LogError($"不存在 TERMINAL_{id}");
                 return;
             }
-            if (terminal.m_password.IsNullOrWhiteSpace())
+            var terminal = TerminalsInLevel[id];
+            if (string.IsNullOrEmpty(terminal.m_password))
             {
                 DevConsole.LogError($"TERMINAL_{id}没有密码");
                 return;
@@ -560,7 +557,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
                 DevConsole.LogError($"TERMINAL_{id} 不需要上行链路秘钥");
                 return;
             }
-            DevConsole.Log($"<color=orange>TERMINAL_{id} UplinkCodes:</color>");
+            DevConsole.Log($"<color=orange>TERMINAL_{id} 上行验证秘钥：</color>");
             for (int i = 0; i < TerminalCodePuzzle[id].Count; i++)
             {
                 DevConsole.Log($"<color=orange>{i + 1}: {TerminalCodePuzzle[id][i].CorrectCode}</color>");

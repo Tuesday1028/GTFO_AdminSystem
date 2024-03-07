@@ -78,6 +78,7 @@ namespace Hikaria.AdminSystem.Features.Misc
             DevConsole.AddCommand(Command.Create<int>("ListEnemyInZone", "统计地区中敌人数量", "统计地区中敌人数量", Parameter.Create("ZoneID", "地区ID"), ListEnemiesInZone));
             DevConsole.AddCommand(Command.Create("ListEnemyData", "列出敌人数据", "列出敌人数据", ListEnemyData));
 
+            //好像没什么实际用处
             DevConsole.AddCommand(Command.Create<int>("ChangeLookup", "修改唯一识别码", "修改唯一识别码", Parameter.Create("Slot", "槽位, 1-4"), ChangeLookup));
             DevConsole.AddCommand(Command.Create("RestoreLookup", "恢复唯一识别码", "恢复唯一识别码", RestoreLookup));
         }
