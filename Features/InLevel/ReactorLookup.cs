@@ -236,5 +236,20 @@ namespace Hikaria.AdminSystem.Features.WardenObjective
             }
             DevConsole.Log(sb.ToString());
         }
+
+        private static void ListReactorsInLevel()
+        {
+            if (!ReactorsInLevel.Any())
+            {
+                DevConsole.LogError($"不存在 REACTOR");
+                return;
+            }
+            StringBuilder sb = new(200);
+            foreach (var reactor in ReactorsInLevel.Values)
+            {
+                sb.AppendLine($"<color=orange>REACTOR_{reactor.m_serialNumber} 状态：{reactor.m_currentState.status}</color>");
+            }
+            DevConsole.Log(sb.ToString());
+        }
     }
 }
