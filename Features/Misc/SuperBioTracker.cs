@@ -157,4 +157,15 @@ internal class SuperBioTracker : Feature
             stepMax = Settings.IgnoreMaxTags ? int.MaxValue : stepMax;
         }
     }
+
+    [ArchivePatch(typeof(ToolSyncManager), nameof(ToolSyncManager.WantToTagEnemy))]
+    private static class ToolSyncManager__WantToTagEnemy__Patch
+    {
+        private static bool Prefix()
+        {
+            if (!EnemyScanner__UpdateTagProgress__Patch.AllowBotTag)
+                return false;
+            return true;
+        }
+    }
 }
