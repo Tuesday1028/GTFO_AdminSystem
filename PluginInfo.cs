@@ -6,9 +6,9 @@
 
         public const string NAME = "AdminSystem";
 
-        public const string VERSION = "3.0.8";
+        public const string VERSION = "3.0.9";
 
-        public const int INTERNAL_VERSION = 10464;
+        public const int INTERNAL_VERSION = 10465;
 
         public const string AUTHOR = "Tuesday";
     }

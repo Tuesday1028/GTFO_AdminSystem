@@ -1,7 +1,11 @@
-﻿using Gear;
+﻿using GameData;
+using Gear;
 using Hikaria.DevConsoleLite;
+using Il2CppInterop.Runtime.InteropTypes;
 using Player;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -165,6 +169,14 @@ namespace Hikaria.AdminSystem.Features.Weapon
             BulletWeaponRayMask = LayerManager.MASK_BULLETWEAPON_RAY;
         }
 
+        public override void OnGameStateChanged(int state)
+        {
+            if (state == (int)eGameStateName.Lobby)
+            {
+
+            }
+        }
+
         [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.Fire))]
         private class BulletWeapon__Fire__Patch
         {
@@ -211,15 +223,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
             }
         }
 
-        //[ArchivePatch(typeof(ItemEquippable), nameof(ItemEquippable.OnWield))]
-        //private class ItemEquippable__OnWield__Patch
-        //{
-        //    private static void Postfix(ItemEquippable __instance)
-        //    {
-        //        SetupClearSight(__instance.gameObject, Settings.ClearSight);
-        //    }
-        //}
-
         [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.OnWield))]
         private class BulletWeapon__OnWield__Patch
         {
@@ -229,21 +232,19 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 {
                     return;
                 }
-                if (!IsWeaponOwner(__instance) || flag)
+                if (!IsWeaponOwner(__instance))
                 {
                     return;
                 }
 
-                flag = true;
-
-                //保存原始数值用于恢复
-                falloff = __instance.ArchetypeData.DamageFalloff;
-                AimSpread = __instance.ArchetypeData.AimSpread;
-                HipFireSpread = __instance.ArchetypeData.HipFireSpread;
-                ShotgunConeSize = __instance.ArchetypeData.ShotgunConeSize;
-                ShotgunBulletSpread = __instance.ArchetypeData.ShotgunBulletSpread;
-                isPiercingBullets = __instance.ArchetypeData.PiercingBullets;
-                PiercingDamageCountLimit = __instance.ArchetypeData.PiercingDamageCountLimit;
+                if (!WeaponInstanceArchetypeDataLookup.TryGetValue(__instance.ArchetypeData.persistentID, out var originData))
+                {
+                    WeaponInstanceArchetypeDataLookup.Add(__instance.ArchetypeData.persistentID, CopyProperties(__instance.ArchetypeData, new()));
+                }
+                else
+                {
+                    __instance.ArchetypeData = originData;
+                }
 
                 //无伤害衰减
                 if (Settings.NoDamageFalloff)
@@ -271,33 +272,26 @@ namespace Hikaria.AdminSystem.Features.Weapon
             }
         }
 
-
-        [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.OnUnWield))]
-        private class BulletWeapon__OnUnWield__Patch
+        private static T CopyProperties<T>(T source, T target) where T : ArchetypeDataBlock
         {
-            static void Prefix(ref BulletWeapon __instance)
+            PropertyInfo[] properties = source.GetType().GetProperties();
+            for (int i = 0; i < properties.Length; i++)
             {
-                if (GameStateManager.Current.m_currentStateName != eGameStateName.InLevel)
+                PropertyInfo sourceProp = properties[i];
+                if (target.GetType().GetProperties().Any((PropertyInfo targetProp) => targetProp.Name == sourceProp.Name && targetProp.GetType() == sourceProp.GetType() && targetProp.CanWrite))
                 {
-                    return;
+                    object value = sourceProp.GetValue(source);
+                    PropertyInfo property = target.GetType().GetProperty(sourceProp.Name);
+                    if (property.PropertyType != typeof(Il2CppObjectBase) || property.PropertyType != typeof(UnityEngine.Object))
+                    {
+                        property.SetValue(target, value);
+                    }
                 }
-                if (!IsWeaponOwner(__instance) || !flag)
-                {
-                    return;
-                }
-                __instance.ArchetypeData.PiercingBullets = isPiercingBullets;
-                __instance.ArchetypeData.PiercingDamageCountLimit = PiercingDamageCountLimit;
-                __instance.ArchetypeData.DamageFalloff = falloff;
-                __instance.ArchetypeData.AimSpread = AimSpread;
-                __instance.ArchetypeData.HipFireSpread = HipFireSpread;
-                __instance.ArchetypeData.ShotgunBulletSpread = ShotgunBulletSpread;
-                __instance.ArchetypeData.ShotgunConeSize = ShotgunConeSize;
-
-                flag = false;
             }
+            return target;
         }
 
-        private static bool flag = false;
+        private static Dictionary<uint, ArchetypeDataBlock> WeaponInstanceArchetypeDataLookup = new();
 
         private static bool IsWeaponOwner(BulletWeapon bulletWeapon)
         {
@@ -365,19 +359,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
             }
         }
 
-
-        private static bool isPiercingBullets;
-
-        private static Vector2 falloff;
-
-        private static float AimSpread;
-
-        private static float HipFireSpread;
-
-        private static int ShotgunConeSize;
-
-        private static int ShotgunBulletSpread;
-
         private static Vector2 FalloffBlocker = new(1000f, 1001f);
 
         private static int EnemyDamagableLayerMask;
@@ -385,7 +366,5 @@ namespace Hikaria.AdminSystem.Features.Weapon
         private static int BulletPiercingPassMask;
 
         private static int BulletWeaponRayMask;
-
-        private static int PiercingDamageCountLimit;
     }
 }
