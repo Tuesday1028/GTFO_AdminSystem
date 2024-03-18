@@ -1,4 +1,6 @@
-﻿using AK;
+﻿using Agents;
+using AK;
+using Enemies;
 using Gear;
 using Player;
 using TheArchive.Core.Attributes;
@@ -45,11 +47,15 @@ internal class SuperBioTracker : Feature
 
         public static bool AllowBotTag { get; private set; }
 
+        public static bool AllowAgentModePatch { get; private set; }
+
         private static bool TryGetTaggableEnemies(EnemyScanner __instance)
         {
             AllowBotTag = false;
+            AllowAgentModePatch = true;
             __instance.m_taggableEnemies = new();
             EnemyScanner.BotTag(__instance.Owner.CourseNode, __instance.Owner.Position, __instance.m_taggableEnemies);
+            AllowAgentModePatch = false;
             AllowBotTag = true;
             return __instance.m_taggableEnemies.Count > 0;
         }
@@ -94,7 +100,9 @@ internal class SuperBioTracker : Feature
                     __instance.Sound.Post(EVENTS.BIOTRACKER_TAGGING_CHARGE_FINISHED, true);
                     if (TryGetTaggableEnemies(__instance))
                     {
+                        AllowAgentModePatch = true;
                         EnemyScanner.BotTag(__instance.Owner.CourseNode, __instance.Owner.Position, __instance.m_taggableEnemies);
+                        AllowAgentModePatch = false;
                         if (__instance.m_enemiesDetected.Count > 1)
                         {
                             PlayerDialogManager.WantToStartDialog(185U, __instance.Owner);
@@ -166,6 +174,16 @@ internal class SuperBioTracker : Feature
             if (!EnemyScanner__UpdateTagProgress__Patch.AllowBotTag)
                 return false;
             return true;
+        }
+    }
+
+    [ArchivePatch(typeof(AgentAI), nameof(AgentAI.Mode), null, ArchivePatch.PatchMethodType.Getter)]
+    private static class AgentAI__get_Mode__Patch
+    {
+        private static void Postfix(AgentAI __instance, ref AgentMode __result)
+        {
+            if (EnemyScanner__UpdateTagProgress__Patch.AllowAgentModePatch && (__instance.TryCast<EnemyAI>()?.m_enemyAgent?.IsScout ?? false))
+                __result = AgentMode.Scout;
         }
     }
 }
