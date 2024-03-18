@@ -1,40 +1,138 @@
-﻿using Gear;
+﻿using AK;
+using Gear;
+using Player;
 using TheArchive.Core.Attributes;
+using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
+using UnityEngine;
 
 namespace Hikaria.AdminSystem.Features.Misc;
 
+[EnableFeatureByDefault]
+[DisallowInGameToggle]
 internal class SuperBioTracker : Feature
 {
     public override string Name => "超级生物扫描仪";
 
     public override FeatureGroup Group => EntryPoint.Groups.Misc;
 
-    [ArchivePatch(typeof(EnemyScanner), nameof(EnemyScanner.RefreshNodeEnemyList))]
-    private static class EnemyScanner__RefreshNodeEnemyList__Patch
+    [FeatureConfig]
+    public static SuperBioTrackerSetting Settings { get; set; }
+
+    public class SuperBioTrackerSetting
     {
-        private static bool Prefix(EnemyScanner __instance)
+        [FSDisplayName("使用机器人扫描")]
+        public bool UseBotTag { get; set; }
+        [FSDisplayName("忽略单次标记上限")]
+        public bool IgnoreMaxTags { get; set; }
+    }
+
+    [ArchivePatch(typeof(EnemyScanner), nameof(EnemyScanner.UpdateTagProgress))]
+    private static class EnemyScanner__UpdateTagProgress__Patch
+    {
+        private static bool Prefix(EnemyScanner __instance, ref int maxTags)
         {
             if (!__instance.Owner.IsLocallyOwned)
                 return true;
-            __instance.RefreshUpdateID();
-            if (__instance.Owner.CourseNode != null)
+            maxTags = Settings.IgnoreMaxTags ? int.MaxValue : maxTags;
+            if (Settings.UseBotTag)
             {
-                EnemyScanner.BotGetScanResult(__instance.Owner.CourseNode, __instance.Owner.Position, __instance.m_enemiesInNodes);
-                __instance.m_nodeListStepsLeft = __instance.m_enemiesInNodes.Count;
+                UpdateTagProgress(__instance, maxTags);
+                return false;
             }
-            __instance.m_nodeListIndex = 0;
-            return false;
+            return true;
         }
-    }
 
-    [ArchivePatch(typeof(EnemyScannerGraphics), nameof(EnemyScannerGraphics.IsDetected))]
-    private static class EnemyScannerGraphics__IsDetected__Patch
-    {
-        private static bool Prefix(ref bool __result)
+        public static bool AllowBotTag { get; private set; }
+
+        private static bool TryGetTaggableEnemies(EnemyScanner __instance)
         {
-            __result = true;
-            return false;
+            AllowBotTag = false;
+            __instance.m_taggableEnemies = new();
+            EnemyScanner.BotTag(__instance.Owner.CourseNode, __instance.Owner.Position, __instance.m_taggableEnemies);
+            AllowBotTag = true;
+            return __instance.m_taggableEnemies.Count > 0;
+        }
+
+        private static void UpdateTagProgress(EnemyScanner __instance, int maxTags)
+        {
+            __instance.m_lastTagging = __instance.m_tagging;
+            __instance.m_lastRecharging = __instance.m_recharging;
+            if (__instance.m_showingNoTargetsTimer > 0f && Clock.Time > __instance.m_showingNoTargetsTimer)
+            {
+                __instance.m_screen.SetNoTargetsText("");
+                __instance.m_showingNoTargetsTimer = -1f;
+            }
+            if ((!__instance.m_recharging && !__instance.m_tagging && __instance.FireButtonPressed) || (__instance.m_tagging && __instance.FireButton))
+            {
+                if (!TryGetTaggableEnemies(__instance))
+                {
+                    if (__instance.m_showingNoTargetsTimer <= 0f)
+                    {
+                        __instance.m_screen.SetNoTargetsText("NO MOVING TARGETS FOUND");
+                        __instance.m_showingNoTargetsTimer = Clock.Time + 1f;
+                        __instance.Sound.Post(EVENTS.BIOTRACKER_NO_MOVING_TARGET_FOUND, true);
+                        return;
+                    }
+                }
+                else
+                {
+                    if (!__instance.m_tagging)
+                    {
+                        __instance.m_tagStartTime = Clock.Time;
+                        __instance.Sound.Post(EVENTS.BIOTRACKER_TAGGING_CHARGE_LOOP, true);
+                        __instance.m_screen.SetStatusText("Tagging..");
+                        __instance.m_tagging = true;
+                        __instance.m_recharging = false;
+                        return;
+                    }
+                    if (Clock.Time < __instance.m_tagStartTime + EnemyScanner.TagDuration)
+                    {
+                        __instance.m_progressBar.SetProgress((Clock.Time - __instance.m_tagStartTime) / EnemyScanner.TagDuration);
+                        return;
+                    }
+                    __instance.Sound.Post(EVENTS.BIOTRACKER_TAGGING_CHARGE_FINISHED, true);
+                    if (TryGetTaggableEnemies(__instance))
+                    {
+                        EnemyScanner.BotTag(__instance.Owner.CourseNode, __instance.Owner.Position, __instance.m_taggableEnemies);
+                        if (__instance.m_enemiesDetected.Count > 1)
+                        {
+                            PlayerDialogManager.WantToStartDialog(185U, __instance.Owner);
+                        }
+                    }
+                    __instance.m_screen.SetGuixColor(Color.red);
+                    __instance.m_screen.SetStatusText("Recharging..");
+                    __instance.m_tagging = false;
+                    __instance.m_recharging = true;
+                    __instance.m_rechargeStartTime = Clock.Time;
+                    return;
+                }
+            }
+            else if (__instance.m_recharging)
+            {
+                float num = AgentModifierManager.ApplyModifier(__instance.Owner, AgentModifier.ScannerRechargeSpeed, __instance.m_rechargeDuration);
+                if (Clock.Time < __instance.m_rechargeStartTime + num)
+                {
+                    float num2 = 1f - (Clock.Time - __instance.m_tagStartTime) / num;
+                    __instance.m_tagging = false;
+                    __instance.m_progressBar.SetProgress(num2);
+                    return;
+                }
+                __instance.m_recharging = false;
+                __instance.Sound.Post(EVENTS.BIOTRACKER_RECHARGED, true);
+                __instance.m_screen.ResetGuixColor();
+                __instance.m_screen.SetStatusText("Ready to tag");
+                return;
+            }
+            else if (__instance.m_progressBar.Progress > 0f)
+            {
+                __instance.m_progressBar.SetProgress(__instance.m_progressBar.Progress - Clock.Delta * 3f);
+                if (__instance.m_tagging)
+                {
+                    __instance.Sound.Post(EVENTS.BIOTRACKER_TAGGING_CHARGE_FINISHED, true);
+                }
+                __instance.m_tagging = false;
+            }
         }
     }
 
@@ -45,18 +143,7 @@ internal class SuperBioTracker : Feature
         {
             if (!__instance.Owner.IsLocallyOwned)
                 return;
-            stepMax = int.MaxValue;
-        }
-    }
-
-    [ArchivePatch(typeof(EnemyScanner), nameof(EnemyScanner.UpdateTagProgress))]
-    private static class EnemyScanner__UpdateTagProgress__Patch
-    {
-        private static void Prefix(EnemyScanner __instance, ref int maxTags)
-        {
-            if (!__instance.Owner.IsLocallyOwned)
-                return;
-            maxTags = int.MaxValue;
+            stepMax = Settings.IgnoreMaxTags ? int.MaxValue : stepMax;
         }
     }
 
@@ -67,7 +154,7 @@ internal class SuperBioTracker : Feature
         {
             if (!__instance.Owner.IsLocallyOwned)
                 return;
-            stepMax = int.MaxValue;
+            stepMax = Settings.IgnoreMaxTags ? int.MaxValue : stepMax;
         }
     }
 }
