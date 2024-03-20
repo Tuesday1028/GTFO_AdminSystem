@@ -5,7 +5,6 @@ using Gear;
 using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Features.Player;
 using Hikaria.AdminSystem.Managers;
-using Hikaria.AdminSystem.Utilities;
 using Hikaria.DevConsoleLite;
 using Player;
 using SNetwork;
@@ -441,7 +440,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
                 if (data.IsImmortal)
                 {
-                    if (OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var entry) && entry.EnableOneShotKill)
+                    if (OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var tentry) && tentry.EnableOneShotKill)
                     {
                         foreach (var index in data.Armorspots)
                         {
@@ -484,14 +483,23 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 {
                     foreach (var index in data.Armorspots)
                     {
-                        if (index.Value >= Settings.ArmorLimbDamageMultiThreshold)
+                        Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
+                        if (!limb.IsDestroyed && m_Owner.CanFireHitObject(limb.gameObject))
                         {
-                            Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
-                            if (!limb.IsDestroyed && m_Owner.CanFireHitObject(limb.gameObject))
-                            {
-                                m_TargetLimb = limb;
-                                return;
-                            }
+                            m_TargetLimb = limb;
+                            return;
+                        }
+                    }
+                }
+                if (data.HasRealArmorSpot && OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var entry) && entry.EnableOneShotKill)
+                {
+                    foreach (var index in data.RealArmorSpots)
+                    {
+                        Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
+                        if (!limb.IsDestroyed && m_Owner.CanFireHitObject(limb.gameObject))
+                        {
+                            m_TargetLimb = limb;
+                            return;
                         }
                     }
                 }

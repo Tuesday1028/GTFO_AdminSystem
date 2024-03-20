@@ -42,7 +42,10 @@ namespace Hikaria.AdminSystem.Managers
                 switch (limb.m_type)
                 {
                     case eLimbDamageType.Armor:
-                        data.Armorspots.Add(limb.m_limbID, limb.m_armorDamageMulti);
+                        if (limb.m_armorDamageMulti < ArmorMultiThreshold)
+                            data.RealArmorSpots.Add(limb.m_limbID, limb.m_armorDamageMulti);
+                        else
+                            data.Armorspots.Add(limb.m_limbID, limb.m_armorDamageMulti);
                         break;
                     case eLimbDamageType.Weakspot:
                         data.Weakspots.Add(limb.m_limbID, limb.m_weakspotDamageMulti);
@@ -52,9 +55,9 @@ namespace Hikaria.AdminSystem.Managers
                         break;
                 }
             }
-            data.Armorspots = data.Armorspots.OrderByDescending(p => p.Value).ToDictionary(p=>p.Key, p=> p.Value);
-            data.Weakspots = data.Weakspots.OrderByDescending(p => p.Value).ToDictionary(p=>p.Key, p=> p.Value);
-            data.IsImmortal = data.Armorspots.Count == enemy.Damage.DamageLimbs.Count && !data.Armorspots.Any(p => p.Value > ArmorMultiThreshold);
+            data.Armorspots = data.Armorspots.OrderByDescending(p => p.Value).ToDictionary(p => p.Key, p => p.Value);
+            data.Weakspots = data.Weakspots.OrderByDescending(p => p.Value).ToDictionary(p => p.Key, p => p.Value);
+            data.IsImmortal = data.RealArmorSpots.Count == enemy.Damage.DamageLimbs.Count;
             EnemyDamageDataLookup.Add(enemy.EnemyDataID, data);
             return data;
         }
@@ -73,6 +76,7 @@ namespace Hikaria.AdminSystem.Managers
                 Weakspots = new();
                 Normalspots = new();
                 Armorspots = new();
+                RealArmorSpots = new();
             }
 
             public uint Id { get; set; }
@@ -80,16 +84,17 @@ namespace Hikaria.AdminSystem.Managers
             public bool IsImmortal { get; set; }
 
             public Dictionary<int, float> Weakspots { get; set; }
-
             public Dictionary<int, float> Normalspots { get; set; }
-
             public Dictionary<int, float> Armorspots { get; set; }
+            public Dictionary<int, float> RealArmorSpots { get; set; }
 
             public bool HasWeakSpot => Weakspots.Count > 0;
 
             public bool HasNormalSpot => Normalspots.Count > 0;
 
             public bool HasArmorSpot => Armorspots.Count > 0;
+
+            public bool HasRealArmorSpot => RealArmorSpots.Count > 0;
         }
     }
 }

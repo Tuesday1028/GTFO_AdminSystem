@@ -209,9 +209,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
                     {
                         color = Color.red;
                     }
-                    string name = TranslateManager.EnemyName(agent.EnemyDataID);
-                    name = name == "未知" ? $"ID: {agent.EnemyDataID}" : name;
-                    marker.SetTitle($"<color=#FFFFFF><b>敌人: {name}\nHP: {agent.Damage.Health:F2}\n状态: <sprite=0 color=#{ColorExt.ToHex(color)}>\n距离: {distance:F2}</b></color>");
+                    marker.SetTitle($"<color=#FFFFFF><b>敌人: {TranslateManager.EnemyName(agent.EnemyDataID)}\nHP: {agent.Damage.Health:F2}\n状态: <sprite=0 color=#{ColorExt.ToHex(color)}>\n距离: {distance:F2}</b></color>");
                     yield return yielder;
                 }
             }

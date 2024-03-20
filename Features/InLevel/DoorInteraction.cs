@@ -2,14 +2,16 @@
 using Hikaria.DevConsoleLite;
 using LevelGeneration;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.FeaturesAPI.Components;
 using TheArchive.Core.FeaturesAPI.Settings;
+using TheArchive.Core.Localization;
 
-namespace Hikaria.AdminSystem.Features.Door
+namespace Hikaria.AdminSystem.Features.InLevel
 {
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
@@ -48,6 +50,7 @@ namespace Hikaria.AdminSystem.Features.Door
             [FSDisplayName("操作")]
             public FButton AttemptInteraction { get; set; } = new FButton("操作", "操作门");
 
+            [Localized]
             public enum eDoorInteractionType
             {
                 Open = 0,
@@ -64,6 +67,7 @@ namespace Hikaria.AdminSystem.Features.Door
                 //Approach = 11
             }
 
+            [Localized]
             public enum eLG_DoorType
             {
                 Weak = 1,

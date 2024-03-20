@@ -1,7 +1,9 @@
 ﻿using Clonesoft.Json;
+using Clonesoft.Json.Linq;
 using Hikaria.AdminSystem.Utilities;
 using Hikaria.DevConsoleLite;
 using LevelGeneration;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -20,6 +22,11 @@ namespace Hikaria.AdminSystem.Features.WardenObjective
         public override string Name => "反应堆";
 
         public override FeatureGroup Group => EntryPoint.Groups.InLevel;
+
+        public override Type[] LocalizationExternalTypes => new Type[]
+        {
+            typeof(eReactorInteraction), typeof(eReactorStatus)
+        };
 
         public static Dictionary<int, LG_WardenObjective_Reactor> ReactorsInLevel { get; set; } = new();
 
@@ -218,6 +225,7 @@ namespace Hikaria.AdminSystem.Features.WardenObjective
         public override void Init()
         {
             DevConsole.AddCommand(Command.Create<int>("ReactorGetCodes", "反应堆秘钥", "查询反应堆秘钥", Parameter.Create("ID", "反应堆编号"), ShowReactorCodes));
+            DevConsole.AddCommand(Command.Create<int, string, string>("ReactorInteraction", "操作反应堆", "操作反应堆", Parameter.Create("ID", "反应堆编号"), Parameter.Create("State", "序列, Startup 或 Shutdown"), Parameter.Create("Interaction", "操作, Init, Verify 或 Finish"), ReactorInteraction));
         }
 
         private static void ShowReactorCodes(int id)
@@ -237,19 +245,55 @@ namespace Hikaria.AdminSystem.Features.WardenObjective
             DevConsole.Log(sb.ToString());
         }
 
-        private static void ListReactorsInLevel()
+        private static void ReactorInteraction(int id, string state, string interaction)
         {
-            if (!ReactorsInLevel.Any())
+            if (!ReactorsInLevel.TryGetValue(id, out var reactor))
             {
-                DevConsole.LogError($"不存在 REACTOR");
+                DevConsole.LogError($"不存在 REACTOR_{id}");
                 return;
             }
-            StringBuilder sb = new(200);
-            foreach (var reactor in ReactorsInLevel.Values)
+            state = state.ToUpperInvariant();
+            interaction = interaction.ToUpperInvariant();
+
+            switch (state)
             {
-                sb.AppendLine($"<color=orange>REACTOR_{reactor.m_serialNumber} 状态：{reactor.m_currentState.status}</color>");
+                case "STARTUP":
+                    switch (interaction)
+                    {
+                        case "INIT":
+                            AttemptInteraction(id, eReactorInteraction.Initiate_startup);
+                            DevConsole.LogSuccess($"执行REACTOR_{id}启动序列");
+                            return;
+                        case "VERIFY":
+                            AttemptInteraction(id, eReactorInteraction.Verify_startup);
+                            DevConsole.LogSuccess($"验证REACTOR_{id}启动序列");
+                            return;
+                        case "FINISH":
+                            AttemptInteraction(id, eReactorInteraction.Finish_startup);
+                            DevConsole.LogSuccess($"完成REACTOR_{id}启动序列");
+                            return;
+                    }
+                    break;
+                case "SHUTDOWN":
+                    switch (interaction)
+                    {
+                        case "INIT":
+                            AttemptInteraction(id, eReactorInteraction.Initiate_shutdown);
+                            DevConsole.LogSuccess($"执行REACTOR_{id}关闭序列");
+                            return;
+                        case "VERIFY":
+                            AttemptInteraction(id, eReactorInteraction.Verify_shutdown);
+                            DevConsole.LogSuccess($"验证REACTOR_{id}关闭序列");
+                            return;
+                        case "FINISH":
+                            AttemptInteraction(id, eReactorInteraction.Finish_shutdown);
+                            DevConsole.LogSuccess($"完成REACTOR_{id}关闭序列");
+                            return;
+                    }
+                    break;
+
             }
-            DevConsole.Log(sb.ToString());
+            DevConsole.LogError("输入有误");
         }
     }
 }

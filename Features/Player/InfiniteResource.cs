@@ -314,7 +314,7 @@ namespace Hikaria.AdminSystem.Features.Player
                 {
                     return;
                 }
-                if (!SNet.TryGetPlayer(data.PlayerLookup, out var player) || !PlayerBackpackManager.TryGetBackpack(player, out var playerBackpack) || !InfResourceLookup.TryGetValue(player.Lookup, out var entry))
+                if (!SNet.Core.TryGetPlayer(data.PlayerLookup, out var player) || !PlayerBackpackManager.TryGetBackpack(player, out var playerBackpack) || !InfResourceLookup.TryGetValue(player.Lookup, out var entry))
                 {
                     return;
                 }
@@ -342,15 +342,15 @@ namespace Hikaria.AdminSystem.Features.Player
                 {
                     return;
                 }
-                if (!SNet.TryGetPlayer(data.PlayerLookup, out SNet_Player player) || !PlayerBackpackManager.TryGetBackpack(player, out _))
+                if (!SNet.Core.TryGetPlayer(data.PlayerLookup, out SNet_Player player) || !PlayerBackpackManager.TryGetBackpack(player, out _) || !InfResourceLookup.TryGetValue(player.Lookup, out var entry))
                 {
                     return;
                 }
-                if (InfResourceLookup[player.Lookup].InfResource || InfResourceLookup[player.Lookup].NoResource)
+                if (entry.InfResource || entry.NoResource)
                 {
                     PlayerBackpackManager.Current.m_ammoStoragePacket.Send(data, SNet_ChannelType.GameOrderCritical);
                 }
-                if (InfResourceLookup[player.Lookup].ForceDeploy)
+                if (entry.ForceDeploy)
                 {
                     pInventoryItemStatus status = new();
                     status.sourcePlayer.SetPlayer(player);

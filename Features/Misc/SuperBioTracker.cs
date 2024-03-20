@@ -29,6 +29,13 @@ internal class SuperBioTracker : Feature
         public bool IgnoreMaxTags { get; set; }
     }
 
+    public override void Init()
+    {
+        Instance = this;
+    }
+
+    public static SuperBioTracker Instance { get; private set; }
+
     [ArchivePatch(typeof(EnemyScanner), nameof(EnemyScanner.UpdateTagProgress))]
     private static class EnemyScanner__UpdateTagProgress__Patch
     {
@@ -75,7 +82,7 @@ internal class SuperBioTracker : Feature
                 {
                     if (__instance.m_showingNoTargetsTimer <= 0f)
                     {
-                        __instance.m_screen.SetNoTargetsText("NO MOVING TARGETS FOUND");
+                        __instance.m_screen.SetNoTargetsText(Instance.Localization.Get(1));
                         __instance.m_showingNoTargetsTimer = Clock.Time + 1f;
                         __instance.Sound.Post(EVENTS.BIOTRACKER_NO_MOVING_TARGET_FOUND, true);
                         return;
@@ -87,7 +94,7 @@ internal class SuperBioTracker : Feature
                     {
                         __instance.m_tagStartTime = Clock.Time;
                         __instance.Sound.Post(EVENTS.BIOTRACKER_TAGGING_CHARGE_LOOP, true);
-                        __instance.m_screen.SetStatusText("Tagging..");
+                        __instance.m_screen.SetStatusText(Instance.Localization.Get(2));
                         __instance.m_tagging = true;
                         __instance.m_recharging = false;
                         return;
@@ -109,7 +116,7 @@ internal class SuperBioTracker : Feature
                         }
                     }
                     __instance.m_screen.SetGuixColor(Color.red);
-                    __instance.m_screen.SetStatusText("Recharging..");
+                    __instance.m_screen.SetStatusText(Instance.Localization.Get(3));
                     __instance.m_tagging = false;
                     __instance.m_recharging = true;
                     __instance.m_rechargeStartTime = Clock.Time;
@@ -129,7 +136,7 @@ internal class SuperBioTracker : Feature
                 __instance.m_recharging = false;
                 __instance.Sound.Post(EVENTS.BIOTRACKER_RECHARGED, true);
                 __instance.m_screen.ResetGuixColor();
-                __instance.m_screen.SetStatusText("Ready to tag");
+                __instance.m_screen.SetStatusText(Instance.Localization.Get(4));
                 return;
             }
             else if (__instance.m_progressBar.Progress > 0f)
@@ -182,8 +189,14 @@ internal class SuperBioTracker : Feature
     {
         private static void Postfix(AgentAI __instance, ref AgentMode __result)
         {
-            if (EnemyScanner__UpdateTagProgress__Patch.AllowAgentModePatch && (__instance.TryCast<EnemyAI>()?.m_enemyAgent?.IsScout ?? false))
-                __result = AgentMode.Scout;
+            if (!EnemyScanner__UpdateTagProgress__Patch.AllowAgentModePatch)
+            {
+                return;
+            }
+            var enemy = __instance.TryCast<EnemyAI>()?.m_enemyAgent ?? null;
+            if (enemy == null) return;
+            if (enemy.Locomotion.CurrentStateEnum != ES_StateEnum.Hibernate)
+                __result = AgentMode.Agressive;
         }
     }
 }

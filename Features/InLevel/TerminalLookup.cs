@@ -440,7 +440,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
             DevConsole.AddCommand(Command.Create<string>("ItemQuery", "查询物品", "查询物品", Parameter.Create("itemName", "物品名称"), QueryItem));
             DevConsole.AddCommand(Command.Create<string>("ItemPing", "标记物品", "标记物品", Parameter.Create("itemName", "物品名称"), PingItem));
-            DevConsole.AddCommand(Command.Create<string>("ItemList", "列出物品", "列出物品", Parameter.Create("Param", "参数"), p =>
+            DevConsole.AddCommand(Command.Create<string>("ItemList", "列出物品", "列出物品", Parameter.Create("Param", "参数, 用','隔开"), p =>
             {
                 var input = p.Split(',');
                 ListItem(input[0], input.Length > 1 ? input[1] : string.Empty);
@@ -602,7 +602,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
         private static void SendCommandToTerminal(int id, string inputstring)
         {
             uint syncID = TerminalsInLevel[id].m_syncID;
-            inputstring = inputstring.ToUpper();
+            inputstring = inputstring.ToUpperInvariant();
             LG_ComputerTerminalManager.WantToChangeTerminalState(syncID, TERM_State.Awake, AdminUtils.LocalPlayerAgent);
             if (!TerminalsInLevel[id].m_command.TryGetCommand(inputstring, out TERM_Command term_Command, out string text, out string text2))
             {
@@ -646,7 +646,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         private static void PingItem(string itemName)
         {
-            itemName = itemName.ToUpper();
+            itemName = itemName.ToUpperInvariant();
             if (!LG_LevelInteractionManager.TryGetTerminalInterface(itemName, AdminUtils.LocalPlayerAgent.DimensionIndex, out iTerminalItem iTerminalItem))
             {
                 DevConsole.LogError($"不存在名为 {itemName} 的物品");
@@ -684,9 +684,9 @@ namespace Hikaria.AdminSystem.Features.InLevel
         private static void ListItem(string param1, string param2 = "")
         {
             List<string> list = new();
-            bool flag2 = param1 == "";
-            bool flag3 = param1 != "";
-            bool flag4 = param2 != "";
+            bool flag2 = param1 == string.Empty;
+            bool flag3 = param1 != string.Empty;
+            bool flag4 = param2 != string.Empty;
             if (flag2)
             {
                 DevConsole.LogError("参数1不可为空");
@@ -716,8 +716,8 @@ namespace Hikaria.AdminSystem.Features.InLevel
                         " ",
                         eFloorInventoryObjectBeaconStatus.NoBeacon.ToString()
                     });
-                    bool flag5 = flag3 && text2.ToUpper().Contains(param1.ToUpper());
-                    bool flag6 = flag4 && text2.ToUpper().Contains(param2.ToUpper());
+                    bool flag5 = flag3 && text2.ToUpperInvariant().Contains(param1.ToUpperInvariant());
+                    bool flag6 = flag4 && text2.ToUpperInvariant().Contains(param2.ToUpperInvariant());
                     bool flag7 = !flag3 && !flag4;
                     bool flag8 = (!flag3 || flag5) && (!flag4 || flag6);
                     if (flag7 || flag8)
