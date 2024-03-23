@@ -1,5 +1,6 @@
 ﻿using GameData;
 using Gear;
+using HarmonyLib;
 using Hikaria.DevConsoleLite;
 using Il2CppInterop.Runtime.InteropTypes;
 using Player;
@@ -70,6 +71,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
             [FSDisplayName("自动上弹")]
             [FSDescription("优先消耗后备弹药")]
             public bool AutoReload { get; set; }
+
+            [FSDisplayName("特殊部位伤害溢出")]
+            [FSDescription("启用后可以在特殊部位单次打出超过最大生命值上限的伤害")]
+            public bool IgnoreLimbMaxHealthClamp { get; set; }
         }
 
         public override void Init()
@@ -169,13 +174,18 @@ namespace Hikaria.AdminSystem.Features.Weapon
             BulletWeaponRayMask = LayerManager.MASK_BULLETWEAPON_RAY;
         }
 
-        public override void OnGameStateChanged(int state)
+        [ArchivePatch(typeof(Dam_EnemyDamageLimb_Custom), nameof(Dam_EnemyDamageLimb_Custom.ApplyWeakspotAndArmorModifiers))]
+        private static class Dam_EnemyDamageLimb_Custom__ApplyWeakspotAndArmorModifiers__Patch
         {
-            if (state == (int)eGameStateName.Lobby)
+            private static bool Prefix(Dam_EnemyDamageLimb_Custom __instance, ref float __result, float dam, float precisionMulti = 1f)
             {
-
+                if (!Settings.IgnoreLimbMaxHealthClamp)
+                    return true;
+                __result = dam * Mathf.Max(__instance.m_weakspotDamageMulti * precisionMulti, 1f) * __instance.m_armorDamageMulti;
+                return false;
             }
         }
+
 
         [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.Fire))]
         private class BulletWeapon__Fire__Patch

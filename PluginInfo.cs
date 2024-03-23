@@ -8,7 +8,7 @@
 
         public const string VERSION = "3.0.9";
 
-        public const int INTERNAL_VERSION = 10465;
+        public const int INTERNAL_VERSION = 10467;
 
         public const string AUTHOR = "Tuesday";
     }
