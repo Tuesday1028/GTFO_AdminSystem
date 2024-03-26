@@ -16,10 +16,11 @@ public class HackingToolEnhance : Feature
 
     public class HackingMinigameAutoCompleteSettings
     {
+        [FSDisplayName("入侵时间间隔")]
+        [FSSlider(0f, 1f, FSSlider.SliderStyle.FloatTwoDecimal)]
+        public float HackingPauseTime { get; set; } = 0.25f;
         [FSDisplayName("立即完成")]
         public bool InstantHacking { get; set; }
-        [FSDisplayName("快速入侵")]
-        public bool FastHacking { get; set; }
         [FSDisplayName("自动入侵")]
         public bool AutoClick { get; set; }
         [FSDisplayName("禁用失败检测")]
@@ -69,10 +70,7 @@ public class HackingToolEnhance : Feature
     {
         private static void Prefix(ref float pauseDelay)
         {
-            if (Settings.FastHacking)
-            {
-                pauseDelay = 0f;
-            }
+            pauseDelay = Settings.HackingPauseTime;
         }
     }
 
@@ -81,10 +79,7 @@ public class HackingToolEnhance : Feature
     {
         private static void Postfix(HackingMinigame_TimingGrid __instance)
         {
-            if (Settings.FastHacking)
-            {
-                __instance.m_gamePauseTimer = 0.1f;
-            }
+            __instance.m_gamePauseTimer = Settings.HackingPauseTime;
         }
     }
 
@@ -93,10 +88,7 @@ public class HackingToolEnhance : Feature
     {
         private static void Postfix(HackingMinigame_TimingGrid __instance)
         {
-            if (Settings.FastHacking)
-            {
-                __instance.m_gamePauseTimer = 0.1f;
-            }
+            __instance.m_gamePauseTimer = Settings.HackingPauseTime;
         }
     }
 }
