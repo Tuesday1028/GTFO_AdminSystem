@@ -52,7 +52,7 @@ internal class SuperBioTracker : Feature
             return true;
         }
 
-        public static bool AllowBotTag { get; private set; }
+        public static bool AllowBotTag { get; private set; } = true;
 
         public static bool AllowAgentModePatch { get; private set; }
 
