@@ -1,9 +1,15 @@
-﻿using GameData;
+﻿using Agents;
+using AK;
+using BepInEx.Unity.IL2CPP.Utils.Collections;
+using Enemies;
+using GameData;
 using Gear;
-using HarmonyLib;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.DevConsoleLite;
 using Il2CppInterop.Runtime.InteropTypes;
 using Player;
+using SNetwork;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -75,6 +81,17 @@ namespace Hikaria.AdminSystem.Features.Weapon
             [FSDisplayName("特殊部位伤害溢出")]
             [FSDescription("启用后可以在特殊部位单次打出超过最大生命值上限的伤害")]
             public bool IgnoreLimbMaxHealthClamp { get; set; }
+
+            /*
+            [FSHeader("特殊弹药")]
+            [FSDisplayName("爆炸子弹")]
+            public bool ExplosiveBullet { get; set; }
+            [FSDisplayName("爆炸子弹范围")]
+            [FSSlider(0f, 5f, FSSlider.SliderStyle.FloatTwoDecimal)]
+            public float ExplosiveBulletRadius { get; set; } = 0.5f;
+            [FSDisplayName("燃烧子弹")]
+            public bool IncendiaryBullet { get; set; }
+            */
         }
 
         public override void Init()
@@ -174,6 +191,92 @@ namespace Hikaria.AdminSystem.Features.Weapon
             BulletWeaponRayMask = LayerManager.MASK_BULLETWEAPON_RAY;
         }
 
+        /*
+        [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.BulletHit))]
+        private class BulletWeapon__BulletHit__Patch
+        {
+            private static bool Prefix(global::Weapon.WeaponHitData weaponRayData, bool doDamage, ref bool __result)
+            {
+                if (!Settings.ExplosiveBullet || !doDamage || !weaponRayData.owner.IsLocallyOwned)
+                {
+                    return true;
+                }
+                var position = weaponRayData.rayHit.point;
+                CellSound.Post(EVENTS.STICKYMINEEXPLODE, position);
+                DamageUtil.DoExplosionDamage(position, Settings.ExplosiveBulletRadius, weaponRayData.damage, LayerManager.MASK_EXPLOSION_TARGETS, LayerManager.MASK_EXPLOSION_BLOCKERS, true, weaponRayData.damage);
+                __result = (weaponRayData.rayHit.collider?.gameObject?.GetComponent<IDamageable>() ?? null) != null;
+                return false;
+            }
+        }
+
+        [ArchivePatch(typeof(Dam_EnemyDamageLimb), nameof(Dam_EnemyDamageLimb.BulletDamage))]
+        private class Dam_EnemyDamageLimb__BulletDamage__Patch
+        {
+            private static void Postfix(Dam_EnemyDamageLimb __instance, float dam, Agent sourceAgent)
+            {
+                if (!Settings.IncendiaryBullet || sourceAgent == null)
+                {
+                    return;
+                }
+                var player = sourceAgent.TryCast<PlayerAgent>();
+                if (player == null || !player.IsLocallyOwned)
+                {
+                    return;
+                }
+                var targetLevel = __instance.ApplyWeakspotAndArmorModifiers(dam, 1f) + __instance.m_base.m_heatLevel;
+                if (!SNet.IsMaster)
+                {
+                    pSetHeatLevel pSetHeatLevel = new();
+                    pSetHeatLevel.heatLevel.Set(targetLevel, 100f);
+                    __instance.m_base.m_setHeatLevelPacket.ReceiveAction.Invoke(pSetHeatLevel);
+                    __instance.m_base.m_setHeatLevelPacket.Send(pSetHeatLevel, SNet_ChannelType.GameNonCritical);
+                }
+                else
+                {
+                    __instance.m_base.SetHeatLevel(targetLevel);
+                }
+                __instance.m_base.OnHeatLevelUpdated();
+            }
+        }
+
+        [ArchivePatch(typeof(EnemyAgent), nameof(EnemyAgent.Setup))]
+        private class EnemyAgent__Setup__Patch
+        {
+            private static void Postfix(EnemyAgent __instance)
+            {
+                __instance.StartCoroutineManaged2(UpdateHeat(__instance.Damage).WrapToIl2Cpp());
+            }
+        }
+
+        private static IEnumerator UpdateHeat(Dam_EnemyDamageBase damageBase)
+        {
+            var yielder = new WaitForSeconds(damageBase.m_fireDamageDelay);
+            damageBase.m_heatLevel = 0f;
+            var agent = PlayerManager.GetLocalPlayerAgent();
+            while (true)
+            {
+                if (damageBase.m_heatLevel > 0f)
+                {
+                    if (!damageBase.OnFire)
+                    {
+                        damageBase.m_heatLevel = Mathf.Clamp(damageBase.m_heatLevel - damageBase.m_heatFalloffSpeed, 0f, 100f);
+                        damageBase.OnHeatLevelUpdated();
+                    }
+                    else
+                    {
+                        float num = damageBase.m_fireDamageMaxPerSecond * damageBase.m_fireDamageDelay * (damageBase.m_heatLevel / 100f);
+                        damageBase.FireDamage(num, agent);
+                        if (damageBase.Owner.Alive)
+                        {
+                            damageBase.Owner.Voice.PlayVoiceEvent(damageBase.Owner.EnemySFXData.SFX_ID_hurtSmall);
+                        }
+                    }
+                }
+                yield return yielder;
+            }
+        }
+        */
+
         [ArchivePatch(typeof(Dam_EnemyDamageLimb_Custom), nameof(Dam_EnemyDamageLimb_Custom.ApplyWeakspotAndArmorModifiers))]
         private static class Dam_EnemyDamageLimb_Custom__ApplyWeakspotAndArmorModifiers__Patch
         {
@@ -249,7 +352,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
                 if (!WeaponInstanceArchetypeDataLookup.TryGetValue(__instance.ArchetypeData.persistentID, out var originData))
                 {
-                    WeaponInstanceArchetypeDataLookup.Add(__instance.ArchetypeData.persistentID, CopyProperties(__instance.ArchetypeData, new()));
+                    WeaponInstanceArchetypeDataLookup.Add(__instance.ArchetypeData.persistentID, AdminUtils.CopyProperties(__instance.ArchetypeData, new()));
                 }
                 else
                 {
@@ -280,25 +383,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 //清晰瞄具
                 SetupClearSight(__instance.gameObject, Settings.ClearSight);
             }
-        }
-
-        private static T CopyProperties<T>(T source, T target) where T : ArchetypeDataBlock
-        {
-            PropertyInfo[] properties = source.GetType().GetProperties();
-            for (int i = 0; i < properties.Length; i++)
-            {
-                PropertyInfo sourceProp = properties[i];
-                if (target.GetType().GetProperties().Any((PropertyInfo targetProp) => targetProp.Name == sourceProp.Name && targetProp.GetType() == sourceProp.GetType() && targetProp.CanWrite))
-                {
-                    object value = sourceProp.GetValue(source);
-                    PropertyInfo property = target.GetType().GetProperty(sourceProp.Name);
-                    if (property.PropertyType != typeof(Il2CppObjectBase) || property.PropertyType != typeof(UnityEngine.Object))
-                    {
-                        property.SetValue(target, value);
-                    }
-                }
-            }
-            return target;
         }
 
         private static Dictionary<uint, ArchetypeDataBlock> WeaponInstanceArchetypeDataLookup = new();
@@ -334,34 +418,37 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 string childName = item.name.ToLower(System.Globalization.CultureInfo.CurrentCulture);
                 foreach (var compName in ClearSightCompNames)
                 {
-                    if (childName.Contains(compName))
+                    if (!childName.Contains(compName))
                     {
-                        MeshRenderer meshRenderer = item.gameObject.GetComponent<MeshRenderer>();
-                        if (meshRenderer != null)
+                        continue;
+                    }
+                    MeshRenderer meshRenderer = item.gameObject.GetComponent<MeshRenderer>();
+                    if (meshRenderer == null)
+                    {
+                        continue;
+                    }
+                    Material material = meshRenderer.material;
+                    Shader shader = meshRenderer.material.shader;
+                    for (int j = 0; j < shader.GetPropertyCount(); j++)
+                    {
+                        string propName = shader.GetPropertyName(j).ToLowerInvariant();
+                        var type = shader.GetPropertyType(j);
+                        int nameId = shader.GetPropertyNameId(j);
+                        foreach (var name in ClearSightShaderProps)
                         {
-                            Material material = meshRenderer.material;
-                            Shader shader = meshRenderer.material.shader;
-                            for (int j = 0; j < shader.GetPropertyCount(); j++)
+                            if (!propName.Contains(name))
                             {
-                                string propName = shader.GetPropertyName(j).ToLowerInvariant();
-                                var type = shader.GetPropertyType(j);
-                                int nameId = shader.GetPropertyNameId(j);
-                                foreach (var name in ClearSightShaderProps)
-                                {
-                                    if (propName.Contains(name))
-                                    {
-                                        if (type == UnityEngine.Rendering.ShaderPropertyType.Float || type == UnityEngine.Rendering.ShaderPropertyType.Range)
-                                        {
-                                            var value = enable ? 0 : shader.GetPropertyDefaultFloatValue(j);
-                                            material.SetFloat(nameId, value);
-                                        }
-                                        else if (type == UnityEngine.Rendering.ShaderPropertyType.Vector)
-                                        {
-                                            var value = enable ? Vector4.zero : shader.GetPropertyDefaultVectorValue(j);
-                                            material.SetVector(nameId, value);
-                                        }
-                                    }
-                                }
+                                continue;
+                            }
+                            if (type == UnityEngine.Rendering.ShaderPropertyType.Float || type == UnityEngine.Rendering.ShaderPropertyType.Range)
+                            {
+                                var value = enable ? 0 : shader.GetPropertyDefaultFloatValue(j);
+                                material.SetFloat(nameId, value);
+                            }
+                            else if (type == UnityEngine.Rendering.ShaderPropertyType.Vector)
+                            {
+                                var value = enable ? Vector4.zero : shader.GetPropertyDefaultVectorValue(j);
+                                material.SetVector(nameId, value);
                             }
                         }
                     }

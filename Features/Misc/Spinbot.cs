@@ -191,7 +191,7 @@ namespace Hikaria.AdminSystem.Features.Misc
 
             private void Update()
             {
-                if (Settings.Mode == SpinbotSetting.SpinMode.Off || m_Player == null || m_Player.Locomotion.m_currentStateEnum == PlayerLocomotion.PLOC_State.Downed)
+                if (CurrentGameState != (int)eGameStateName.InLevel || Settings.Mode == SpinbotSetting.SpinMode.Off || m_Player == null || m_Player.Locomotion.m_currentStateEnum == PlayerLocomotion.PLOC_State.Downed)
                 {
                     return;
                 }

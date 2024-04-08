@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
+using TheArchive.Core.Localization;
 using TheArchive.Core.Models;
 using TheArchive.Loader;
 using TheArchive.Utilities;
@@ -90,12 +91,14 @@ namespace Hikaria.AdminSystem.Features.Weapon
             [FSDisplayName("非活跃颜色")]
             public SColor PassiveDetection { get; set; } = new(0.5f, 0.5f, 0.5f, 0.5f);
 
+            [Localized]
             public enum AutoAimMode
             {
                 Crosshair,
                 Closest
             }
 
+            [Localized]
             public enum AutoFireMode
             {
                 Off,

@@ -61,7 +61,6 @@ namespace Hikaria.AdminSystem.Features.Misc
             DevConsole.AddCommand(Command.Create<uint, int>("SetFog", "切换雾气", "切换雾气", Parameter.Create("ID", "FogDataID"), Parameter.Create("Dimension", "象限Index"), StartFogTransition));
 
             DevConsole.AddCommand(Command.Create<int, int, int>("FireTargeting", "发射炮弹", "发射炮弹", Parameter.Create("Type", "种类"), Parameter.Create("Slot", "槽位, 1-4"), Parameter.Create("Count", "个数"), FireTargeting));
-            DevConsole.AddCommand(Command.Create("FullBright", "点亮全图", "点亮全图", ToggleFullBright));
 
             DevConsole.AddCommand(Command.Create<int>("FinishWardenObjectiveChain", "强行完成目标任务链", "强行完成目标任务链", Parameter.Create("LayerType", "0: 主要,1: 次要, 2: 附加"), ForceFinishWardenObjectiveChain));
             DevConsole.AddCommand(Command.Create("FinishAllWardenObjectiveChain", "强行完成所有目标任务链", "强行完成所有目标任务链", ForceFinishAllWardenObjectiveChain));
@@ -91,7 +90,7 @@ namespace Hikaria.AdminSystem.Features.Misc
             {
                 default:
                 case 0:
-                    enemies = GameObject.FindObjectsOfType<EnemyAgent>().ToList();
+                    enemies = UnityEngine.Object.FindObjectsOfType<EnemyAgent>().ToList();
                     for (int i = 0; i < enemies.Count; i++)
                     {
                         if ((!enemies[i].IsScout && enemies[i].Locomotion.CurrentStateEnum != ES_StateEnum.Hibernate) || (enemies[i].IsScout && enemies[i].HasValidTarget()))
@@ -110,7 +109,7 @@ namespace Hikaria.AdminSystem.Features.Misc
                     msg = "可到达";
                     break;
                 case 2:
-                    enemies = GameObject.FindObjectsOfType<EnemyAgent>().ToArray().ToList();
+                    enemies = UnityEngine.Object.FindObjectsOfType<EnemyAgent>().ToArray().ToList();
                     for (int i = 0; i < enemies.Count; i++)
                     {
                         enemies[i].Damage.ExplosionDamage(1000000000f, enemies[i].Position, enemies[i].Forward, 0);
@@ -128,7 +127,7 @@ namespace Hikaria.AdminSystem.Features.Misc
             switch (choice)
             {
                 case 0:
-                    enemies = GameObject.FindObjectsOfType<EnemyAgent>().ToArray().ToList();
+                    enemies = UnityEngine.Object.FindObjectsOfType<EnemyAgent>().ToArray().ToList();
                     for (int i = 0; i < enemies.Count; i++)
                     {
                         if ((!enemies[i].IsScout && enemies[i].Locomotion.CurrentStateEnum != ES_StateEnum.Hibernate) || (enemies[i].IsScout && enemies[i].HasValidTarget()))
@@ -147,7 +146,7 @@ namespace Hikaria.AdminSystem.Features.Misc
                     msg = "可到达";
                     break;
                 case 2:
-                    enemies = GameObject.FindObjectsOfType<EnemyAgent>().ToArray().ToList();
+                    enemies = UnityEngine.Object.FindObjectsOfType<EnemyAgent>().ToArray().ToList();
                     for (int i = 0; i < enemies.Count; i++)
                     {
                         ToolSyncManager.WantToTagEnemy(enemies[i]);
@@ -262,7 +261,7 @@ namespace Hikaria.AdminSystem.Features.Misc
                 return;
             }
             EnemySync.pEnemyStateData data = new();
-            EnemyAgent[] enemies = GameObject.FindObjectsOfType<EnemyAgent>();
+            EnemyAgent[] enemies = UnityEngine.Object.FindObjectsOfType<EnemyAgent>();
             foreach (EnemyAgent enemy in enemies)
             {
                 if (all || enemy.HasValidTarget())
@@ -304,7 +303,7 @@ namespace Hikaria.AdminSystem.Features.Misc
                     break;
             }
             EnemySync.pEnemyStateData data;
-            EnemyAgent[] enemies = GameObject.FindObjectsOfType<EnemyAgent>();
+            EnemyAgent[] enemies = UnityEngine.Object.FindObjectsOfType<EnemyAgent>();
             foreach (EnemyAgent enemy in enemies)
             {
                 if (all || enemy.HasValidTarget())
@@ -687,27 +686,6 @@ namespace Hikaria.AdminSystem.Features.Misc
                 ProjectileManager.WantToFireTargeting((ProjectileType)type, player, AdminUtils.LocalPlayerAgent.EyePosition + AdminUtils.LocalPlayerAgent.Forward * 0.25f, AdminUtils.LocalPlayerAgent.Forward, count, 100);
                 count--;
             }
-        }
-
-        private static void ToggleFullBright()
-        {
-            bool enabled = false;
-            EffectLight light = AdminUtils.LocalPlayerAgent.gameObject.GetComponent<EffectLight>();
-            if (light == null)
-            {
-                light = AdminUtils.LocalPlayerAgent.gameObject.AddComponent<EffectLight>();
-                light.Intensity = 0.2f;
-                light.Range = 200.0f;
-                light.Color = new Color(1f, 1f, 0.78431f) * 0.65f;
-            }
-            else
-            {
-                enabled = light.enabled;
-            }
-
-            light.enabled = !enabled;
-
-            DevConsole.LogSuccess($"已{(light.enabled ? "启用" : "禁用")}点亮全图");
         }
 
         private static void ForceFinishWardenObjectiveChain(int layer)

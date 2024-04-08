@@ -4,6 +4,8 @@ using ChainedPuzzles;
 using GameData;
 using Gear;
 using Hikaria.AdminSystem.Extensions;
+using Hikaria.AdminSystem.Interfaces;
+using Hikaria.AdminSystem.Managers;
 using Hikaria.AdminSystem.Utilities;
 using Hikaria.DevConsoleLite;
 using LevelGeneration;
@@ -24,7 +26,7 @@ namespace Hikaria.AdminSystem.Features.Item
     [DisallowInGameToggle]
     [DoNotSaveToConfig]
     [EnableFeatureByDefault]
-    public class ItemMarkerManager : Feature
+    public class ItemMarkerManager : Feature, IOnRecallComplete
     {
         public override string Name => "物品标记";
 
@@ -82,15 +84,17 @@ namespace Hikaria.AdminSystem.Features.Item
                 DevConsole.LogVariable("物品标记", Settings.EnableItemMarker);
             }));
 
-            SNet_Events.OnRecallComplete += new Action<eBufferType>((p) =>
-            {
-                if (CurrentGameState == (int)eGameStateName.InLevel)
-                {
-                    ItemMarkerHandler.Instance.StartCoroutine(ItemMarker.LoadingItem(false));
-                }
-            });
-
+            GameEventManager.RegisterSelfInGameEventManager(this);
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<ItemMarkerHandler>();
+        }
+
+        public void OnRecallComplete(eBufferType bufferType)
+        {
+            if (CurrentGameState == (int)eGameStateName.InLevel)
+            {
+                FeatureLogger.Notice("OnRecallComplete");
+                ItemMarkerHandler.Instance.StartCoroutine(ItemMarker.LoadingItem(SNet.IsMaster));
+            }
         }
 
         [ArchivePatch(typeof(LocalPlayerAgent), nameof(LocalPlayerAgent.Setup))]
@@ -101,7 +105,7 @@ namespace Hikaria.AdminSystem.Features.Item
                 if (ItemMarkerHandler.Instance == null)
                 {
                     GameObject obj = new();
-                    GameObject.DontDestroyOnLoad(obj);
+                    UnityEngine.Object.DontDestroyOnLoad(obj);
                     obj.AddComponent<ItemMarkerHandler>();
                 }
             }
