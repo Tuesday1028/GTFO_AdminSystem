@@ -28,6 +28,7 @@ namespace Hikaria.AdminSystem.Extensions
         {
             foreach (var limb in enemy.Damage.DamageLimbs)
             {
+                if (limb == null) continue;
                 if (!player.Raycast(limb.DamageTargetPos, LayerManager.MASK_WORLD, out _))
                 {
                     return true;

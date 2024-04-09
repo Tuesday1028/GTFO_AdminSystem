@@ -1,4 +1,5 @@
 ﻿using Clonesoft.Json;
+using Clonesoft.Json.Linq;
 using Hikaria.DevConsoleLite;
 using LevelGeneration;
 using Player;
@@ -8,12 +9,14 @@ using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.Localization;
+using UnityEngine;
 using static Hikaria.AdminSystem.Managers.PauseManager;
 
 namespace Hikaria.AdminSystem.Features.InLevel;
 
 [DisallowInGameToggle]
 [EnableFeatureByDefault]
+[DoNotSaveToConfig]
 public class PauseGame : Feature
 {
     public override string Name => "暂停游戏";
@@ -40,7 +43,7 @@ public class PauseGame : Feature
             }
         }
         [JsonIgnore]
-        private PauseGameStatus _currentStatus = PauseGameStatus.Unpaused;
+        public PauseGameStatus _currentStatus = PauseGameStatus.Unpaused;
     }
 
     [Localized]
@@ -79,7 +82,11 @@ public class PauseGame : Feature
 
     public override void OnGameStateChanged(int state)
     {
-        Settings.CurrentStatus = PauseGameStatus.Unpaused;
+        if (Settings._currentStatus != PauseGameStatus.Unpaused)
+        {
+            Settings._currentStatus = PauseGameStatus.Unpaused;
+            DoPauseGame(Settings._currentStatus);
+        }
     }
 
     [ArchivePatch(typeof(GS_InLevel), nameof(GS_InLevel.Update))]
@@ -97,9 +104,9 @@ public class PauseGame : Feature
     [ArchivePatch(typeof(PlayerSync), nameof(PlayerSync.IncomingLocomotion))]
     private class PlayerSync__IncomongLocomotion__Patch
     {
-        private static void Prefix(PlayerSync __instance, pPlayerLocomotion data)
+        private static void Postfix(PlayerSync __instance, pPlayerLocomotion data)
         {
-            if (!SNet.IsMaster || !IsPaused)
+            if (!SNet.IsMaster || !IsPaused || __instance.m_agent.IsLocallyOwned)
             {
                 return;
             }
@@ -108,11 +115,20 @@ public class PauseGame : Feature
             {
                 return;
             }
-            if (data.Pos == __instance.m_locomotionLast.Pos && __instance.m_agent.Inventory.WieldedSlot == InventorySlot.None)
+            var player = __instance.m_agent.Owner;
+            if (player.IsOutOfSync || !player.IsInGame)
             {
                 return;
             }
-            __instance.m_agent.RequestToggleControlsEnabled(false);
+            if (Vector3.Distance(data.Pos, __instance.m_agent.Position) >= 2f)
+            {
+                __instance.m_agent.RequestToggleControlsEnabled(false);
+            }
+            if (__instance.m_agent.Inventory.WieldedSlot != InventorySlot.None)
+            {
+                __instance.m_agent.RequestToggleControlsEnabled(false);
+                __instance.WantsToWieldSlot(InventorySlot.None);
+            }
         }
     }
 
