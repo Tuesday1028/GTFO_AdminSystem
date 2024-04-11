@@ -93,7 +93,7 @@ namespace Hikaria.AdminSystem.Features.Item
             if (CurrentGameState == (int)eGameStateName.InLevel)
             {
                 FeatureLogger.Notice("OnRecallComplete");
-                ItemMarkerHandler.Instance.StartCoroutine(ItemMarker.LoadingItem(SNet.IsMaster));
+                ItemMarkerHandler.Instance.StartCoroutine(ItemMarker.LoadingItem(false));
             }
         }
 
