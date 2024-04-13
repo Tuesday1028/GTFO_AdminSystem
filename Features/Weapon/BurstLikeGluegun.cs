@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace Hikaria.AdminSystem.Features.Weapon;
 
+[ForceDisable]
 public class BurstLikeGluegun : Feature
 {
     public override string Name => "胶枪式连发武器蓄力开火";

@@ -97,6 +97,19 @@ namespace Hikaria.AdminSystem.Features.Item
             }
         }
 
+        [ArchivePatch(typeof(LG_WardenObjective_Reactor), nameof(LG_WardenObjective_Reactor.OnBuildDone))]
+        private class LG_WardenObjective_Reactor__OnBuildDone__Patch
+        {
+            private static void Postfix(LG_WardenObjective_Reactor __instance)
+            {
+                if (__instance.SpawnNode != null && __instance.m_terminal != null)
+                {
+                    if (!__instance.SpawnNode.m_zone.TerminalsSpawnedInZone.Contains(__instance.m_terminal))
+                        __instance.SpawnNode.m_zone.TerminalsSpawnedInZone.Add(__instance.m_terminal);
+                }
+            }
+        }
+
         [ArchivePatch(typeof(LocalPlayerAgent), nameof(LocalPlayerAgent.Setup))]
         private class LocalPlayerAgent__Setup__Patch
         {
