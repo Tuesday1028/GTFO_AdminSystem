@@ -393,16 +393,12 @@ namespace Hikaria.AdminSystem.Features.Misc
             DevConsole.LogSuccess("已设置小地图全显");
         }
 
+        //客机现在可以踢任何人，无敌了！
         private static void KickPlayer(int slot)
         {
             if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var agent))
             {
                 DevConsole.LogError("输入有误");
-                return;
-            }
-            if (!SNet.IsMaster && !agent.Owner.IsLocal)
-            {
-                DevConsole.LogError("只有房主可以踢人");
                 return;
             }
             if (agent.Owner.IsLocal)
@@ -411,7 +407,19 @@ namespace Hikaria.AdminSystem.Features.Misc
             }
             else
             {
-                TheArchive.Features.Security.PlayerLobbyManagement.KickPlayer(agent.Owner);
+                if (SNet.IsMaster)
+                {
+                    TheArchive.Features.Security.PlayerLobbyManagement.KickPlayer(agent.Owner);
+                }
+                else
+                {
+                    pPlayerData_Session data = new();
+                    data.player.SetPlayer(agent.Owner);
+                    data.playerSlotIndex = 100;
+                    data.role = eReplicationRole.Slave;
+                    data.mode = eReplicationMode.Unassigned;
+                    SNet.Sync.m_playerSessionPacket.Send(data, SNet_ChannelType.GameOrderCritical, SNet.Master);
+                }
             }
             DevConsole.LogSuccess($"已踢出玩家 {agent.Owner.NickName}");
         }
