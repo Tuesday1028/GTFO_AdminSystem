@@ -404,7 +404,7 @@ namespace Hikaria.AdminSystem.Features.Misc
             var player = agent.Owner;
             if (player.IsLocal)
             {
-                SNet.SessionHub.KickPlayer(SNet.LocalPlayer, SNet_PlayerEventReason.Kick_ByVote);
+                SNet.SessionHub.LeaveHub();
             }
             else
             {
@@ -414,22 +414,24 @@ namespace Hikaria.AdminSystem.Features.Misc
                 }
                 else
                 {
-                    pMigrationReport migrationReportData = new();
-                    migrationReportData.hasNewMaster = true;
-                    migrationReportData.NewMaster.SetPlayer(SNet.LocalPlayer);
-                    migrationReportData.type = MigrationReportType.NoAction;
-                    SNet.MasterManagement.m_migrationReportPacket.Send(migrationReportData, SNet_ChannelType.SessionOrderCritical, player);
-                    SNet.SessionHub.m_masterSessionAnswerPacket.Send(new pMasterAnswer() {
-                        answer = pMasterSessionAnswerType.LeaveLobby
-                    }, SNet_ChannelType.SessionOrderCritical, player);
-
-
-                    //pPlayerData_Session data = agent.Owner.Session;
-                    //var index = data.playerSlotIndex;
-                    //data.playerSlotIndex = 100;
-                    //SNet.Sync.m_playerSessionPacket.Send(data, SNet_ChannelType.GameOrderCritical, SNet.Master);
-                    //data.playerSlotIndex = index;
-                    //SNet.Sync.m_playerSessionPacket.Send(data, SNet_ChannelType.GameOrderCritical, SNet.Master);
+                    if (player.IsMaster)
+                    {
+                        pPlayerData_Session data = agent.Owner.Session;
+                        data.playerSlotIndex = 100;
+                        SNet.Sync.m_playerSessionPacket.Send(data, SNet_ChannelType.GameOrderCritical, SNet.Master);
+                    }
+                    else
+                    {
+                        pMigrationReport migrationReportData = new();
+                        migrationReportData.hasNewMaster = true;
+                        migrationReportData.NewMaster.SetPlayer(SNet.LocalPlayer);
+                        migrationReportData.type = MigrationReportType.NoAction;
+                        SNet.MasterManagement.m_migrationReportPacket.Send(migrationReportData, SNet_ChannelType.SessionOrderCritical, player);
+                        SNet.SessionHub.m_masterSessionAnswerPacket.Send(new pMasterAnswer()
+                        {
+                            answer = pMasterSessionAnswerType.LeaveLobby
+                        }, SNet_ChannelType.SessionOrderCritical, player);
+                    }
                 }
             }
             DevConsole.LogSuccess($"已踢出玩家 {player.NickName}");
