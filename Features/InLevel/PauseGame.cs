@@ -10,7 +10,6 @@ using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.Localization;
 using UnityEngine;
-using static Hikaria.AdminSystem.Managers.PauseManager;
 
 namespace Hikaria.AdminSystem.Features.InLevel;
 
@@ -75,11 +74,6 @@ public class PauseGame : Feature
         }));
     }
 
-    public override void OnGameDataInitialized()
-    {
-        Setup();
-    }
-
     public override void OnGameStateChanged(int state)
     {
         if (Settings._currentStatus != PauseGameStatus.Unpaused)
@@ -94,7 +88,7 @@ public class PauseGame : Feature
     {
         private static void Postfix()
         {
-            if (IsPaused)
+            if (PauseManager.IsPaused)
             {
                 Clock.ExpeditionProgressionTime = ExpeditionProgressionTime;
             }
@@ -106,7 +100,7 @@ public class PauseGame : Feature
     {
         private static void Postfix(PlayerSync __instance, pPlayerLocomotion data)
         {
-            if (!SNet.IsMaster || !IsPaused || __instance.m_agent.IsLocallyOwned)
+            if (!SNet.IsMaster || !PauseManager.IsPaused || __instance.m_agent.IsLocallyOwned)
             {
                 return;
             }
@@ -145,7 +139,7 @@ public class PauseGame : Feature
         {
             Clock.ExpeditionProgressionTime = ExpeditionProgressionTime;
         }
-        IsPaused = flag;
+        PauseManager.IsPaused = flag;
         SetPauseForWardenObjectiveItems(flag);
         SetPauseForAllPlayers(flag);
     }

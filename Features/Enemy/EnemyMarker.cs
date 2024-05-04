@@ -1,9 +1,10 @@
 ﻿using AIGraph;
 using BepInEx.Unity.IL2CPP.Utils;
 using Enemies;
-using Hikaria.AdminSystem.Interfaces;
 using Hikaria.AdminSystem.Managers;
 using Hikaria.AdminSystem.Utilities;
+using Hikaria.Core;
+using Hikaria.Core.Interfaces;
 using Hikaria.DevConsoleLite;
 using Player;
 using SNetwork;
@@ -59,7 +60,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
 
         public override void Init()
         {
-            GameEventManager.RegisterSelfInGameEventManager(this);
+            GameEventAPI.RegisterSelf(this);
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<EnemyMarkerHandler>();
             DevConsole.AddCommand(Command.Create<bool?>("EnemyMarker", "敌人标记", "实时显示敌人类别、位置、血量、状态和距离信息", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
             {

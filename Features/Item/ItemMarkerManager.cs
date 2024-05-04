@@ -4,9 +4,9 @@ using ChainedPuzzles;
 using GameData;
 using Gear;
 using Hikaria.AdminSystem.Extensions;
-using Hikaria.AdminSystem.Interfaces;
-using Hikaria.AdminSystem.Managers;
 using Hikaria.AdminSystem.Utilities;
+using Hikaria.Core;
+using Hikaria.Core.Interfaces;
 using Hikaria.DevConsoleLite;
 using LevelGeneration;
 using Player;
@@ -84,7 +84,7 @@ namespace Hikaria.AdminSystem.Features.Item
                 DevConsole.LogVariable("物品标记", Settings.EnableItemMarker);
             }));
 
-            GameEventManager.RegisterSelfInGameEventManager(this);
+            GameEventAPI.RegisterSelf(this);
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<ItemMarkerHandler>();
         }
 

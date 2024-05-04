@@ -1,37 +1,21 @@
-﻿using BepInEx;
-using BepInEx.Unity.IL2CPP;
-using Hikaria.AdminSystem.Utilities;
+﻿using Hikaria.AdminSystem.Utilities;
 using System.Collections.Generic;
-using TheArchive;
 using TheArchive.Core;
+using TheArchive.Core.Attributes;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.Localization;
 
 namespace Hikaria.AdminSystem;
 
-[BepInDependency("Hikaria.DevConsole", BepInDependency.DependencyFlags.HardDependency)]
-[BepInDependency(ArchiveMod.GUID, BepInDependency.DependencyFlags.HardDependency)]
-[BepInPlugin(PluginInfo.GUID, PluginInfo.NAME, PluginInfo.VERSION)]
-public class EntryPoint : BasePlugin, IArchiveModule
+[ArchiveDependency(DevConsoleLite.Plugin.PluginInfo.GUID, ArchiveDependency.DependencyFlags.HardDependency)]
+[ArchiveModule(PluginInfo.GUID, PluginInfo.NAME, PluginInfo.VERSION)]
+public class EntryPoint : IArchiveModule
 {
-    public override void Load()
+    public void Init()
     {
         Instance = this;
 
-        ArchiveMod.RegisterArchiveModule(typeof(EntryPoint));
-
         Logs.LogMessage("OK");
-    }
-
-    public override bool Unload()
-    {
-        ArchiveMod.UnpatchModule(Instance);
-
-        return base.Unload();
-    }
-
-    public void Init()
-    {
     }
 
     public void OnSceneWasLoaded(int buildIndex, string sceneName)

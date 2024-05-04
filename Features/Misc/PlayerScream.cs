@@ -1,5 +1,5 @@
-﻿using Hikaria.AdminSystem.Interfaces;
-using Hikaria.AdminSystem.Managers;
+﻿using Hikaria.Core;
+using Hikaria.Core.Interfaces;
 using Hikaria.DevConsoleLite;
 using Player;
 using SNetwork;
@@ -69,7 +69,7 @@ internal class PlayerScream : Feature, IOnPlayerEvent
             WantToSay(playerID, eventID, inDialogID, startDialogID, subtitleId);
         }));
 
-        GameEventManager.RegisterSelfInGameEventManager(this);
+        GameEventAPI.RegisterSelf(this);
     }
 
 

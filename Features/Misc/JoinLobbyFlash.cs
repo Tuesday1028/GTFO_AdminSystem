@@ -1,6 +1,6 @@
-﻿using Hikaria.AdminSystem.Interfaces;
-using Hikaria.AdminSystem.Managers;
-using Hikaria.AdminSystem.Utilities;
+﻿using Hikaria.AdminSystem.Utilities;
+using Hikaria.Core;
+using Hikaria.Core.Interfaces;
 using Hikaria.DevConsoleLite;
 using SNetwork;
 using TheArchive.Core.Attributes;
@@ -32,7 +32,7 @@ namespace Hikaria.AdminSystem.Features.Misc
 
         public override void Init()
         {
-            GameEventManager.RegisterSelfInGameEventManager(this);
+            GameEventAPI.RegisterSelf(this);
             DevConsole.AddCommand(Command.Create<bool?>("JoinLobbyFlash", "进场特效", "启用后进入大厅会发出对应位置玩家颜色的闪光", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
             {
                 if (!enable.HasValue)

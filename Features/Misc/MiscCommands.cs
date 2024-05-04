@@ -9,6 +9,7 @@ using Hikaria.DevConsoleLite;
 using LevelGeneration;
 using Player;
 using SNetwork;
+using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -40,6 +41,7 @@ namespace Hikaria.AdminSystem.Features.Misc
             DevConsole.AddCommand(Command.Create("Drop", "丢弃物品", "丢弃手中物品", DropItem));
 
             //玩家相关
+            //DevConsole.AddCommand(Command.Create<ulong>("ForceInvitePlayer", "强制邀请玩家", "强制邀请玩家", Parameter.Create("Lookup", "SteamID64"), ForceInvitePlayer));
             DevConsole.AddCommand(Command.Create<int>("KickPlayer", "踢出玩家", "踢出玩家", Parameter.Create("Slot", "槽位, 1-4"), KickPlayer));
             DevConsole.AddCommand(Command.Create<int>("BanPlayer", "封禁玩家", "封禁玩家", Parameter.Create("Slot", "槽位, 1-4"), BanPlayer));
             DevConsole.AddCommand(Command.Create<int, bool>("CtrlPlayer", "玩家控制", "开启关闭玩家活动", Parameter.Create("Slot", "槽位, 1-4"), Parameter.Create("Enable", "开启或关闭, True或False"), SetPlayerControl));
@@ -393,15 +395,14 @@ namespace Hikaria.AdminSystem.Features.Misc
             DevConsole.LogSuccess("已设置小地图全显");
         }
 
-        //客机现在可以踢任何人，无敌了！
         private static void KickPlayer(int slot)
         {
-            if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var agent))
+            var player = SNet.Slots.GetPlayerInSlot(slot - 1);
+            if (player == null || player.IsBot)
             {
                 DevConsole.LogError("输入有误");
                 return;
             }
-            var player = agent.Owner;
             if (player.IsLocal)
             {
                 SNet.SessionHub.LeaveHub();
@@ -416,9 +417,16 @@ namespace Hikaria.AdminSystem.Features.Misc
                 {
                     if (player.IsMaster)
                     {
-                        pPlayerData_Session data = agent.Owner.Session;
-                        data.playerSlotIndex = 100;
-                        SNet.Sync.m_playerSessionPacket.Send(data, SNet_ChannelType.GameOrderCritical, SNet.Master);
+                        pMigrationReport migrationReportData = new();
+                        migrationReportData.hasNewMaster = true;
+                        migrationReportData.NewMaster.SetPlayer(SNet.LocalPlayer);
+                        migrationReportData.type = MigrationReportType.NoAction;
+                        SNet.MasterManagement.m_migrationReportPacket.Send(migrationReportData, SNet_ChannelType.SessionOrderCritical, player);
+
+                        SNet.SessionHub.m_masterSessionAnswerPacket.Send(new()
+                        {
+                            answer = pMasterSessionAnswerType.LeaveLobby
+                        }, SNet_ChannelType.SessionOrderCritical, player);
                     }
                     else
                     {
@@ -427,14 +435,64 @@ namespace Hikaria.AdminSystem.Features.Misc
                         migrationReportData.NewMaster.SetPlayer(SNet.LocalPlayer);
                         migrationReportData.type = MigrationReportType.NoAction;
                         SNet.MasterManagement.m_migrationReportPacket.Send(migrationReportData, SNet_ChannelType.SessionOrderCritical, player);
+
                         SNet.SessionHub.m_masterSessionAnswerPacket.Send(new pMasterAnswer()
                         {
                             answer = pMasterSessionAnswerType.LeaveLobby
                         }, SNet_ChannelType.SessionOrderCritical, player);
+
+                        /*
+                        pPlayerData_Session forceJoinLobbyData = player.Session;
+                        forceJoinLobbyData.playerSlotIndex = 100;
+                        SNet.Sync.m_playerSessionPacket.Send(forceJoinLobbyData, SNet_ChannelType.GameOrderCritical, SNet.Master);
+                        */
+
+                        /*
+                        pMigrationReport migrationReportData = new();
+                        migrationReportData.hasNewMaster = true;
+                        migrationReportData.NewMaster.SetPlayer(SNet.LocalPlayer);
+                        migrationReportData.type = MigrationReportType.NoAction;
+                        SNet.MasterManagement.m_migrationReportPacket.Send(migrationReportData, SNet_ChannelType.SessionOrderCritical, player);
+                        
+                        pSessionMemberStateChange forceJoinLobbyData = new();
+                        forceJoinLobbyData.player.SetPlayer(SNet.Master);
+                        forceJoinLobbyData.reason = SNet_PlayerEventReason.None;
+                        forceJoinLobbyData.type = SessionMemberChangeType.Kicked;
+                        SNet.SessionHub.m_masterSessionMemberChangePacket.Send(forceJoinLobbyData, SNet_ChannelType.SessionOrderCritical, player);
+
+                        SNet.SessionHub.m_masterSessionAnswerPacket.Send(new pMasterAnswer()
+                        {
+                            answer = pMasterSessionAnswerType.LeaveLobby
+                        }, SNet_ChannelType.SessionOrderCritical, player);
+                        */
                     }
                 }
             }
             DevConsole.LogSuccess($"已踢出玩家 {player.NickName}");
+        }
+
+        private static void ForceInvitePlayer(ulong lookup)
+        {
+            if (!SNet.IsInLobby)
+            {
+                DevConsole.LogError("不在大厅内");
+                return;
+            }
+            if (!SNet.Core.TryGetPlayer(lookup, out var player, true))
+            {
+                DevConsole.LogError($"不存在玩家 {lookup}");
+                return;
+            }
+            pForceJoinLobby forceJoinLobbyData = new() { lobbyID = SNet.Lobby.Identifier.ID };
+            SNet.SessionHub.m_forceJoinLobby.Send(forceJoinLobbyData, SNet_ChannelType.SessionOrderCritical, player);
+            pWhoIsMasterAnswer whoIsMasterAnswerData = new pWhoIsMasterAnswer
+            {
+                lobbyId = SNet.Lobby.Identifier.ID,
+                sessionKey = SNet.SessionHub.SessionID
+            };
+            SNet.MasterManagement.m_whoIsMasterAnswerPacket.Send(whoIsMasterAnswerData, SNet_ChannelType.SessionOrderCritical, player);
+            SNet.Lobby.TryCast<SNet_Lobby_STEAM>().PlayerJoined(player, new() { m_SteamID = player.Lookup });
+            DevConsole.Log($"已强制邀请玩家: {player.NickName}");
         }
 
         private static void BanPlayer(int slot)

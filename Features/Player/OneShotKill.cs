@@ -1,9 +1,9 @@
 ﻿using Agents;
 using Gear;
 using Hikaria.AdminSystem.Extensions;
-using Hikaria.AdminSystem.Interfaces;
-using Hikaria.AdminSystem.Managers;
 using Hikaria.AdminSystem.Utilities;
+using Hikaria.Core;
+using Hikaria.Core.Interfaces;
 using Hikaria.DevConsoleLite;
 using Player;
 using SNetwork;
@@ -77,7 +77,7 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public override void Init()
         {
-            GameEventManager.RegisterSelfInGameEventManager(this);
+            GameEventAPI.RegisterSelf(this);
             DevConsole.AddCommand(Command.Create<int, bool?>("OneShotKill", "秒杀敌人", "秒杀敌人", Parameter.Create("Slot", "玩家所在槽位"), Parameter.Create("Enable", "True: 启用, False: 禁用"), (slot, enable) =>
             {
                 if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var player) || !OneShotKillLookup.TryGetValue(player.Owner.Lookup, out var entry))
