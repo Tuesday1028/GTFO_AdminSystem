@@ -1,5 +1,5 @@
 ﻿using Clonesoft.Json;
-using Clonesoft.Json.Linq;
+using Hikaria.Core;
 using Hikaria.DevConsoleLite;
 using LevelGeneration;
 using Player;
@@ -88,7 +88,7 @@ public class PauseGame : Feature
     {
         private static void Postfix()
         {
-            if (PauseManager.IsPaused)
+            if (GameEventAPI.IsPaused)
             {
                 Clock.ExpeditionProgressionTime = ExpeditionProgressionTime;
             }
@@ -100,7 +100,7 @@ public class PauseGame : Feature
     {
         private static void Postfix(PlayerSync __instance, pPlayerLocomotion data)
         {
-            if (!SNet.IsMaster || !PauseManager.IsPaused || __instance.m_agent.IsLocallyOwned)
+            if (!SNet.IsMaster || !GameEventAPI.IsPaused || __instance.m_agent.IsLocallyOwned)
             {
                 return;
             }
@@ -139,7 +139,7 @@ public class PauseGame : Feature
         {
             Clock.ExpeditionProgressionTime = ExpeditionProgressionTime;
         }
-        PauseManager.IsPaused = flag;
+        GameEventAPI.IsPaused = flag;
         SetPauseForWardenObjectiveItems(flag);
         SetPauseForAllPlayers(flag);
     }
