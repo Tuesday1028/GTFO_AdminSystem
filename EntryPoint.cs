@@ -8,6 +8,7 @@ using TheArchive.Core.Localization;
 namespace Hikaria.AdminSystem;
 
 [ArchiveDependency(DevConsoleLite.Plugin.PluginInfo.GUID, ArchiveDependency.DependencyFlags.HardDependency)]
+[ArchiveDependency(Core.PluginInfo.GUID, ArchiveDependency.DependencyFlags.HardDependency)]
 [ArchiveModule(PluginInfo.GUID, PluginInfo.NAME, PluginInfo.VERSION)]
 public class EntryPoint : IArchiveModule
 {
