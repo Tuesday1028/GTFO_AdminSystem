@@ -1,11 +1,11 @@
-﻿using Gear;
+﻿#if false
+using Gear;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.FeaturesAPI;
 using UnityEngine;
 
 namespace Hikaria.AdminSystem.Features.Weapon;
 
-[ForceDisable]
 public class BurstLikeGluegun : Feature
 {
     public override string Name => "胶枪式连发武器蓄力开火";
@@ -171,3 +171,4 @@ public class BurstLikeGluegun : Feature
         }
     }
 }
+#endif

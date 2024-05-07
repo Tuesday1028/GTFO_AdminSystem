@@ -1,5 +1,6 @@
 ﻿using AIGraph;
 using BepInEx.Unity.IL2CPP.Utils;
+using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Enemies;
 using Hikaria.AdminSystem.Managers;
 using Hikaria.AdminSystem.Utilities;
@@ -111,7 +112,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
 
             private void Start()
             {
-                this.StartCoroutine(UpdateMarkers());
+                StartCoroutine(UpdateMarkers().WrapToIl2Cpp());
             }
 
             private IEnumerator UpdateMarkers()

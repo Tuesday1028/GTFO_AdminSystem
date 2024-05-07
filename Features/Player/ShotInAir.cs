@@ -15,6 +15,8 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public override FeatureGroup Group => EntryPoint.Groups.Player;
 
+        public override bool InlineSettingsIntoParentMenu => true;
+
         [FeatureConfig]
         public static ShotInAirSettings Settings { get; set; }
 

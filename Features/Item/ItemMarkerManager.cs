@@ -1,5 +1,5 @@
 ﻿using AIGraph;
-using BepInEx.Unity.IL2CPP.Utils;
+using BepInEx.Unity.IL2CPP.Utils.Collections;
 using ChainedPuzzles;
 using GameData;
 using Gear;
@@ -18,7 +18,6 @@ using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.FeaturesAPI.Components;
-using TheArchive.Loader;
 using UnityEngine;
 
 namespace Hikaria.AdminSystem.Features.Item
@@ -47,7 +46,7 @@ namespace Hikaria.AdminSystem.Features.Item
         {
             public ItemMarkerSettings()
             {
-                ReloadItemMarker = new FButton("重载", "重载物品标记", () => { ItemMarkerHandler.Instance.StartCoroutine(ItemMarker.LoadingItem(true)); });
+                ReloadItemMarker = new FButton("重载", "重载物品标记", () => { CoroutineManager.StartCoroutine(ItemMarker.LoadingItem(true, false).WrapToIl2Cpp()); });
             }
 
             [FSDisplayName("启用物品标记")]
@@ -85,7 +84,6 @@ namespace Hikaria.AdminSystem.Features.Item
             }));
 
             GameEventAPI.RegisterSelf(this);
-            LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<ItemMarkerHandler>();
         }
 
         public void OnRecallComplete(eBufferType bufferType)
@@ -93,7 +91,36 @@ namespace Hikaria.AdminSystem.Features.Item
             if (CurrentGameState == (int)eGameStateName.InLevel)
             {
                 FeatureLogger.Notice("OnRecallComplete");
-                ItemMarkerHandler.Instance.StartCoroutine(ItemMarker.LoadingItem(false));
+                CoroutineManager.StartCoroutine(ItemMarker.LoadingItem(false, false).WrapToIl2Cpp());
+            }
+        }
+
+        [ArchivePatch(typeof(ItemSpawnManager), nameof(ItemSpawnManager.SpawnItem))]
+        private class ItemSpawnManager__SpawnItem__Patch
+        {
+            private static void Postfix(global::Item __result)
+            {
+                var itemInLevel = __result.TryCast<ItemInLevel>();
+                if (itemInLevel != null)
+                    ItemMarker._AllItemInLevels.Add(itemInLevel);
+            }
+        }
+
+        [ArchivePatch(typeof(LG_FunctionMarkerBuilder), nameof(LG_FunctionMarkerBuilder.SetupFunctionGO))]
+        private class LG_FunctionMarkerBuilder__SetupFunctionGO__Patch
+        {
+            private static void Postfix(GameObject GO)
+            {
+                ItemMarker._AllGameObjectsToInspect.Add(GO);
+            }
+        }
+
+        [ArchivePatch(typeof(LG_SecurityDoor), nameof(LG_SecurityDoor.Setup))]
+        private class LG_SecurityDoor__Setup__Patch
+        {
+            private static void Postfix(LG_SecurityDoor __instance)
+            {
+                ItemMarker._AllGameObjectsToInspect.Add(__instance.gameObject);
             }
         }
 
@@ -106,20 +133,6 @@ namespace Hikaria.AdminSystem.Features.Item
                 {
                     if (!__instance.SpawnNode.m_zone.TerminalsSpawnedInZone.Contains(__instance.m_terminal))
                         __instance.SpawnNode.m_zone.TerminalsSpawnedInZone.Add(__instance.m_terminal);
-                }
-            }
-        }
-
-        [ArchivePatch(typeof(LocalPlayerAgent), nameof(LocalPlayerAgent.Setup))]
-        private class LocalPlayerAgent__Setup__Patch
-        {
-            private static void Postfix(LocalPlayerAgent __instance)
-            {
-                if (ItemMarkerHandler.Instance == null)
-                {
-                    GameObject obj = new();
-                    UnityEngine.Object.DontDestroyOnLoad(obj);
-                    obj.AddComponent<ItemMarkerHandler>();
                 }
             }
         }
@@ -192,15 +205,6 @@ namespace Hikaria.AdminSystem.Features.Item
             private static LG_Zone currentZone;
         }
 
-        private class ItemMarkerHandler : MonoBehaviour
-        {
-            public static ItemMarkerHandler Instance { get; private set; }
-            private void Awake()
-            {
-                Instance = this;
-            }
-        }
-
         private class ItemMarker
         {
             public NavMarker Marker { get; private set; }
@@ -218,7 +222,7 @@ namespace Hikaria.AdminSystem.Features.Item
 
             public void SetTitle(iTerminalItem terminalItem, string name = "")
             {
-                if (terminalItem == null)
+                if (terminalItem == null || string.IsNullOrEmpty(terminalItem.TerminalItemKey))
                 {
                     if (!name.IsNullOrEmptyOrWhiteSpace())
                     {
@@ -258,6 +262,8 @@ namespace Hikaria.AdminSystem.Features.Item
             public readonly static Dictionary<int, ItemMarker> _DynamicItemMarkers = new();
 
             public readonly static Dictionary<int, ItemMarker> _OtherItemMarkers = new();
+            public readonly static HashSet<ItemInLevel> _AllItemInLevels = new();
+            public readonly static HashSet<GameObject> _AllGameObjectsToInspect = new();
 
             public static bool MarkItems;
 
@@ -462,8 +468,7 @@ namespace Hikaria.AdminSystem.Features.Item
             {
                 if (current == eGameStateName.InLevel)
                 {
-                    ItemMarkerHandler.Instance.enabled = true;
-                    ItemMarkerHandler.Instance.StartCoroutine(LoadingItem());
+                    CoroutineManager.StartCoroutine(LoadingItem(false, true).WrapToIl2Cpp());
                 }
             }
 
@@ -492,6 +497,9 @@ namespace Hikaria.AdminSystem.Features.Item
                         UnityEngine.Object.Destroy(itemMarker.Marker.gameObject);
                     }
                     _OtherItemMarkers.Clear();
+
+                    _AllItemInLevels.Clear();
+                    _AllGameObjectsToInspect.Clear();
                 }
             }
 
@@ -505,7 +513,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     }
                 }
 
-                foreach (var item in UnityEngine.Object.FindObjectsOfType<ItemInLevel>())
+                foreach (var item in _AllItemInLevels)
                 {
                     Vector3 pos = item.gameObject.transform.position;
                     bool getNode = AIG_CourseNode.TryGetCourseNode(Dimension.GetDimensionFromPos(pos).DimensionIndex, pos, 1.25f, out AIG_CourseNode node);
@@ -531,50 +539,20 @@ namespace Hikaria.AdminSystem.Features.Item
                 }
             }
 
-            public static IEnumerator LoadingItem(bool forceLoad = false)
+            public static void InspectGameObject(GameObject go)
             {
-                var yielder = new WaitForSecondsRealtime(3f);
-                if (!SNet.IsMaster && !forceLoad)
-                {
-                    yield return yielder;
-                }
+                if (go == null) return;
 
-                RegisterItemInLevelInCourseNodes();
-
-                foreach (var item in _FixedItemMarkers)
+                do
                 {
-                    Remove(item.Key, ItemType.FixedItems);
-                }
-                foreach (var item in _DynamicItemMarkers)
-                {
-                    Remove(item.Key, ItemType.Resource);
-                }
-                foreach (var item in _OtherItemMarkers)
-                {
-                    Remove(item.Key, ItemType.InLevelCarry);
-                }
-
-                var navMarkers = UnityEngine.Object.FindObjectsOfType<NavMarker>();
-                foreach (var navMarker in navMarkers)
-                {
-                    if (navMarker.name.Contains("AdminSystem"))
-                    {
-                        UnityEngine.Object.Destroy(navMarker.gameObject);
-                    }
-                }
-
-                var doors = UnityEngine.Object.FindObjectsOfType<LG_SecurityDoor>();
-                foreach (var door in doors)
-                {
+                    var door = go.GetComponentInChildren<LG_SecurityDoor>();
+                    if (door == null)
+                        break;
                     if (door.m_locks == null)
-                    {
-                        continue;
-                    }
+                        return;
                     var doorLock = door.m_locks.TryCast<LG_SecurityDoor_Locks>();
                     if (doorLock == null)
-                    {
-                        continue;
-                    }
+                        return;
                     if (doorLock.m_lastStatus == eDoorStatus.Closed_LockedWithBulkheadDC)
                     {
                         var marker = Place(doorLock.m_intOpenDoor.gameObject, ItemType.DoorLock);
@@ -617,148 +595,19 @@ namespace Hikaria.AdminSystem.Features.Item
                             Remove(doorLock.m_intOpenDoor.gameObject.GetInstanceID(), ItemType.DoorLock);
                         }
                     });
+                    return;
                 }
+                while (false);
 
-                var resourcePackItems = UnityEngine.Object.FindObjectsOfType<ResourcePackPickup>();
-                foreach (var item in resourcePackItems)
+                do
                 {
-                    if (item == null || item.ItemDataBlock == null)
-                        continue;
-
-                    var marker = Place(item, ItemType.Resource);
-                    marker.SetColor(ColorType.PickupItems);
-                    marker.SetTitle(item.m_terminalItem);
-                    item.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>(delegate (ePickupItemStatus status, pPickupPlacement placement, PlayerAgent player, bool isRecall)
-                    {
-                        if (status == ePickupItemStatus.PickedUp)
-                        {
-                            Remove(item.GetInstanceID(), ItemType.Resource);
-                        _retry:
-                            try
-                            {
-                                if (item.CourseNode != null)
-                                {
-                                    foreach (var i in item.CourseNode.m_itemsInNode)
-                                    {
-                                        if (i.GetInstanceID() == item.GetInstanceID())
-                                        {
-                                            item.CourseNode.m_itemsInNode.Remove(i);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    if (AIG_CourseNode.TryGetCourseNode(Dimension.GetDimensionFromPos(item.transform.position).DimensionIndex, item.transform.position, 1f, out AIG_CourseNode node))
-                                    {
-                                        foreach (var i in node.m_itemsInNode)
-                                        {
-                                            if (i.GetInstanceID() == item.GetInstanceID())
-                                            {
-                                                node.m_itemsInNode.Remove(i);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            catch
-                            {
-                                goto _retry;
-                            }
-                        }
-                        else if (status == ePickupItemStatus.PlacedInLevel)
-                        {
-                            marker = Place(item, ItemType.Resource);
-                            marker.SetColor(ColorType.PickupItems);
-                            marker.SetTitle(item.m_terminalItem);
-                        }
-                    });
-                }
-
-                var consumableItems = UnityEngine.Object.FindObjectsOfType<ConsumablePickup_Core>();
-                foreach (var item in consumableItems)
-                {
-                    if (item == null || item.ItemDataBlock == null)
-                        continue;
-
-                    var marker = Place(item, ItemType.Consumable);
-                    marker.SetColor(ColorType.PickupItems);
-                    marker.SetTitle(item.PublicName);
-                    item.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>(delegate (ePickupItemStatus status, pPickupPlacement placement, PlayerAgent player, bool isRecall)
-                    {
-                        if (status == ePickupItemStatus.PickedUp)
-                        {
-                            Remove(item.GetInstanceID(), ItemType.Consumable);
-                        _retry:
-                            try
-                            {
-                                if (item.CourseNode != null)
-                                {
-                                    foreach (var i in item.CourseNode.m_itemsInNode)
-                                    {
-                                        if (i.GetInstanceID() == item.GetInstanceID())
-                                        {
-                                            item.CourseNode.m_itemsInNode.Remove(i);
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    if (AIG_CourseNode.TryGetCourseNode(Dimension.GetDimensionFromPos(item.transform.position).DimensionIndex, item.transform.position, 1f, out AIG_CourseNode node))
-                                    {
-                                        foreach (var i in node.m_itemsInNode)
-                                        {
-                                            if (i.GetInstanceID() == item.GetInstanceID())
-                                            {
-                                                node.m_itemsInNode.Remove(i);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            catch
-                            {
-                                goto _retry;
-                            }
-                        }
-                        else if (status == ePickupItemStatus.PlacedInLevel)
-                        {
-                            marker = Place(item, ItemType.Consumable);
-                            marker.SetColor(ColorType.PickupItems);
-                            marker.SetTitle(item.PublicName);
-                        }
-                    });
-                }
-
-                var smallPickupItems = UnityEngine.Object.FindObjectsOfType<GenericSmallPickupItem_Core>();
-                foreach (var smallPickupItem in smallPickupItems)
-                {
-                    var terminalItemName = smallPickupItem.m_terminalItem?.TerminalItemKey ?? smallPickupItem.PublicName;
-                    var name = string.IsNullOrEmpty(terminalItemName) ? smallPickupItem.ArchetypeName : terminalItemName;
-                    var marker = Place(smallPickupItem, ItemType.SmallPickupItems);
-                    marker.SetColor(ColorType.Objective);
-                    marker.SetTitle(name);
-                    smallPickupItem.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>(delegate (ePickupItemStatus status, pPickupPlacement placement, PlayerAgent player, bool isRecall)
-                    {
-                        if (status == ePickupItemStatus.PickedUp)
-                        {
-                            Remove(smallPickupItem.GetInstanceID(), ItemType.Consumable);
-                        }
-                        else if (status == ePickupItemStatus.PlacedInLevel)
-                        {
-                            marker = Place(smallPickupItem, ItemType.SmallPickupItems);
-                            marker.SetColor(ColorType.Objective);
-                            marker.SetTitle(smallPickupItem.m_terminalItem, name);
-                        }
-                    });
-                }
-
-                var generators = UnityEngine.Object.FindObjectsOfType<LG_PowerGenerator_Core>();
-                foreach (var gene in generators)
-                {
+                    var gene = go.GetComponentInChildren<LG_PowerGenerator_Core>();
+                    if (gene == null)
+                        break;
                     Remove(gene.gameObject.GetInstanceID(), ItemType.FixedItems);
-                    if (!gene.m_powerCellInteraction.TryCast<LG_GenericCarryItemInteractionTarget>().isActiveAndEnabled)
+                    if (!gene.m_powerCellInteraction.TryCast<LG_GenericCarryItemInteractionTarget>()?.isActiveAndEnabled ?? true)
                     {
-                        continue;
+                        return;
                     }
                     if (gene.m_graphics.m_gfxSlot.active || (gene.m_isWardenObjective && !gene.ObjectiveItemSolved))
                     {
@@ -794,11 +643,16 @@ namespace Hikaria.AdminSystem.Features.Item
                             }
                         });
                     }
+                    return;
                 }
+                while (false);
 
-                var hsus = UnityEngine.Object.FindObjectsOfType<LG_HSU>();
-                foreach (var hsu in hsus)
+
+                do
                 {
+                    var hsu = go.GetComponentInChildren<LG_HSU>();
+                    if (hsu == null)
+                        break;
                     if (hsu.m_isWardenObjective && !hsu.ObjectiveItemSolved)
                     {
                         var marker = Place(hsu.gameObject, ItemType.FixedItems);
@@ -809,11 +663,16 @@ namespace Hikaria.AdminSystem.Features.Item
                             Remove(hsu.gameObject.GetInstanceID(), ItemType.FixedItems);
                         });
                     }
+                    return;
                 }
+                while (false);
 
-                var hsuActivators = UnityEngine.Object.FindObjectsOfType<LG_HSUActivator_Core>();
-                foreach (var hsuActivator in hsuActivators)
+
+                do
                 {
+                    var hsuActivator = go.GetComponentInChildren<LG_HSUActivator_Core>();
+                    if (hsuActivator == null)
+                        break;
                     if (hsuActivator.m_isWardenObjective && !hsuActivator.ObjectiveItemSolved)
                     {
                         var marker = Place(hsuActivator.gameObject, ItemType.FixedItems);
@@ -828,24 +687,28 @@ namespace Hikaria.AdminSystem.Features.Item
                             Remove(hsuActivator.gameObject.GetInstanceID(), ItemType.FixedItems);
                         });
                     }
+                    return;
                 }
+                while (false);
 
-                var bulkDCs = UnityEngine.Object.FindObjectsOfType<LG_BulkheadDoorController_Core>();
-                foreach (var bulkDC in bulkDCs)
+                do
                 {
+                    var bulkDC = go.GetComponentInChildren<LG_BulkheadDoorController_Core>();
+                    if (bulkDC == null)
+                        break;
                     bool isAllSolved = true;
                     foreach (ChainedPuzzleInstance chainedPuzzle in bulkDC.m_bulkheadScans.Values)
                     {
                         if (!chainedPuzzle.IsSolved)
                         {
                             isAllSolved = false;
-                            break;
+                            return;
                         }
                     }
                     if (isAllSolved)
                     {
                         Remove(bulkDC.gameObject.GetInstanceID(), ItemType.FixedItems);
-                        continue;
+                        return;
                     }
 
                     var marker = Place(bulkDC.gameObject, ItemType.FixedItems);
@@ -863,23 +726,224 @@ namespace Hikaria.AdminSystem.Features.Item
                         }
                         Remove(bulkDC.gameObject.GetInstanceID(), ItemType.FixedItems);
                     });
+                    return;
                 }
+                while (false);
 
-                var carryItems = UnityEngine.Object.FindObjectsOfType<CarryItemPickup_Core>();
-                foreach (var carry in carryItems)
+                do
                 {
-                    if (carry.ItemDataBlock == null)
-                        continue;
+                    var terminal = go.GetComponentInChildren<LG_ComputerTerminal>();
+                    if (terminal == null)
+                        break;
+                    var marker = Place(terminal.gameObject, ItemType.Terminal);
+                    marker.SetColor(ColorType.Terminal);
+                    if (terminal.m_terminalItem == null)
+                    {
+                        marker.SetTitle($"TERMINAL_{terminal.m_serialNumber}");
+                    }
+                    else
+                    {
+                        marker.SetTitle(terminal.m_terminalItem);
+                    }
 
+                    if (terminal.IsPasswordProtected)
+                    {
+                        if (terminal.m_passwordLinkerJob == null)
+                        {
+                            return;
+                        }
+                        var linkedTerminals = terminal.m_passwordLinkerJob.m_terminalsWithPasswordParts;
+                        if (linkedTerminals == null)
+                        {
+                            return;
+                        }
+                        string req = string.Empty;
+                        foreach (var linkedTerminal in linkedTerminals)
+                        {
+                            req += linkedTerminal.m_terminalItem.TerminalItemKey + '\n';
+                        }
+                        marker = Place(terminal.gameObject, ItemType.Terminal);
+                        marker.SetColor(ColorType.Terminal);
+                        marker.SetTitle($"{terminal.m_terminalItem.TerminalItemKey}\n<color=orange>::REQ::</color>\n{req}");
+                    }
+                    return;
+                }
+                while (false);
+
+                do
+                {
+                    var disinfectionStation = go.GetComponentInChildren<LG_DisinfectionStation>();
+                    if (disinfectionStation == null)
+                        break;
+                    var marker = Place(disinfectionStation.gameObject, ItemType.FixedItems);
+                    marker.SetColor(ColorType.Generic);
+                    marker.SetTitle(disinfectionStation.m_terminalItem.TerminalItemKey);
+                    return;
+                }
+                while (false);
+            }
+
+            public static void RegisterItemInLevel(ItemInLevel itemInLevel)
+            {
+                do
+                {
+                    var resourcePackItem = itemInLevel.TryCast<ResourcePackPickup>();
+                    if (resourcePackItem == null)
+                        break;
+                    if (resourcePackItem.ItemDataBlock == null)
+                        return;
+                    var marker = Place(resourcePackItem, ItemType.Resource);
+                    marker.SetColor(ColorType.PickupItems);
+                    marker.SetTitle(resourcePackItem.m_terminalItem);
+                    resourcePackItem.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>(delegate (ePickupItemStatus status, pPickupPlacement placement, PlayerAgent player, bool isRecall)
+                    {
+                        if (status == ePickupItemStatus.PickedUp)
+                        {
+                            Remove(resourcePackItem.GetInstanceID(), ItemType.Resource);
+                        _retry:
+                            try
+                            {
+                                if (resourcePackItem.CourseNode != null)
+                                {
+                                    foreach (var i in resourcePackItem.CourseNode.m_itemsInNode)
+                                    {
+                                        if (i.GetInstanceID() == resourcePackItem.GetInstanceID())
+                                        {
+                                            resourcePackItem.CourseNode.m_itemsInNode.Remove(i);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if (AIG_CourseNode.TryGetCourseNode(Dimension.GetDimensionFromPos(resourcePackItem.transform.position).DimensionIndex, resourcePackItem.transform.position, 1f, out AIG_CourseNode node))
+                                    {
+                                        foreach (var i in node.m_itemsInNode)
+                                        {
+                                            if (i.GetInstanceID() == resourcePackItem.GetInstanceID())
+                                            {
+                                                node.m_itemsInNode.Remove(i);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                goto _retry;
+                            }
+                        }
+                        else if (status == ePickupItemStatus.PlacedInLevel)
+                        {
+                            marker = Place(resourcePackItem, ItemType.Resource);
+                            marker.SetColor(ColorType.PickupItems);
+                            marker.SetTitle(resourcePackItem.m_terminalItem);
+                        }
+                    });
+                    return;
+                }
+                while (false);
+
+                do
+                {
+                    var consumable = itemInLevel.TryCast<ConsumablePickup_Core>();
+                    if (consumable == null)
+                        break;
+                    if (consumable.ItemDataBlock == null)
+                        return;
+                    var marker = Place(consumable, ItemType.Consumable);
+                    marker.SetColor(ColorType.PickupItems);
+                    marker.SetTitle(consumable.PublicName);
+                    consumable.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>(delegate (ePickupItemStatus status, pPickupPlacement placement, PlayerAgent player, bool isRecall)
+                    {
+                        if (status == ePickupItemStatus.PickedUp)
+                        {
+                            Remove(consumable.GetInstanceID(), ItemType.Consumable);
+                        _retry:
+                            try
+                            {
+                                if (consumable.CourseNode != null)
+                                {
+                                    foreach (var i in consumable.CourseNode.m_itemsInNode)
+                                    {
+                                        if (i.GetInstanceID() == consumable.GetInstanceID())
+                                        {
+                                            consumable.CourseNode.m_itemsInNode.Remove(i);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    if (AIG_CourseNode.TryGetCourseNode(Dimension.GetDimensionFromPos(consumable.transform.position).DimensionIndex, consumable.transform.position, 1f, out AIG_CourseNode node))
+                                    {
+                                        foreach (var i in node.m_itemsInNode)
+                                        {
+                                            if (i.GetInstanceID() == consumable.GetInstanceID())
+                                            {
+                                                node.m_itemsInNode.Remove(i);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            catch
+                            {
+                                goto _retry;
+                            }
+                        }
+                        else if (status == ePickupItemStatus.PlacedInLevel)
+                        {
+                            marker = Place(consumable, ItemType.Consumable);
+                            marker.SetColor(ColorType.PickupItems);
+                            marker.SetTitle(consumable.PublicName);
+                        }
+                    });
+                    return;
+                }
+                while (false);
+
+                do
+                {
+                    var smallPickupItem = itemInLevel.TryCast<GenericSmallPickupItem_Core>();
+                    if (smallPickupItem == null)
+                        break;
+                    var terminalItemName = smallPickupItem.m_terminalItem?.TerminalItemKey ?? smallPickupItem.PublicName;
+                    var name = string.IsNullOrEmpty(terminalItemName) ? smallPickupItem.ArchetypeName : terminalItemName;
+                    var marker = Place(smallPickupItem, ItemType.SmallPickupItems);
+                    marker.SetColor(ColorType.Objective);
+                    marker.SetTitle(name);
+                    smallPickupItem.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>(delegate (ePickupItemStatus status, pPickupPlacement placement, PlayerAgent player, bool isRecall)
+                    {
+                        if (status == ePickupItemStatus.PickedUp)
+                        {
+                            Remove(smallPickupItem.GetInstanceID(), ItemType.Consumable);
+                        }
+                        else if (status == ePickupItemStatus.PlacedInLevel)
+                        {
+                            marker = Place(smallPickupItem, ItemType.SmallPickupItems);
+                            marker.SetColor(ColorType.Objective);
+                            marker.SetTitle(smallPickupItem.m_terminalItem, name);
+                        }
+                    });
+                    return;
+                }
+                while (false);
+
+                do
+                {
+                    var carry = itemInLevel.TryCast<CarryItemPickup_Core>();
+                    if (carry == null)
+                        break;
+                    if (carry.ItemDataBlock == null)
+                        return;
                     if (carry.ItemDataBlock.persistentID == GD.Item.Carry_Generator_PowerCell)
                     {
                         if (carry.GetCustomData().byteState == 1)
                         {
-                            continue;
+                            return;
                         }
                         var marker = Place(carry, ItemType.InLevelCarry);
                         marker.SetColor(ColorType.GeneratorItems);
-                        marker.SetTitle(carry.m_terminalItem);
+                        marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
                         carry.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>(delegate (ePickupItemStatus status, pPickupPlacement placement, PlayerAgent player, bool isRecall)
                         {
                             if (status == ePickupItemStatus.PickedUp)
@@ -896,7 +960,7 @@ namespace Hikaria.AdminSystem.Features.Item
                                 {
                                     marker = Place(carry, ItemType.InLevelCarry);
                                     marker.SetColor(ColorType.GeneratorItems);
-                                    marker.SetTitle(carry.m_terminalItem);
+                                    marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
                                 }
                             }
                         });
@@ -905,7 +969,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     {
                         var marker = Place(carry, ItemType.InLevelCarry);
                         marker.SetColor(ColorType.FogItems);
-                        marker.SetTitle(carry.m_terminalItem);
+                        marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
                         carry.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>(delegate (ePickupItemStatus status, pPickupPlacement placement, PlayerAgent player, bool isRecall)
                         {
                             if (status == ePickupItemStatus.PickedUp)
@@ -916,7 +980,7 @@ namespace Hikaria.AdminSystem.Features.Item
                             {
                                 marker = Place(carry, ItemType.InLevelCarry);
                                 marker.SetColor(ColorType.FogItems);
-                                marker.SetTitle(carry.m_terminalItem);
+                                marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
                             }
                         });
                     }
@@ -924,7 +988,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     {
                         var marker = Place(carry, ItemType.InLevelCarry);
                         marker.SetColor(ColorType.Objective);
-                        marker.SetTitle(carry.m_terminalItem);
+                        marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
                         carry.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>(delegate (ePickupItemStatus status, pPickupPlacement placement, PlayerAgent player, bool isRecall)
                         {
                             if (status == ePickupItemStatus.PickedUp)
@@ -940,20 +1004,24 @@ namespace Hikaria.AdminSystem.Features.Item
                                 }
                                 marker = Place(carry, ItemType.InLevelCarry);
                                 marker.SetColor(ColorType.Objective);
-                                marker.SetTitle(carry.m_terminalItem);
+                                marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
                             }
                         });
                     }
+                    return;
                 }
+                while (false);
 
-                var keyItems = UnityEngine.Object.FindObjectsOfType<KeyItemPickup_Core>();
-                foreach (var key in keyItems)
+                do
                 {
+                    var key = itemInLevel.TryCast<KeyItemPickup_Core>();
+                    if (key == null)
+                        break;
                     if (key.ItemDataBlock.persistentID == GD.Item.Pickup_bulkheadKey)
                     {
                         var marker = Place(key, ItemType.PickupItems);
                         marker.SetColor(ColorType.BulkheadItems);
-                        marker.SetTitle(key.m_terminalItem);
+                        marker.SetTitle(key.m_terminalItem, key.ArchetypeName);
                         key.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>(delegate (ePickupItemStatus status, pPickupPlacement placement, PlayerAgent player, bool isRecall)
                         {
                             if (status == ePickupItemStatus.PickedUp)
@@ -964,7 +1032,7 @@ namespace Hikaria.AdminSystem.Features.Item
                             {
                                 marker = Place(key, ItemType.PickupItems);
                                 marker.SetColor(ColorType.BulkheadItems);
-                                marker.SetTitle(key.m_terminalItem);
+                                marker.SetTitle(key.m_terminalItem, key.ArchetypeName);
                             }
                         });
                     }
@@ -972,7 +1040,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     {
                         var marker = Place(key, ItemType.PickupItems);
                         marker.SetColor(ColorType.KeycardItems);
-                        marker.SetTitle(key.m_terminalItem);
+                        marker.SetTitle(key.m_terminalItem, key.ArchetypeName);
                         key.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>(delegate (ePickupItemStatus status, pPickupPlacement placement, PlayerAgent player, bool isRecall)
                         {
                             if (status == ePickupItemStatus.PickedUp)
@@ -983,56 +1051,17 @@ namespace Hikaria.AdminSystem.Features.Item
                             {
                                 marker = Place(key, ItemType.PickupItems);
                                 marker.SetColor(ColorType.KeycardItems);
-                                marker.SetTitle(key.m_terminalItem);
+                                marker.SetTitle(key.m_terminalItem, key.ArchetypeName);
                             }
                         });
                     }
+                    return;
                 }
+                while (false);
+            }
 
-                var terminals = UnityEngine.Object.FindObjectsOfType<LG_ComputerTerminal>();
-                foreach (var terminal in terminals)
-                {
-                    var marker = Place(terminal.gameObject, ItemType.Terminal);
-                    marker.SetColor(ColorType.Terminal);
-                    if (terminal.m_terminalItem == null)
-                    {
-                        marker.SetTitle($"TERMINAL_{terminal.m_serialNumber}");
-                    }
-                    else
-                    {
-                        marker.SetTitle(terminal.m_terminalItem);
-                    }
-
-                    if (terminal.IsPasswordProtected)
-                    {
-                        if (terminal.m_passwordLinkerJob == null)
-                        {
-                            continue;
-                        }
-                        var linkedTerminals = terminal.m_passwordLinkerJob.m_terminalsWithPasswordParts;
-                        if (linkedTerminals == null)
-                        {
-                            continue;
-                        }
-                        string req = "";
-                        foreach (var linkedTerminal in linkedTerminals)
-                        {
-                            req += linkedTerminal.m_terminalItem.TerminalItemKey + '\n';
-                        }
-                        marker = Place(terminal.gameObject, ItemType.Terminal);
-                        marker.SetColor(ColorType.Terminal);
-                        marker.SetTitle($"{terminal.m_terminalItem.TerminalItemKey}\n<color=orange>::REQ::</color>\n{req}");
-                    }
-                }
-
-                var disinfectionStations = UnityEngine.Object.FindObjectsOfType<LG_DisinfectionStation>();
-                foreach (var disinfectionStation in disinfectionStations)
-                {
-                    var marker = Place(disinfectionStation.gameObject, ItemType.FixedItems);
-                    marker.SetColor(ColorType.Generic);
-                    marker.SetTitle(disinfectionStation.m_terminalItem.TerminalItemKey);
-                }
-
+            public static void UpdateVisiableForItemMarkers()
+            {
                 foreach (var marker in _DynamicItemMarkers.Values)
                 {
                     marker.Marker.SetVisible(false);
@@ -1056,6 +1085,56 @@ namespace Hikaria.AdminSystem.Features.Item
                         value.Marker.SetVisible(MarkItems);
                     }
                 }
+            }
+
+            public static IEnumerator LoadingItem(bool forceLoad = false, bool registerInNodes = false)
+            {
+                var yielder = new WaitForFixedUpdate();//WaitForSecondsRealtime(3f);
+                if (!SNet.IsMaster && !forceLoad)
+                {
+                    yield return yielder;
+                }
+
+                if (registerInNodes)
+                {
+                    RegisterItemInLevelInCourseNodes();
+                }
+
+                foreach (var item in _FixedItemMarkers)
+                {
+                    Remove(item.Key, ItemType.FixedItems);
+                }
+                foreach (var item in _DynamicItemMarkers)
+                {
+                    Remove(item.Key, ItemType.Resource);
+                }
+                foreach (var item in _OtherItemMarkers)
+                {
+                    Remove(item.Key, ItemType.InLevelCarry);
+                }
+
+                /*
+                var navMarkers = UnityEngine.Object.FindObjectsOfType<NavMarker>();
+                foreach (var navMarker in navMarkers)
+                {
+                    if (navMarker.name.Contains("AdminSystem"))
+                    {
+                        UnityEngine.Object.Destroy(navMarker.gameObject);
+                    }
+                }
+                */
+
+                foreach (var item in _AllItemInLevels)
+                {
+                    RegisterItemInLevel(item);
+                }
+                foreach (var go in _AllGameObjectsToInspect)
+                {
+                    InspectGameObject(go);
+                }
+
+
+                UpdateVisiableForItemMarkers();
             }
 
             public static void SetVisible(bool active)
@@ -1100,16 +1179,6 @@ namespace Hikaria.AdminSystem.Features.Item
                         itemMarker.Marker.SetVisible(active);
                     }
                 }
-            }
-
-            public static void ReloadItemMarker()
-            {
-                if (GameStateManager.CurrentStateName != eGameStateName.InLevel)
-                {
-                    DevConsole.LogError("不在游戏中");
-                    return;
-                }
-                LoadingItem(true);
             }
 
             public static Color GetUnityColor(ColorType markerColor)

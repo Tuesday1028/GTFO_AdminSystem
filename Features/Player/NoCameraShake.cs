@@ -14,6 +14,8 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public override string Description => "禁用受到伤害时视角抖动";
 
+        public override bool InlineSettingsIntoParentMenu => true;
+
         public override FeatureGroup Group => EntryPoint.Groups.Player;
 
         [FeatureConfig]

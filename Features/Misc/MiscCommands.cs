@@ -5,11 +5,11 @@ using Enemies;
 using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Managers;
 using Hikaria.AdminSystem.Utilities;
+using Hikaria.Core;
 using Hikaria.DevConsoleLite;
 using LevelGeneration;
 using Player;
 using SNetwork;
-using Steamworks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -82,6 +82,22 @@ namespace Hikaria.AdminSystem.Features.Misc
             //好像没什么实际用处
             DevConsole.AddCommand(Command.Create<int>("ChangeLookup", "修改唯一识别码", "修改唯一识别码", Parameter.Create("Slot", "槽位, 1-4"), ChangeLookup));
             DevConsole.AddCommand(Command.Create("RestoreLookup", "恢复唯一识别码", "恢复唯一识别码", RestoreLookup));
+
+            DevConsole.AddCommand(Command.Create("PauseGame", "暂停游戏", "暂停游戏", () =>
+            {
+                if (CurrentGameState != (int)eGameStateName.InLevel)
+                {
+                    DevConsole.LogError("不在游戏中");
+                    return;
+                }
+                if (!SNet.IsMaster)
+                {
+                    DevConsole.LogError("主机才能暂停游戏");
+                    return;
+                }
+                GameEventAPI.IsGamePaused = !GameEventAPI.IsGamePaused;
+                DevConsole.LogSuccess($"已{(GameEventAPI.IsGamePaused ? "暂停" : "继续")}游戏");
+            }));
         }
 
         private static void KillEnemies(int choice)

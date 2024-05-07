@@ -18,6 +18,8 @@ internal class SuperBioTracker : Feature
 
     public override FeatureGroup Group => EntryPoint.Groups.Misc;
 
+    public override bool InlineSettingsIntoParentMenu => true;
+
     [FeatureConfig]
     public static SuperBioTrackerSetting Settings { get; set; }
 
