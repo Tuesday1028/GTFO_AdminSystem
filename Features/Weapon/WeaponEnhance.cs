@@ -415,7 +415,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             foreach (var item in baseGO.GetComponentsInChildren<Transform>())
             {
-                string childName = item.name.ToLower(System.Globalization.CultureInfo.CurrentCulture);
+                string childName = item.name.ToLowerInvariant();
                 foreach (var compName in ClearSightCompNames)
                 {
                     if (!childName.Contains(compName))

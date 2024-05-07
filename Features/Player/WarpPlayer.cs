@@ -227,13 +227,13 @@ namespace Hikaria.AdminSystem.Features.Player
             {
                 return;
             }
-            WarpStoresLookup.AutoAdd(key, new WarpStorePosEntry
+            WarpStoresLookup[key] = new WarpStorePosEntry
             {
                 DimensionIndex = AdminUtils.LocalPlayerAgent.DimensionIndex,
                 Position = AdminUtils.LocalPlayerAgent.Position,
                 Forward = AdminUtils.LocalPlayerAgent.Forward,
                 Name = key
-            });
+            };
         }
 
         private static void WarpPlayerToStoredPos(SlotIndex slot, string key)

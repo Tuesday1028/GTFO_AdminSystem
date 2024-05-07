@@ -111,7 +111,7 @@ namespace Hikaria.AdminSystem.Features.Item
         {
             foreach (ItemDataBlock block in GameDataBlockBase<ItemDataBlock>.GetAllBlocksForEditor())
             {
-                NameIDLookup.AutoAdd(block.publicName.Replace(" ", "").ToUpper(System.Globalization.CultureInfo.CurrentCulture), block.persistentID);
+                NameIDLookup[block.publicName.Replace(" ", "").ToUpperInvariant()] = block.persistentID;
                 IDBlockLookup.Add(block.persistentID, block);
             }
         }
@@ -154,7 +154,7 @@ namespace Hikaria.AdminSystem.Features.Item
 
         private static void PlayerPickupItem(int slot, string itemName)
         {
-            itemName = itemName.ToUpper(System.Globalization.CultureInfo.CurrentCulture);
+            itemName = itemName.ToUpperInvariant();
             SNet_Player playerInSlot = SNet.Slots.GetPlayerInSlot(slot - 1);
             if (playerInSlot == null)
             {
@@ -193,7 +193,7 @@ namespace Hikaria.AdminSystem.Features.Item
 
         private static void SpawnItem(string itemName, string spawnmode)
         {
-            itemName = itemName.ToUpper(System.Globalization.CultureInfo.CurrentCulture);
+            itemName = itemName.ToUpperInvariant();
             if (NameIDLookup.TryGetValue(itemName, out uint value))
             {
                 SpawnItem(value, spawnmode);
@@ -206,7 +206,7 @@ namespace Hikaria.AdminSystem.Features.Item
 
         private static void SpawnItem(uint id, string spawnmode)
         {
-            spawnmode = spawnmode.ToLower(System.Globalization.CultureInfo.CurrentCulture);
+            spawnmode = spawnmode.ToLowerInvariant();
             if (!IDBlockLookup.TryGetValue(id, out ItemDataBlock value))
             {
                 DevConsole.LogError($"不存在ID为{id}的物品");
@@ -252,7 +252,7 @@ namespace Hikaria.AdminSystem.Features.Item
         private static void SpawnMine(string choice)
         {
             uint MineID = 125U;
-            choice = choice.ToLower(System.Globalization.CultureInfo.CurrentCulture);
+            choice = choice.ToLowerInvariant();
             switch (choice)
             {
                 case "glue":

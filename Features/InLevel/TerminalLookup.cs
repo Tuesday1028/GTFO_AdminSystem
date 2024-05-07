@@ -507,7 +507,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
                         return;
                     }
 
-                    value.AutoAdd(data.FileName, data);
+                    value[data.FileName] = data;
                 }
             }
         }

@@ -420,15 +420,15 @@ namespace Hikaria.AdminSystem.Features.Item
                     case ItemType.Consumable:
                     case ItemType.Terminal:
                     case ItemType.SmallPickupItems:
-                        _DynamicItemMarkers.AutoAdd(id, marker);
+                        _DynamicItemMarkers[id] = marker;
                         break;
                     case ItemType.FixedItems:
                     case ItemType.DoorLock:
-                        _FixedItemMarkers.AutoAdd(id, marker);
+                        _FixedItemMarkers[id] = marker;
                         break;
                     case ItemType.InLevelCarry:
                     case ItemType.PickupItems:
-                        _OtherItemMarkers.AutoAdd(id, marker);
+                        _OtherItemMarkers[id] = marker;
                         break;
                 }
             }
