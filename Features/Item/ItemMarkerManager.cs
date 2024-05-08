@@ -13,8 +13,6 @@ using SNetwork;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -569,7 +567,7 @@ namespace Hikaria.AdminSystem.Features.Item
             public static void InspectGameObject(GameObject go)
             {
                 if (go == null) return;
-
+                /*
                 var portals = go.GetComponentsInChildren<LG_DimensionPortal>();
                 foreach (var portal in portals)
                 {
@@ -585,6 +583,7 @@ namespace Hikaria.AdminSystem.Features.Item
                         Remove(portal.gameObject.GetInstanceID(), ItemType.FixedItems);
                     }
                 }
+                */
 
                 var genes = go.GetComponentsInChildren<LG_PowerGenerator_Core>();
                 foreach (var gene in genes)
