@@ -6,6 +6,7 @@ using Hikaria.DevConsoleLite;
 using LevelGeneration;
 using Player;
 using SNetwork;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TheArchive.Core.Attributes;
@@ -74,36 +75,28 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public static Dictionary<string, global::Item> ItemsInLevel { get; set; } = new();
 
-        private static bool IsValidItemSlot(pItemData data)
+        [ArchivePatch(typeof(ItemSpawnManager), nameof(ItemSpawnManager.SpawnItem))]
+        private class ItemSpawnManager__SpawnItem__Patch
         {
-            return data.slot == InventorySlot.ResourcePack || data.slot == InventorySlot.Consumable || data.slot == InventorySlot.ConsumableHeavy || data.slot == InventorySlot.InLevelCarry || data.slot == InventorySlot.InPocket;
-        }
-
-        [ArchivePatch(typeof(LG_PickupItem_Sync), nameof(LG_PickupItem_Sync.OnStateChange))]
-        private class LG_PickupItem_Sync__OnStateChange__Patch
-        {
-            private static void Prefix(LG_PickupItem_Sync __instance, pPickupItemState newState, bool isRecall)
+            private static void Postfix(global::Item __result)
             {
-                if (IsValidItemSlot(__instance.item.pItemData))
+                var itemInLevel = __result.TryCast<ItemInLevel>();
+                if (itemInLevel == null) return;
+                string[] array = itemInLevel.ToString().Split(' ');
+                var key = array[1];
+                ItemsInLevel[key] = itemInLevel;
+
+                itemInLevel.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                 {
-                    if (newState.status == ePickupItemStatus.PickedUp)
+                    if (status == ePickupItemStatus.PickedUp)
                     {
-                        string[] array = __instance.item.ToString().Split(' ');
-                        ItemsInLevel.Remove(array[1]);
+                        ItemsInLevel.Remove(key);
                     }
-                    if (newState.status == ePickupItemStatus.PlacedInLevel)
+                    else if (status == ePickupItemStatus.PlacedInLevel)
                     {
-                        string[] array2 = __instance.item.ToString().Split(' ');
-                        if (!ItemsInLevel.ContainsKey(array2[1]))
-                        {
-                            ItemsInLevel.Add(array2[1], __instance.item);
-                        }
-                        else
-                        {
-                            ItemsInLevel[array2[1]] = __instance.item;
-                        }
+                        ItemsInLevel[key] = itemInLevel;
                     }
-                }
+                });
             }
         }
 
@@ -112,32 +105,16 @@ namespace Hikaria.AdminSystem.Features.Item
             foreach (ItemDataBlock block in GameDataBlockBase<ItemDataBlock>.GetAllBlocksForEditor())
             {
                 NameIDLookup[block.publicName.Replace(" ", "").ToUpperInvariant()] = block.persistentID;
-                IDBlockLookup.Add(block.persistentID, block);
+                IDBlockLookup[block.persistentID] = block;
             }
         }
 
 
         public override void OnGameStateChanged(int state)
         {
-            eGameStateName current = (eGameStateName)state;
-            if (current >= eGameStateName.ExpeditionSuccess && current <= eGameStateName.ExpeditionAbort || current == eGameStateName.AfterLevel)
+            if (state == (int)eGameStateName.AfterLevel)
             {
                 ItemsInLevel.Clear();
-            }
-            if (current == eGameStateName.InLevel)
-            {
-                ItemsInLevel.Clear();
-                foreach (var item in Object.FindObjectsOfType<global::Item>())
-                {
-                    if (IsValidItemSlot(item.pItemData))
-                    {
-                        string[] array = item.ToString().Split(' ');
-                        if (!ItemsInLevel.TryAdd(array[1], item))
-                        {
-                            ItemsInLevel[array[1]] = item;
-                        }
-                    }
-                }
             }
         }
 
@@ -186,6 +163,7 @@ namespace Hikaria.AdminSystem.Features.Item
                         return;
                     }
                     DevConsole.LogError($"不存在slot为 {slot} 的玩家");
+                    return;
                 }
             }
             DevConsole.LogError("目标物品为空");

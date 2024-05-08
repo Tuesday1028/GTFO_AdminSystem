@@ -19,10 +19,5 @@ namespace Hikaria.AdminSystem.Extensions
                 return str.Substring(0, length);
             }
         }
-
-        public static bool IsNullOrEmptyOrWhiteSpace(this string str)
-        {
-            return str.IsNullOrWhiteSpace() || string.IsNullOrEmpty(str);
-        }
     }
 }

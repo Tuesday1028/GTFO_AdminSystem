@@ -31,7 +31,6 @@ namespace Hikaria.AdminSystem.Features.InLevel
         public static TerminalLookup Instance { get; private set; }
 
         [FeatureConfig]
-        [JsonIgnore]
         public static TerminalSettings Settings { get; set; }
 
         private static Il2CppSystem.Collections.Generic.Dictionary<int, Il2CppSystem.Collections.Generic.List<TerminalUplinkPuzzleRound>> TerminalCodePuzzle = new();
@@ -42,13 +41,16 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         public class TerminalSettings
         {
+            [JsonIgnore]
             [FSDisplayName("目标终端序列号")]
             public int TerminalID { get; set; }
 
+            [JsonIgnore]
             [FSDisplayName("查询终端信息")]
             public FButton SearchTerminal { get; set; } = new FButton("查询", "查询终端信息");
             [FSDisplayName("终端信息")]
             [FSReadOnly]
+            [JsonIgnore]
             public List<TerminalSettingsEntry> TargetTerminal { get; set; }
         }
 
@@ -248,7 +250,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
                     var list = new List<TerminalLogEntry>();
                     foreach (var pair in TerminalsInLevel[ID].GetLocalLogs())
                     {
-                        if (!pair.Key.IsNullOrEmptyOrWhiteSpace() && TerminalsInLevel[ID].m_logVisibleMap.ContainsKey(pair.Key) && TerminalsInLevel[ID].m_logVisibleMap[pair.Key])
+                        if (!string.IsNullOrEmpty(pair.Key) && TerminalsInLevel[ID].m_logVisibleMap.ContainsKey(pair.Key) && TerminalsInLevel[ID].m_logVisibleMap[pair.Key])
                         {
                             list.Add(new(pair.Value));
                         }
