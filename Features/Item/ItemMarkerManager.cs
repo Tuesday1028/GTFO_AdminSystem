@@ -677,7 +677,7 @@ namespace Hikaria.AdminSystem.Features.Item
                             }
                         }
                     });
-                    if (gene.ObjectiveItemSolved || !gene.m_isWardenObjective || !gene.m_graphics.m_gfxSlot.active)
+                    if ((gene.ObjectiveItemSolved || !gene.m_isWardenObjective) && !gene.m_graphics.m_gfxSlot.active)
                     {
                         Remove(gene.gameObject.GetInstanceID(), ItemType.FixedItems);
                     }
