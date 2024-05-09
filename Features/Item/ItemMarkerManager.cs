@@ -7,6 +7,7 @@ using Hikaria.AdminSystem.Utilities;
 using Hikaria.Core;
 using Hikaria.Core.Interfaces;
 using Hikaria.DevConsoleLite;
+using Il2CppInterop.Runtime;
 using LevelGeneration;
 using Player;
 using SNetwork;
@@ -89,10 +90,7 @@ namespace Hikaria.AdminSystem.Features.Item
 
         private void OnFactoryBuildDone()
         {
-            foreach (var itemInLevel in UnityEngine.Object.FindObjectsOfType<ItemInLevel>())
-            {
-                ItemMarker._AllItemInLevels.Add(itemInLevel);
-            }
+            ItemMarker.SearchGameObjects();
         }
 
         public void OnRecallComplete(eBufferType bufferType)
@@ -122,42 +120,6 @@ namespace Hikaria.AdminSystem.Features.Item
                 {
                     consumable.CourseNode = __instance.m_core.SpawnNode;
                 }
-            }
-        }
-
-        [ArchivePatch(typeof(LG_FunctionMarkerBuilder), nameof(LG_FunctionMarkerBuilder.SetupFunctionGO))]
-        private class LG_FunctionMarkerBuilder__SetupFunctionGO__Patch
-        {
-            private static void Postfix(GameObject GO)
-            {
-                ItemMarker._AllGameObjectsToInspect.Add(GO);
-            }
-        }
-
-        [ArchivePatch(typeof(LG_SecurityDoor), nameof(LG_SecurityDoor.Setup))]
-        private class LG_SecurityDoor__Setup__Patch
-        {
-            private static void Postfix(LG_SecurityDoor __instance)
-            {
-                ItemMarker._AllGameObjectsToInspect.Add(__instance.gameObject);
-            }
-        }
-
-        [ArchivePatch(typeof(LG_DimensionPortal), nameof(LG_DimensionPortal.Setup))]
-        private class LG_DimensionPortal__OnBuildDone__Patch
-        {
-            private static void Postfix(LG_DimensionPortal __instance)
-            {
-                ItemMarker._AllGameObjectsToInspect.Add(__instance.gameObject);
-            }
-        }
-
-        [ArchivePatch(typeof(LG_HSUActivator_Core), nameof(LG_HSUActivator_Core.OnBuildDone))]
-        private class LG_HSUActivator_Core__OnBuildDone__Patch
-        {
-            private static void Postfix(LG_HSUActivator_Core __instance)
-            {
-                ItemMarker._AllGameObjectsToInspect.Add(__instance.gameObject);
             }
         }
 
@@ -291,6 +253,42 @@ namespace Hikaria.AdminSystem.Features.Item
             public void SetColor(ColorType color)
             {
                 SetColor(GetUnityColor(color));
+            }
+
+            public static void SearchGameObjects()
+            {
+                foreach (var itemInLevel in UnityEngine.Object.FindObjectsOfType<ItemInLevel>())
+                {
+                    _AllItemInLevels.Add(itemInLevel);
+                }
+                foreach (var obj in UnityEngine.Object.FindObjectsOfType<LG_ComputerTerminal>())
+                {
+                    _AllGameObjectsToInspect.Add(obj.gameObject);
+                }
+                foreach (var obj in UnityEngine.Object.FindObjectsOfType<LG_HSU>())
+                {
+                    _AllGameObjectsToInspect.Add(obj.gameObject);
+                }
+                foreach (var obj in UnityEngine.Object.FindObjectsOfType<LG_HSUActivator_Core>())
+                {
+                    _AllGameObjectsToInspect.Add(obj.gameObject);
+                }
+                foreach (var obj in UnityEngine.Object.FindObjectsOfType<LG_SecurityDoor>())
+                {
+                    _AllGameObjectsToInspect.Add(obj.gameObject);
+                }
+                foreach (var obj in UnityEngine.Object.FindObjectsOfType<LG_SecurityDoor>())
+                {
+                    _AllGameObjectsToInspect.Add(obj.gameObject);
+                }
+                foreach (var obj in UnityEngine.Object.FindObjectsOfType<LG_BulkheadDoorController_Core>())
+                {
+                    _AllGameObjectsToInspect.Add(obj.gameObject);
+                }
+                foreach (var obj in UnityEngine.Object.FindObjectsOfType<LG_DisinfectionStation>())
+                {
+                    _AllGameObjectsToInspect.Add(obj.gameObject);
+                }
             }
 
 
@@ -588,17 +586,6 @@ namespace Hikaria.AdminSystem.Features.Item
                 }
             }
 
-            public static void InspectPickupItem(LG_PickupItem pickupItem)
-            {
-                var itemInLevel = pickupItem.GetComponentInChildren<ItemInLevel>();
-                if (itemInLevel == null) return;
-                if (itemInLevel.CourseNode == null)
-                {
-                    itemInLevel.CourseNode = pickupItem.SpawnNode;
-                }
-                _AllItemInLevels.Add(itemInLevel);
-            }
-
             public static void InspectGameObject(GameObject go)
             {
                 if (go == null) return;
@@ -831,7 +818,6 @@ namespace Hikaria.AdminSystem.Features.Item
                         }
                         marker.SetTitle($"{terminal.m_terminalItem.TerminalItemKey}\n<color=orange>::REQ::</color>\n{req}");
                     }
-
                 }
 
                 var disinfectionStations = go.GetComponentsInChildren<LG_DisinfectionStation>();
