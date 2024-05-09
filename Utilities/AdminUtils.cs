@@ -17,7 +17,7 @@ namespace Hikaria.AdminSystem.Utilities
             return true;
         }
 
-        public static LocalPlayerAgent LocalPlayerAgent => PlayerManager.GetLocalPlayerAgent().TryCast<LocalPlayerAgent>();
+        public static LocalPlayerAgent LocalPlayerAgent => PlayerManager.GetLocalPlayerAgent()?.TryCast<LocalPlayerAgent>() ?? null;
 
         public static T CopyProperties<T>(T source, T target)
         {

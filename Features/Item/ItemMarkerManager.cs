@@ -103,6 +103,15 @@ namespace Hikaria.AdminSystem.Features.Item
             }
         }
 
+        [ArchivePatch(typeof(ItemInLevel), nameof(ItemInLevel.OnDespawn))]
+        private class ItemInLevel__OnDespawn__Patch
+        {
+            private static void Prefix(ItemInLevel __instance)
+            {
+                ItemMarker._AllItemInLevels.Remove(__instance);
+            }
+        }
+
         [ArchivePatch(typeof(LG_ResourceContainer_Storage), nameof(LG_ResourceContainer_Storage.SpawnConsumable))]
         private class LG_ResourceContainer_Storage__SpawnConsumable__Patch
         {
@@ -1125,9 +1134,18 @@ namespace Hikaria.AdminSystem.Features.Item
                 }
                 */
 
+                var yielder = new WaitForFixedUpdate();
+
+                while (!SNet.LocalPlayer.HasPlayerAgent)
+                {
+                    yield return yielder;
+                }
+
                 yield return new WaitForEndOfFrame();
 
                 CleanupItemMarkers();
+                
+                RegisterItemInLevelInCourseNodesOncePerLevel();
 
                 foreach (var go in _AllGameObjectsToInspect)
                 {
@@ -1137,8 +1155,6 @@ namespace Hikaria.AdminSystem.Features.Item
                 {
                     RegisterItemInLevel(itemInLevel);
                 }
-
-                RegisterItemInLevelInCourseNodesOncePerLevel();
 
                 UpdateDynamicItemMarkersVisiable();
                 IsFirstLoadPerLevel = false;

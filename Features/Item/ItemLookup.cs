@@ -19,7 +19,7 @@ namespace Hikaria.AdminSystem.Features.Item
     [DoNotSaveToConfig]
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
-    public class PickupItem : Feature
+    public class ItemLookup : Feature
     {
         public override string Name => "物品";
 
