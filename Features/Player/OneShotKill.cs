@@ -96,10 +96,6 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public void OnSessionMemberChanged(SNet_Player player, SessionMemberEvent playerEvent)
         {
-            if (!player.IsValid())
-            {
-                return;
-            }
             if (playerEvent == SessionMemberEvent.JoinSessionHub)
             {
                 OneShotKillEntry entry = new()

@@ -16,7 +16,6 @@ using System.Collections.Generic;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
-using TheArchive.Core.FeaturesAPI.Components;
 using TheArchive.Interfaces;
 using UnityEngine;
 
@@ -40,8 +39,15 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public override void OnGameStateChanged(int state)
         {
-            ItemMarker.DoLoad((eGameStateName)state);
-            ItemMarker.DoClear((eGameStateName)state);
+            var currentState = (eGameStateName)state;
+            if (currentState == eGameStateName.InLevel)
+            {
+                ItemMarker.DoEnterLevelOnceLoad();
+            }
+            if (currentState == eGameStateName.AfterLevel)
+            {
+                ItemMarker.DoAfterLevelClear();
+            }
         }
 
         public class ItemMarkerSettings
@@ -58,10 +64,6 @@ namespace Hikaria.AdminSystem.Features.Item
                     ItemMarker.SetVisible(value);
                 }
             }
-
-            [FSDisplayName("重载物品标记")]
-            [FSDescription("点击按钮来修正物品标记错误")]
-            public FButton ReloadItemMarker { get; set; } = new FButton("重载", "重载物品标记", () => { CoroutineManager.StartCoroutine(ItemMarker.LoadingItem(false).WrapToIl2Cpp()); });
         }
 
         public override void Init()
@@ -87,10 +89,6 @@ namespace Hikaria.AdminSystem.Features.Item
 
         private void OnFactoryBuildDone()
         {
-            foreach (var pickupItem in UnityEngine.Object.FindObjectsOfType<LG_PickupItem>())
-            {
-                ItemMarker._AllPickupItemsToInspect.Add(pickupItem);
-            }
             foreach (var itemInLevel in UnityEngine.Object.FindObjectsOfType<ItemInLevel>())
             {
                 ItemMarker._AllItemInLevels.Add(itemInLevel);
@@ -99,10 +97,9 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public void OnRecallComplete(eBufferType bufferType)
         {
-            if (CurrentGameState == (int)eGameStateName.InLevel)
+            if (CurrentGameState == (int)eGameStateName.InLevel || bufferType == eBufferType.Checkpoint)
             {
-                FeatureLogger.Notice("OnRecallComplete");
-                CoroutineManager.StartCoroutine(ItemMarker.LoadingItem(false).WrapToIl2Cpp());
+                CoroutineManager.StartCoroutine(ItemMarker.LoadingItem().WrapToIl2Cpp());
             }
         }
 
@@ -294,9 +291,9 @@ namespace Hikaria.AdminSystem.Features.Item
 
             public static HashSet<ItemInLevel> _AllItemInLevels = new();
             public static HashSet<GameObject> _AllGameObjectsToInspect = new();
-            public static HashSet<LG_PickupItem> _AllPickupItemsToInspect = new();
 
             public static bool MarkItems;
+            private static bool IsFirstLoadPerLevel = true;
 
             private static readonly Color _GenericColor = Color.blue; //Dark Blue
             private static readonly Color _TerminalColor = ColorExt.Hex("#42CE1F"); //Lime Green
@@ -310,8 +307,11 @@ namespace Hikaria.AdminSystem.Features.Item
 
             public static ItemMarker Place(ItemInLevel item, ItemType type)
             {
-                item.internalSync.GetCurrentState().placement.node.TryGet(out var currentNode);
-                item.CourseNode = currentNode;
+                // 游戏逻辑: OnSyncStateChanged 触发于 CourseNode 更新前，所以必须手动更新
+                if (item.internalSync.GetCurrentState().placement.node.TryGet(out var currentNode))
+                {
+                    item.CourseNode = currentNode;
+                }
                 if (type == ItemType.Resource || type == ItemType.Consumable || type == ItemType.SmallPickupItems)
                 {
                     NavMarker navMarker;
@@ -332,7 +332,6 @@ namespace Hikaria.AdminSystem.Features.Item
                     }
                     navMarker.SetIconScale(0.275f);
                     navMarker.m_titleSubObj.transform.localScale = Vector3.one * 1.75f;
-                    navMarker.gameObject.name += "__AdminSystem";
 
                     var itemMarker = new ItemMarker(navMarker);
                     itemMarker.SetColor(ColorType.PickupItems);
@@ -356,7 +355,6 @@ namespace Hikaria.AdminSystem.Features.Item
                     navMarker.SetVisible(MarkItems);
                     navMarker.SetIconScale(0.275f);
                     navMarker.m_titleSubObj.transform.localScale = Vector3.one * 1.75f;
-                    navMarker.gameObject.name += "__AdminSystem";
 
                     var itemMarker = new ItemMarker(navMarker);
                     itemMarker.SetColor(ColorType.Generic);
@@ -379,7 +377,6 @@ namespace Hikaria.AdminSystem.Features.Item
                     navMarker.SetVisible(MarkItems);
                     navMarker.SetIconScale(0.275f);
                     navMarker.m_titleSubObj.transform.localScale = Vector3.one * 1.75f;
-                    navMarker.gameObject.name += "__AdminSystem";
 
                     var itemMarker = new ItemMarker(navMarker);
                     itemMarker.SetColor(ColorType.Generic);
@@ -409,7 +406,6 @@ namespace Hikaria.AdminSystem.Features.Item
                     navMarker.SetVisible(MarkItems);
                     navMarker.SetIconScale(0.275f);
                     navMarker.m_titleSubObj.transform.localScale = Vector3.one * 1.75f;
-                    navMarker.gameObject.name += "__AdminSystem";
 
                     var itemMarker = new ItemMarker(navMarker);
                     itemMarker.SetColor(ColorType.Generic);
@@ -433,7 +429,6 @@ namespace Hikaria.AdminSystem.Features.Item
                     navMarker.SetVisible(MarkItems);
                     navMarker.SetIconScale(0.275f);
                     navMarker.m_titleSubObj.transform.localScale = Vector3.one * 1.75f;
-                    navMarker.gameObject.name += "__AdminSystem";
 
                     var itemMarker = new ItemMarker(navMarker);
                     itemMarker.SetColor(ColorType.Terminal);
@@ -498,58 +493,88 @@ namespace Hikaria.AdminSystem.Features.Item
                 }
             }
 
-            public static void DoLoad(eGameStateName current)
+            public static void DoEnterLevelOnceLoad()
             {
-                if (current == eGameStateName.InLevel)
+                if (IsFirstLoadPerLevel)
                 {
-                    CoroutineManager.StartCoroutine(LoadingItem(true).WrapToIl2Cpp());
+                    CoroutineManager.StartCoroutine(LoadingItem().WrapToIl2Cpp());
                 }
             }
 
-            public static void DoClear(eGameStateName current)
+            private static void CleanupItemMarkers()
             {
-                if (current == eGameStateName.AfterLevel)
+                foreach (var itemMarker in _FixedItemMarkers.Values)
                 {
-                    foreach (var itemMarker in _FixedItemMarkers.Values)
-                    {
-                        itemMarker.Marker.SetVisible(false);
-                        GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
-                        UnityEngine.Object.Destroy(itemMarker.Marker.gameObject);
-                    }
-                    _FixedItemMarkers.Clear();
-                    foreach (var itemMarker in _DynamicItemMarkers.Values)
-                    {
-                        itemMarker.Marker.SetVisible(false);
-                        GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
-                        UnityEngine.Object.Destroy(itemMarker.Marker.gameObject);
-                    }
-                    _DynamicItemMarkers.Clear();
-                    foreach (var itemMarker in _OtherItemMarkers.Values)
-                    {
-                        itemMarker.Marker.SetVisible(false);
-                        GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
-                        UnityEngine.Object.Destroy(itemMarker.Marker.gameObject);
-                    }
-                    _OtherItemMarkers.Clear();
-
-                    _AllItemInLevels.Clear();
-                    _AllGameObjectsToInspect.Clear();
-                    _AllPickupItemsToInspect.Clear();
+                    itemMarker.Marker.SetVisible(false);
+                    GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
                 }
+                _FixedItemMarkers.Clear();
+                foreach (var itemMarker in _DynamicItemMarkers.Values)
+                {
+                    itemMarker.Marker.SetVisible(false);
+                    GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
+                }
+                _DynamicItemMarkers.Clear();
+                foreach (var itemMarker in _OtherItemMarkers.Values)
+                {
+                    itemMarker.Marker.SetVisible(false);
+                    GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
+                }
+                _OtherItemMarkers.Clear();
             }
 
-            private static void RegisterItemInLevelInCourseNodes()
+            public static void DoAfterLevelClear()
             {
+                CleanupItemMarkers();
+
+                _AllItemInLevels.Clear();
+                _AllGameObjectsToInspect.Clear();
+
+                IsFirstLoadPerLevel = true;
+            }
+
+            private static void RegisterItemInLevelInCourseNodesOncePerLevel()
+            {
+                if (!IsFirstLoadPerLevel)
+                {
+                    return;
+                }
                 foreach (var item in _AllItemInLevels)
                 {
+                    SetCourseNodeForItemInLevel(item);
                     if (item.CourseNode == null)
                     {
+                        FeatureLogger.Error($"[{item.name}] CourseNode is null!");
                         continue;
                     }
                     if (!item.CourseNode.m_itemsInNode.Contains(item))
                     {
                         item.CourseNode.m_itemsInNode.Add(item);
                     }
+                }
+            }
+
+            private static void SetCourseNodeForItemInLevel(ItemInLevel item)
+            {
+                if (item.CourseNode != null)
+                {
+                    return;
+                }
+                if (item.internalSync.GetCurrentState().placement.node.TryGet(out var node))
+                {
+                    item.CourseNode = node;
+                    return;
+                }
+                if (item.container != null)
+                {
+                    item.CourseNode = item.container.m_core.SpawnNode;
+                    return;
+                }
+                var pickupItem = item.transform.parent.parent.GetComponentInChildren<LG_PickupItem>();
+                if (pickupItem != null)
+                {
+                    item.CourseNode = pickupItem.SpawnNode;
+                    return;
                 }
             }
 
@@ -591,32 +616,35 @@ namespace Hikaria.AdminSystem.Features.Item
                     var marker = Place(gene.gameObject, ItemType.FixedItems);
                     marker.SetColor(ColorType.GeneratorItems);
                     marker.SetTitle(gene.m_terminalItem);
-                    gene.OnSyncStatusChanged += new Action<ePowerGeneratorStatus>((status) =>
+                    if (IsFirstLoadPerLevel)
                     {
-                        if (status == ePowerGeneratorStatus.Powered)
+                        gene.OnSyncStatusChanged += new Action<ePowerGeneratorStatus>((status) =>
                         {
-                            Remove(gene.gameObject.GetInstanceID(), ItemType.FixedItems);
-                            if (gene.LinkedSecurityDoor != null)
+                            if (status == ePowerGeneratorStatus.Powered)
                             {
-                                var doorLock = gene.LinkedSecurityDoor.m_locks.TryCast<LG_SecurityDoor_Locks>();
-                                Remove(doorLock.m_intOpenDoor.gameObject.GetInstanceID(), ItemType.DoorLock);
+                                Remove(gene.gameObject.GetInstanceID(), ItemType.FixedItems);
+                                if (gene.LinkedSecurityDoor != null)
+                                {
+                                    var doorLock = gene.LinkedSecurityDoor.m_locks.TryCast<LG_SecurityDoor_Locks>();
+                                    Remove(doorLock.m_intOpenDoor.gameObject.GetInstanceID(), ItemType.DoorLock);
+                                }
                             }
-                        }
-                        else if (status == ePowerGeneratorStatus.UnPowered)
-                        {
-                            marker = Place(gene.gameObject, ItemType.FixedItems);
-                            marker.SetColor(ColorType.GeneratorItems);
-                            marker.SetTitle(gene.m_terminalItem);
-
-                            if (gene.LinkedSecurityDoor != null)
+                            else if (status == ePowerGeneratorStatus.UnPowered)
                             {
-                                var doorLock = gene.LinkedSecurityDoor.m_locks.TryCast<LG_SecurityDoor_Locks>();
-                                marker = Place(doorLock.m_intOpenDoor.gameObject, ItemType.DoorLock);
+                                marker = Place(gene.gameObject, ItemType.FixedItems);
                                 marker.SetColor(ColorType.GeneratorItems);
-                                marker.SetTitle($"<color=orange>::REQ::</color> {doorLock.m_powerGeneratorNeeded.m_terminalItem.TerminalItemKey}");
+                                marker.SetTitle(gene.m_terminalItem);
+
+                                if (gene.LinkedSecurityDoor != null)
+                                {
+                                    var doorLock = gene.LinkedSecurityDoor.m_locks.TryCast<LG_SecurityDoor_Locks>();
+                                    marker = Place(doorLock.m_intOpenDoor.gameObject, ItemType.DoorLock);
+                                    marker.SetColor(ColorType.GeneratorItems);
+                                    marker.SetTitle($"<color=orange>::REQ::</color> {doorLock.m_powerGeneratorNeeded.m_terminalItem.TerminalItemKey}");
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
                     if ((gene.ObjectiveItemSolved || !gene.m_isWardenObjective) && !gene.m_graphics.m_gfxSlot.active)
                     {
                         Remove(gene.gameObject.GetInstanceID(), ItemType.FixedItems);
@@ -630,10 +658,13 @@ namespace Hikaria.AdminSystem.Features.Item
                     var marker = Place(hsu.gameObject, ItemType.FixedItems);
                     marker.SetColor(ColorType.Objective);
                     marker.SetTitle(hsu.m_terminalItem);
-                    hsu.m_pickupSampleInteraction.OnInteractionTriggered += new Action<PlayerAgent>((player) =>
+                    if (IsFirstLoadPerLevel)
                     {
-                        Remove(hsu.gameObject.GetInstanceID(), ItemType.FixedItems);
-                    });
+                        hsu.m_pickupSampleInteraction.OnInteractionTriggered += new Action<PlayerAgent>((player) =>
+                        {
+                            Remove(hsu.gameObject.GetInstanceID(), ItemType.FixedItems);
+                        });
+                    }
                     if (!hsu.m_isWardenObjective || hsu.ObjectiveItemSolved)
                     {
                         Remove(hsu.gameObject.GetInstanceID(), ItemType.FixedItems);
@@ -646,25 +677,28 @@ namespace Hikaria.AdminSystem.Features.Item
                     var marker = Place(hsuActivator.gameObject, ItemType.FixedItems);
                     marker.SetColor(ColorType.Objective);
                     marker.SetTitle(hsuActivator.m_terminalItem);
-                    hsuActivator.OnHSUInsertSequenceDone += new Action<LG_HSUActivator_Core>((hsuActivator_Core) =>
+                    if (IsFirstLoadPerLevel)
                     {
-                        var hsuIn = hsuActivator.LinkedItemGoingIn;
-                        if (hsuIn != null)
+                        hsuActivator.OnHSUInsertSequenceDone += new Action<LG_HSUActivator_Core>((hsuActivator_Core) =>
                         {
-                            Remove(hsuIn.GetInstanceID(), ItemType.InLevelCarry);
-                        }
-                        Remove(hsuActivator.gameObject.GetInstanceID(), ItemType.FixedItems);
-                    });
-                    hsuActivator.OnHSUExitSequence += new Action<LG_HSUActivator_Core>((hsuActivator_Core) =>
-                    {
-                        var hsuOut = hsuActivator.LinkedItemComingOut;
-                        if (hsuOut != null)
+                            var hsuIn = hsuActivator.LinkedItemGoingIn;
+                            if (hsuIn != null)
+                            {
+                                Remove(hsuIn.GetInstanceID(), ItemType.InLevelCarry);
+                            }
+                            Remove(hsuActivator.gameObject.GetInstanceID(), ItemType.FixedItems);
+                        });
+                        hsuActivator.OnHSUExitSequence += new Action<LG_HSUActivator_Core>((hsuActivator_Core) =>
                         {
-                            var marker = Place(hsuOut, ItemType.InLevelCarry);
-                            marker.SetColor(ColorType.Objective);
-                            marker.SetTitle(hsuOut.m_terminalItem, hsuOut.ArchetypeName);
-                        }
-                    });
+                            var hsuOut = hsuActivator.LinkedItemComingOut;
+                            if (hsuOut != null)
+                            {
+                                var marker = Place(hsuOut, ItemType.InLevelCarry);
+                                marker.SetColor(ColorType.Objective);
+                                marker.SetTitle(hsuOut.m_terminalItem, hsuOut.ArchetypeName);
+                            }
+                        });
+                    }
                     if ((!hsuActivator.m_isWardenObjective || hsuActivator.ObjectiveItemSolved) && hsuActivator.m_stateReplicator.State.status == eHSUActivatorStatus.ExtractionDone)
                     {
                         Remove(hsuActivator.gameObject.GetInstanceID(), ItemType.FixedItems);
@@ -699,37 +733,24 @@ namespace Hikaria.AdminSystem.Features.Item
                         marker.SetColor(ColorType.GeneratorItems);
                         marker.SetTitle($"<color=orange>::REQ::</color> {doorLock.m_powerGeneratorNeeded.m_terminalItem.TerminalItemKey}");
                     }
-                    Action OnChainPuzzleActivate = () =>
+                    if (IsFirstLoadPerLevel)
                     {
-                        Remove(doorLock.m_intOpenDoor.gameObject.GetInstanceID(), ItemType.DoorLock);
-                    };
-                    Action<SNet_Player> OnKeyItemSolved = (SNet_Player player) =>
-                    {
-                        Remove(doorLock.m_intOpenDoor.gameObject.GetInstanceID(), ItemType.DoorLock);
-                    };
-                    if (doorLock.OnKeyItemSolved != null)
-                    {
-                        doorLock.OnKeyItemSolved += OnKeyItemSolved;
-                    }
-                    if (door.OnChainPuzzleActivate != null)
-                    {
-                        door.OnChainPuzzleActivate += OnChainPuzzleActivate;
-                    }
-                    door.m_sync.Cast<LG_Door_Sync>().OnDoorStateChange += new Action<pDoorState, bool>((state, isDropinState) =>
-                    {
-                        switch (state.status)
+                        door.m_sync.Cast<LG_Door_Sync>().OnDoorStateChange += new Action<pDoorState, bool>((state, isDropinState) =>
                         {
-                            case eDoorStatus.ChainedPuzzleActivated:
-                            case eDoorStatus.Unlocked:
-                            case eDoorStatus.Opening:
-                            case eDoorStatus.Open:
-                            case eDoorStatus.Closed:
-                            case eDoorStatus.Closed_LockedWithChainedPuzzle:
-                            case eDoorStatus.Closed_LockedWithChainedPuzzle_Alarm:
-                                Remove(doorLock.m_intOpenDoor.gameObject.GetInstanceID(), ItemType.DoorLock);
-                                break;
-                        }
-                    });
+                            switch (state.status)
+                            {
+                                case eDoorStatus.ChainedPuzzleActivated:
+                                case eDoorStatus.Unlocked:
+                                case eDoorStatus.Opening:
+                                case eDoorStatus.Open:
+                                case eDoorStatus.Closed:
+                                case eDoorStatus.Closed_LockedWithChainedPuzzle:
+                                case eDoorStatus.Closed_LockedWithChainedPuzzle_Alarm:
+                                    Remove(doorLock.m_intOpenDoor.gameObject.GetInstanceID(), ItemType.DoorLock);
+                                    break;
+                            }
+                        });
+                    }
                 }
 
                 var bulkDCs = go.GetComponentsInChildren<LG_BulkheadDoorController_Core>();
@@ -738,18 +759,21 @@ namespace Hikaria.AdminSystem.Features.Item
                     var marker = Place(bulkDC.gameObject, ItemType.FixedItems);
                     marker.SetColor(ColorType.BulkheadItems);
                     marker.SetTitle(bulkDC.m_terminalItem);
-                    bulkDC.OnScanDoneCallback += new Action<LG_LayerType>(delegate (LG_LayerType layer)
+                    if (IsFirstLoadPerLevel)
                     {
-                        Remove(bulkDC.m_connectedBulkheadDoors[layer].m_locks.Cast<LG_SecurityDoor_Locks>().m_intOpenDoor.gameObject.GetInstanceID(), ItemType.DoorLock);
-                        foreach (ChainedPuzzleInstance chainedPuzzle in bulkDC.m_bulkheadScans.Values)
+                        bulkDC.OnScanDoneCallback += new Action<LG_LayerType>(delegate (LG_LayerType layer)
                         {
-                            if (!chainedPuzzle.IsSolved)
+                            Remove(bulkDC.m_connectedBulkheadDoors[layer].m_locks.Cast<LG_SecurityDoor_Locks>().m_intOpenDoor.gameObject.GetInstanceID(), ItemType.DoorLock);
+                            foreach (ChainedPuzzleInstance chainedPuzzle in bulkDC.m_bulkheadScans.Values)
                             {
-                                return;
+                                if (!chainedPuzzle.IsSolved)
+                                {
+                                    return;
+                                }
                             }
-                        }
-                        Remove(bulkDC.gameObject.GetInstanceID(), ItemType.FixedItems);
-                    });
+                            Remove(bulkDC.gameObject.GetInstanceID(), ItemType.FixedItems);
+                        });
+                    }
                     bool isAllSolved = true;
                     foreach (ChainedPuzzleInstance chainedPuzzle in bulkDC.m_bulkheadScans.Values)
                     {
@@ -811,14 +835,6 @@ namespace Hikaria.AdminSystem.Features.Item
 
             public static void RegisterItemInLevel(ItemInLevel itemInLevel)
             {
-                if (itemInLevel.CourseNode == null)
-                {
-                    var terminalItem = itemInLevel.GetComponentInChildren<iTerminalItem>();
-                    if (terminalItem != null)
-                    {
-                        itemInLevel.CourseNode = terminalItem.SpawnNode;
-                    }
-                }
                 do
                 {
                     var resourcePackItem = itemInLevel.TryCast<ResourcePackPickup>();
@@ -829,19 +845,22 @@ namespace Hikaria.AdminSystem.Features.Item
                     var marker = Place(resourcePackItem, ItemType.Resource);
                     marker.SetColor(ColorType.PickupItems);
                     marker.SetTitle(resourcePackItem.m_terminalItem);
-                    resourcePackItem.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
+                    if (IsFirstLoadPerLevel)
                     {
-                        if (status == ePickupItemStatus.PickedUp)
+                        resourcePackItem.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                         {
-                            Remove(resourcePackItem.GetInstanceID(), ItemType.Resource);
-                        }
-                        else if (status == ePickupItemStatus.PlacedInLevel)
-                        {
-                            marker = Place(resourcePackItem, ItemType.Resource);
-                            marker.SetColor(ColorType.PickupItems);
-                            marker.SetTitle(resourcePackItem.m_terminalItem);
-                        }
-                    });
+                            if (status == ePickupItemStatus.PickedUp)
+                            {
+                                Remove(resourcePackItem.GetInstanceID(), ItemType.Resource);
+                            }
+                            else if (status == ePickupItemStatus.PlacedInLevel)
+                            {
+                                marker = Place(resourcePackItem, ItemType.Resource);
+                                marker.SetColor(ColorType.PickupItems);
+                                marker.SetTitle(resourcePackItem.m_terminalItem);
+                            }
+                        });
+                    }
                     return;
                 }
                 while (false);
@@ -856,19 +875,22 @@ namespace Hikaria.AdminSystem.Features.Item
                     var marker = Place(consumable, ItemType.Consumable);
                     marker.SetColor(ColorType.PickupItems);
                     marker.SetTitle(consumable.PublicName);
-                    consumable.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
+                    if (IsFirstLoadPerLevel)
                     {
-                        if (status == ePickupItemStatus.PickedUp)
+                        consumable.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                         {
-                            Remove(consumable.GetInstanceID(), ItemType.Consumable);
-                        }
-                        else if (status == ePickupItemStatus.PlacedInLevel)
-                        {
-                            marker = Place(consumable, ItemType.Consumable);
-                            marker.SetColor(ColorType.PickupItems);
-                            marker.SetTitle(consumable.PublicName);
-                        }
-                    });
+                            if (status == ePickupItemStatus.PickedUp)
+                            {
+                                Remove(consumable.GetInstanceID(), ItemType.Consumable);
+                            }
+                            else if (status == ePickupItemStatus.PlacedInLevel)
+                            {
+                                marker = Place(consumable, ItemType.Consumable);
+                                marker.SetColor(ColorType.PickupItems);
+                                marker.SetTitle(consumable.PublicName);
+                            }
+                        });
+                    }
                     return;
                 }
                 while (false);
@@ -883,19 +905,22 @@ namespace Hikaria.AdminSystem.Features.Item
                     var marker = Place(smallPickupItem, ItemType.SmallPickupItems);
                     marker.SetColor(ColorType.Objective);
                     marker.SetTitle(name);
-                    smallPickupItem.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
+                    if (IsFirstLoadPerLevel)
                     {
-                        if (status == ePickupItemStatus.PickedUp)
+                        smallPickupItem.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                         {
-                            Remove(smallPickupItem.GetInstanceID(), ItemType.Consumable);
-                        }
-                        else if (status == ePickupItemStatus.PlacedInLevel)
-                        {
-                            marker = Place(smallPickupItem, ItemType.SmallPickupItems);
-                            marker.SetColor(ColorType.Objective);
-                            marker.SetTitle(smallPickupItem.m_terminalItem, name);
-                        }
-                    });
+                            if (status == ePickupItemStatus.PickedUp)
+                            {
+                                Remove(smallPickupItem.GetInstanceID(), ItemType.Consumable);
+                            }
+                            else if (status == ePickupItemStatus.PlacedInLevel)
+                            {
+                                marker = Place(smallPickupItem, ItemType.SmallPickupItems);
+                                marker.SetColor(ColorType.Objective);
+                                marker.SetTitle(smallPickupItem.m_terminalItem, name);
+                            }
+                        });
+                    }
                     return;
                 }
                 while (false);
@@ -912,26 +937,29 @@ namespace Hikaria.AdminSystem.Features.Item
                         var marker = Place(carry, ItemType.InLevelCarry);
                         marker.SetColor(ColorType.GeneratorItems);
                         marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
-                        carry.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
+                        if (IsFirstLoadPerLevel)
                         {
-                            if (status == ePickupItemStatus.PickedUp)
+                            carry.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                             {
-                                Remove(carry.GetInstanceID(), ItemType.InLevelCarry);
-                            }
-                            else if (status == ePickupItemStatus.PlacedInLevel)
-                            {
-                                if (carry.GetCustomData().byteState != 0 || !carry.gameObject.active)
+                                if (status == ePickupItemStatus.PickedUp)
                                 {
                                     Remove(carry.GetInstanceID(), ItemType.InLevelCarry);
                                 }
-                                else
+                                else if (status == ePickupItemStatus.PlacedInLevel)
                                 {
-                                    marker = Place(carry, ItemType.InLevelCarry);
-                                    marker.SetColor(ColorType.GeneratorItems);
-                                    marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
+                                    if (carry.GetCustomData().byteState != 0 || !carry.gameObject.active)
+                                    {
+                                        Remove(carry.GetInstanceID(), ItemType.InLevelCarry);
+                                    }
+                                    else
+                                    {
+                                        marker = Place(carry, ItemType.InLevelCarry);
+                                        marker.SetColor(ColorType.GeneratorItems);
+                                        marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
+                                    }
                                 }
-                            }
-                        });
+                            });
+                        }
                         if (carry.IsLinkedToMachine || carry.GetCustomData().byteState != 0 || !carry.m_interact.IsActive)
                         {
                             Remove(carry.GetInstanceID(), ItemType.InLevelCarry);
@@ -942,19 +970,22 @@ namespace Hikaria.AdminSystem.Features.Item
                         var marker = Place(carry, ItemType.InLevelCarry);
                         marker.SetColor(ColorType.FogItems);
                         marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
-                        carry.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
+                        if (IsFirstLoadPerLevel)
                         {
-                            if (status == ePickupItemStatus.PickedUp)
+                            carry.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                             {
-                                Remove(carry.GetInstanceID(), ItemType.InLevelCarry);
-                            }
-                            else if (status == ePickupItemStatus.PlacedInLevel)
-                            {
-                                marker = Place(carry, ItemType.InLevelCarry);
-                                marker.SetColor(ColorType.FogItems);
-                                marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
-                            }
-                        });
+                                if (status == ePickupItemStatus.PickedUp)
+                                {
+                                    Remove(carry.GetInstanceID(), ItemType.InLevelCarry);
+                                }
+                                else if (status == ePickupItemStatus.PlacedInLevel)
+                                {
+                                    marker = Place(carry, ItemType.InLevelCarry);
+                                    marker.SetColor(ColorType.FogItems);
+                                    marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
+                                }
+                            });
+                        }
                         if (carry.IsLinkedToMachine || carry.GetCustomData().byteState != 0 || !carry.m_interact.IsActive)
                         {
                             Remove(carry.GetInstanceID(), ItemType.InLevelCarry);
@@ -965,24 +996,27 @@ namespace Hikaria.AdminSystem.Features.Item
                         var marker = Place(carry, ItemType.InLevelCarry);
                         marker.SetColor(ColorType.Objective);
                         marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
-                        carry.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
+                        if (IsFirstLoadPerLevel)
                         {
-                            if (status == ePickupItemStatus.PickedUp)
+                            carry.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                             {
-                                Remove(carry.GetInstanceID(), ItemType.InLevelCarry);
-                            }
-                            else if (status == ePickupItemStatus.PlacedInLevel)
-                            {
-                                if (carry.IsLinkedToMachine || carry.GetCustomData().byteState != 0 || !carry.m_interact.IsActive)
+                                if (status == ePickupItemStatus.PickedUp)
                                 {
                                     Remove(carry.GetInstanceID(), ItemType.InLevelCarry);
-                                    return;
                                 }
-                                marker = Place(carry, ItemType.InLevelCarry);
-                                marker.SetColor(ColorType.Objective);
-                                marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
-                            }
-                        });
+                                else if (status == ePickupItemStatus.PlacedInLevel)
+                                {
+                                    if (carry.IsLinkedToMachine || carry.GetCustomData().byteState != 0 || !carry.m_interact.IsActive)
+                                    {
+                                        Remove(carry.GetInstanceID(), ItemType.InLevelCarry);
+                                        return;
+                                    }
+                                    marker = Place(carry, ItemType.InLevelCarry);
+                                    marker.SetColor(ColorType.Objective);
+                                    marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
+                                }
+                            });
+                        }
                         if (carry.IsLinkedToMachine || carry.GetCustomData().byteState != 0 || !carry.m_interact.IsActive)
                         {
                             Remove(carry.GetInstanceID(), ItemType.InLevelCarry);
@@ -1002,38 +1036,44 @@ namespace Hikaria.AdminSystem.Features.Item
                         var marker = Place(key, ItemType.PickupItems);
                         marker.SetColor(ColorType.BulkheadItems);
                         marker.SetTitle(key.m_terminalItem, key.ArchetypeName);
-                        key.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
+                        if (IsFirstLoadPerLevel)
                         {
-                            if (status == ePickupItemStatus.PickedUp)
+                            key.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                             {
-                                Remove(key.GetInstanceID(), ItemType.PickupItems);
-                            }
-                            else if (status == ePickupItemStatus.PlacedInLevel)
-                            {
-                                marker = Place(key, ItemType.PickupItems);
-                                marker.SetColor(ColorType.BulkheadItems);
-                                marker.SetTitle(key.m_terminalItem, key.ArchetypeName);
-                            }
-                        });
+                                if (status == ePickupItemStatus.PickedUp)
+                                {
+                                    Remove(key.GetInstanceID(), ItemType.PickupItems);
+                                }
+                                else if (status == ePickupItemStatus.PlacedInLevel)
+                                {
+                                    marker = Place(key, ItemType.PickupItems);
+                                    marker.SetColor(ColorType.BulkheadItems);
+                                    marker.SetTitle(key.m_terminalItem, key.ArchetypeName);
+                                }
+                            });
+                        }
                     }
                     else
                     {
                         var marker = Place(key, ItemType.PickupItems);
                         marker.SetColor(ColorType.KeycardItems);
                         marker.SetTitle(key.m_terminalItem, key.ArchetypeName);
-                        key.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
+                        if (IsFirstLoadPerLevel)
                         {
-                            if (status == ePickupItemStatus.PickedUp)
+                            key.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                             {
-                                Remove(key.GetInstanceID(), ItemType.PickupItems);
-                            }
-                            else if (status == ePickupItemStatus.PlacedInLevel)
-                            {
-                                marker = Place(key, ItemType.PickupItems);
-                                marker.SetColor(ColorType.KeycardItems);
-                                marker.SetTitle(key.m_terminalItem, key.ArchetypeName);
-                            }
-                        });
+                                if (status == ePickupItemStatus.PickedUp)
+                                {
+                                    Remove(key.GetInstanceID(), ItemType.PickupItems);
+                                }
+                                else if (status == ePickupItemStatus.PlacedInLevel)
+                                {
+                                    marker = Place(key, ItemType.PickupItems);
+                                    marker.SetColor(ColorType.KeycardItems);
+                                    marker.SetTitle(key.m_terminalItem, key.ArchetypeName);
+                                }
+                            });
+                        }
                     }
                     return;
                 }
@@ -1067,43 +1107,40 @@ namespace Hikaria.AdminSystem.Features.Item
                 }
             }
 
-            public static IEnumerator LoadingItem(bool registerInNodes = false)
+            public static IEnumerator LoadingItem()
             {
+                /*
+                foreach (var key in _FixedItemMarkers.Keys.ToList())
+                {
+                    Remove(key, ItemType.FixedItems);
+                }
+                foreach (var key in _DynamicItemMarkers.Keys.ToList())
+                {
+                    Remove(key, ItemType.Resource);
+                }
+                foreach (var key in _OtherItemMarkers.Keys.ToList())
+                {
+                    Remove(key, ItemType.InLevelCarry);
+                }
+                */
+
                 yield return new WaitForEndOfFrame();
 
-                foreach (var item in _FixedItemMarkers)
-                {
-                    Remove(item.Key, ItemType.FixedItems);
-                }
-                foreach (var item in _DynamicItemMarkers)
-                {
-                    Remove(item.Key, ItemType.Resource);
-                }
-                foreach (var item in _OtherItemMarkers)
-                {
-                    Remove(item.Key, ItemType.InLevelCarry);
-                }
-
+                CleanupItemMarkers();
 
                 foreach (var go in _AllGameObjectsToInspect)
                 {
                     InspectGameObject(go);
                 }
-                foreach (var pickupItem in _AllPickupItemsToInspect)
+                foreach (var itemInLevel in _AllItemInLevels)
                 {
-                    InspectPickupItem(pickupItem);
-                }
-                foreach (var pickupItem in _AllItemInLevels)
-                {
-                    RegisterItemInLevel(pickupItem);
+                    RegisterItemInLevel(itemInLevel);
                 }
 
-                if (registerInNodes)
-                {
-                    RegisterItemInLevelInCourseNodes();
-                }
+                RegisterItemInLevelInCourseNodesOncePerLevel();
 
                 UpdateDynamicItemMarkersVisiable();
+                IsFirstLoadPerLevel = false;
             }
 
             public static void SetVisible(bool active)
@@ -1124,10 +1161,6 @@ namespace Hikaria.AdminSystem.Features.Item
                 foreach (var marker in _DynamicItemMarkers.Values)
                 {
                     marker.Marker.SetVisible(false);
-                }
-                if (CurrentGameState != (int)eGameStateName.InLevel)
-                {
-                    return;
                 }
                 foreach (var nodes in AdminUtils.LocalPlayerAgent.CourseNode.m_zone.m_courseNodes)
                 {

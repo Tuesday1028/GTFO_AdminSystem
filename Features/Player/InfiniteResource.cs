@@ -1,5 +1,4 @@
-﻿using Hikaria.AdminSystem.Extensions;
-using Hikaria.AdminSystem.Utilities;
+﻿using Hikaria.AdminSystem.Utilities;
 using Hikaria.Core;
 using Hikaria.Core.Interfaces;
 using Hikaria.DevConsoleLite;
@@ -138,10 +137,6 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public void OnSessionMemberChanged(SNet_Player player, SessionMemberEvent playerEvent)
         {
-            if (!player.IsValid())
-            {
-                return;
-            }
             if (playerEvent == SessionMemberEvent.JoinSessionHub)
             {
                 InfiniteResourceEntry entry = new()
@@ -415,7 +410,7 @@ namespace Hikaria.AdminSystem.Features.Player
         public override void OnGameStateChanged(int state)
         {
             eGameStateName current = (eGameStateName)state;
-            if (current == eGameStateName.ExpeditionSuccess || current == eGameStateName.ExpeditionAbort || current == eGameStateName.AfterLevel)
+            if (current == eGameStateName.AfterLevel)
             {
                 foreach (var item in Settings.PlayerSettings)
                 {
