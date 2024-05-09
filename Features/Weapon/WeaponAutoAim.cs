@@ -40,6 +40,9 @@ namespace Hikaria.AdminSystem.Features.Weapon
             [FSDisplayName("启用自瞄")]
             public bool EnableAutoAim { get; set; }
 
+            [FSDisplayName("启用弹道修正")]
+            public bool EnableTrajectoryRedirection { get; set; }
+
             [FSDisplayName("隔墙自瞄")]
             public bool WallHackAim { get; set; }
 
@@ -263,8 +266,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 }
 
                 weaponRayData.maxRayDist = 2000f;
-
-                weaponRayData.fireDir = (weaponAutoAim.AimTargetPos - weaponRayData.owner.FPSCamera.Position).normalized;
+                if (Settings.EnableTrajectoryRedirection)
+                {
+                    weaponRayData.fireDir = (weaponAutoAim.AimTargetPos - weaponRayData.owner.FPSCamera.Position).normalized;
+                }
             }
         }
 

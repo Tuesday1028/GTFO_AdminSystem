@@ -41,7 +41,7 @@ namespace Hikaria.AdminSystem.Features.Item
         public override void OnGameStateChanged(int state)
         {
             var currentState = (eGameStateName)state;
-            if (currentState == eGameStateName.InLevel)
+            if (currentState == eGameStateName.InLevel && SNet.IsMaster)
             {
                 ItemMarker.DoEnterLevelOnceLoad();
             }
@@ -95,7 +95,7 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public void OnRecallComplete(eBufferType bufferType)
         {
-            if (CurrentGameState == (int)eGameStateName.InLevel || bufferType == eBufferType.Checkpoint)
+            if (bufferType == eBufferType.DropIn || bufferType == eBufferType.Checkpoint)
             {
                 CoroutineManager.StartCoroutine(ItemMarker.LoadingItem().WrapToIl2Cpp());
             }

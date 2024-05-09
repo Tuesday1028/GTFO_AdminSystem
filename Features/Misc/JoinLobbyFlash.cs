@@ -21,8 +21,6 @@ namespace Hikaria.AdminSystem.Features.Misc
 
         public override FeatureGroup Group => EntryPoint.Groups.Misc;
 
-        public override bool InlineSettingsIntoParentMenu => true;
-
         [FeatureConfig]
         public static JoinLobbyFlashSettings Settings { get; set; }
 
