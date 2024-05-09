@@ -307,11 +307,6 @@ namespace Hikaria.AdminSystem.Features.Item
 
             public static ItemMarker Place(ItemInLevel item, ItemType type)
             {
-                // 游戏逻辑: OnSyncStateChanged 触发于 CourseNode 更新前，所以必须手动更新
-                if (item.internalSync.GetCurrentState().placement.node.TryGet(out var currentNode))
-                {
-                    item.CourseNode = currentNode;
-                }
                 if (type == ItemType.Resource || type == ItemType.Consumable || type == ItemType.SmallPickupItems)
                 {
                     NavMarker navMarker;
@@ -323,10 +318,8 @@ namespace Hikaria.AdminSystem.Features.Item
                     {
                         navMarker = GuiManager.NavMarkerLayer.PlaceCustomMarker(NavMarkerOption.WaypointTitle, item.gameObject, item.gameObject.name, 0, false);
                     }
-
                     navMarker.SetVisible(MarkItems);
-
-                    if (item.CourseNode == null || (item.CourseNode != null && item.CourseNode.m_zone.ID != AdminUtils.LocalPlayerAgent.CourseNode.m_zone.ID))
+                    if (!item.internalSync.GetCurrentState().placement.node.TryGet(out var node) || node.m_zone.ID != AdminUtils.LocalPlayerAgent.CourseNode.m_zone.ID)
                     {
                         navMarker.SetVisible(false);
                     }
@@ -457,6 +450,7 @@ namespace Hikaria.AdminSystem.Features.Item
                         break;
                     case ItemType.InLevelCarry:
                     case ItemType.PickupItems:
+                    default:
                         _OtherItemMarkers[id] = marker;
                         break;
                 }
@@ -464,32 +458,39 @@ namespace Hikaria.AdminSystem.Features.Item
 
             public static void Remove(int id, ItemType type)
             {
-                if (type == ItemType.Resource || type == ItemType.Consumable || type == ItemType.Terminal || type == ItemType.SmallPickupItems)
+                ItemMarker itemMarker;
+                switch (type)
                 {
-                    if (_DynamicItemMarkers.TryGetValue(id, out ItemMarker itemMarker))
-                    {
-                        itemMarker.Marker.SetVisible(false);
-                        GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
-                        _DynamicItemMarkers.Remove(id);
-                    }
-                }
-                else if (type == ItemType.FixedItems || type == ItemType.DoorLock)
-                {
-                    if (_FixedItemMarkers.TryGetValue(id, out ItemMarker itemMarker))
-                    {
-                        itemMarker.Marker.SetVisible(false);
-                        GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
-                        _FixedItemMarkers.Remove(id);
-                    }
-                }
-                else if (type == ItemType.InLevelCarry || type == ItemType.PickupItems)
-                {
-                    if (_OtherItemMarkers.TryGetValue(id, out ItemMarker itemMarker))
-                    {
-                        itemMarker.Marker.SetVisible(false);
-                        GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
-                        _OtherItemMarkers.Remove(id);
-                    }
+                    case ItemType.Resource:
+                    case ItemType.Consumable:
+                    case ItemType.Terminal:
+                    case ItemType.SmallPickupItems:
+                        if (_DynamicItemMarkers.TryGetValue(id, out itemMarker))
+                        {
+                            itemMarker.Marker.SetVisible(false);
+                            GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
+                            _DynamicItemMarkers.Remove(id);
+                        }
+                        break;
+                    case ItemType.FixedItems:
+                    case ItemType.DoorLock:
+                        if (_FixedItemMarkers.TryGetValue(id, out itemMarker))
+                        {
+                            itemMarker.Marker.SetVisible(false);
+                            GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
+                            _FixedItemMarkers.Remove(id);
+                        }
+                        break;
+                    case ItemType.InLevelCarry:
+                    case ItemType.PickupItems:
+                    default:
+                        if (_OtherItemMarkers.TryGetValue(id, out itemMarker))
+                        {
+                            itemMarker.Marker.SetVisible(false);
+                            GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
+                            _OtherItemMarkers.Remove(id);
+                        }
+                        break;
                 }
             }
 
