@@ -42,7 +42,7 @@ namespace Hikaria.AdminSystem.Features.Misc
 
             //玩家相关
             //DevConsole.AddCommand(Command.Create<ulong>("ForceInvitePlayer", "强制邀请玩家", "强制邀请玩家", Parameter.Create("Lookup", "SteamID64"), ForceInvitePlayer));
-            DevConsole.AddCommand(Command.Create<int>("KickPlayer", "踢出玩家", "踢出玩家", Parameter.Create("Slot", "槽位, 1-4"), KickPlayer));
+            DevConsole.AddCommand(Command.Create<int>("KickPlayer", "踢出玩家", "踢出玩家", Parameter.Create("Slot", "槽位, 1-4"), KickPlayerBySlot));
             DevConsole.AddCommand(Command.Create<int>("BanPlayer", "封禁玩家", "封禁玩家", Parameter.Create("Slot", "槽位, 1-4"), BanPlayer));
             DevConsole.AddCommand(Command.Create<int, bool>("CtrlPlayer", "玩家控制", "开启关闭玩家活动", Parameter.Create("Slot", "槽位, 1-4"), Parameter.Create("Enable", "开启或关闭, True或False"), SetPlayerControl));
             DevConsole.AddCommand(Command.Create("FuckMaster", "踢出房主", "踢出房主", FuckMaster));
@@ -411,14 +411,8 @@ namespace Hikaria.AdminSystem.Features.Misc
             DevConsole.LogSuccess("已设置小地图全显");
         }
 
-        private static void KickPlayer(int slot)
+        private static void KickPlayer(SNet_Player player)
         {
-            var player = SNet.Slots.GetPlayerInSlot(slot - 1);
-            if (player == null || player.IsBot)
-            {
-                DevConsole.LogError("输入有误");
-                return;
-            }
             if (player.IsLocal)
             {
                 SNet.SessionHub.LeaveHub();
@@ -487,6 +481,18 @@ namespace Hikaria.AdminSystem.Features.Misc
             DevConsole.LogSuccess($"已踢出玩家 {player.NickName}");
         }
 
+        private static void KickPlayerBySlot(int slot)
+        {
+            var player = SNet.Slots.GetPlayerInSlot(slot - 1);
+            if (player == null || player.IsBot)
+            {
+                DevConsole.LogError("输入有误");
+                return;
+            }
+            KickPlayer(player);
+        }
+
+        //没写好，可能无法实现
         private static void ForceInvitePlayer(ulong lookup)
         {
             if (!SNet.IsInLobby)

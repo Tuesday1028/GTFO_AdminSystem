@@ -7,13 +7,13 @@ using Hikaria.AdminSystem.Utilities;
 using Hikaria.Core;
 using Hikaria.Core.Interfaces;
 using Hikaria.DevConsoleLite;
-using Il2CppInterop.Runtime;
 using LevelGeneration;
 using Player;
 using SNetwork;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -106,6 +106,9 @@ namespace Hikaria.AdminSystem.Features.Item
         {
             private static void Prefix(ItemInLevel __instance)
             {
+                ItemMarker.Remove(__instance.GetInstanceID(), ItemMarker.ItemType.Resource);
+                ItemMarker.Remove(__instance.GetInstanceID(), ItemMarker.ItemType.FixedItems);
+                ItemMarker.Remove(__instance.GetInstanceID(), ItemMarker.ItemType.InLevelCarry);
                 ItemMarker._AllItemInLevels.Remove(__instance);
             }
         }
@@ -547,12 +550,13 @@ namespace Hikaria.AdminSystem.Features.Item
                 {
                     return;
                 }
-                foreach (var item in _AllItemInLevels)
+                foreach (var item in _AllItemInLevels.ToList())
                 {
                     SetCourseNodeForItemInLevel(item);
                     if (item.CourseNode == null)
                     {
-                        FeatureLogger.Error($"[{item.name}] CourseNode is null!");
+                        FeatureLogger.Error($"'{item.name}' CourseNode is null, remove!");
+                        _AllItemInLevels.Remove(item);
                         continue;
                     }
                     if (!item.CourseNode.m_itemsInNode.Contains(item))
@@ -568,10 +572,14 @@ namespace Hikaria.AdminSystem.Features.Item
                 {
                     return;
                 }
-                if (item.internalSync.GetCurrentState().placement.node.TryGet(out var node))
+                if (item.internalSync != null)
                 {
-                    item.CourseNode = node;
-                    return;
+                    var state = item.internalSync.GetCurrentState();
+                    if (state.placement.node.TryGet(out var node) && state.status != ePickupItemStatus.PickedUp)
+                    {
+                        item.CourseNode = node;
+                        return;
+                    }
                 }
                 if (item.container != null)
                 {
@@ -1120,14 +1128,17 @@ namespace Hikaria.AdminSystem.Features.Item
                 }
                 */
 
-                var yielder = new WaitForFixedUpdate();
+                if (SNet.LocalPlayer.IsOutOfSync)
+                    yield break;
+
+                var yielder = new WaitForEndOfFrame();
+
+                yield return yielder;
 
                 while (!SNet.LocalPlayer.HasPlayerAgent)
                 {
                     yield return yielder;
                 }
-
-                yield return new WaitForEndOfFrame();
 
                 CleanupItemMarkers();
                 
