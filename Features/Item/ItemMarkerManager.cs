@@ -38,19 +38,6 @@ namespace Hikaria.AdminSystem.Features.Item
         [FeatureConfig]
         public static ItemMarkerSettings Settings { get; set; }
 
-        public override void OnGameStateChanged(int state)
-        {
-            var currentState = (eGameStateName)state;
-            if (currentState == eGameStateName.InLevel && SNet.IsMaster)
-            {
-                ItemMarker.DoEnterLevelOnceLoad();
-            }
-            if (currentState == eGameStateName.AfterLevel)
-            {
-                ItemMarker.DoAfterLevelClear();
-            }
-        }
-
         public class ItemMarkerSettings
         {
             [FSDisplayName("启用物品标记")]
@@ -93,6 +80,22 @@ namespace Hikaria.AdminSystem.Features.Item
             ItemMarker.SearchGameObjects();
         }
 
+        public override void OnGameStateChanged(int state)
+        {
+            var currentState = (eGameStateName)state;
+            if (currentState == eGameStateName.InLevel)
+            {
+                if (!SNet.LocalPlayer.IsOutOfSync)
+                {
+                    ItemMarker.DoEnterLevelOnceLoad();
+                }
+            }
+            if (currentState == eGameStateName.AfterLevel)
+            {
+                ItemMarker.DoAfterLevelClear();
+            }
+        }
+
         public void OnRecallComplete(eBufferType bufferType)
         {
             if (bufferType == eBufferType.DropIn || bufferType == eBufferType.Checkpoint)
@@ -110,19 +113,6 @@ namespace Hikaria.AdminSystem.Features.Item
                 ItemMarker.Remove(__instance.GetInstanceID(), ItemMarker.ItemType.FixedItems);
                 ItemMarker.Remove(__instance.GetInstanceID(), ItemMarker.ItemType.InLevelCarry);
                 ItemMarker._AllItemInLevels.Remove(__instance);
-            }
-        }
-
-        [ArchivePatch(typeof(LG_ResourceContainer_Storage), nameof(LG_ResourceContainer_Storage.SpawnConsumable))]
-        private class LG_ResourceContainer_Storage__SpawnConsumable__Patch
-        {
-            private static void Postfix(LG_ResourceContainer_Storage __instance, Transform align)
-            {
-                var consumable = align.GetComponentInChildren<ConsumablePickup_Core>();
-                if (consumable != null && consumable.CourseNode == null)
-                {
-                    consumable.CourseNode = __instance.m_core.SpawnNode;
-                }
             }
         }
 
