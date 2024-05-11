@@ -69,7 +69,7 @@ namespace Hikaria.AdminSystem.Features.Misc
 
             DevConsole.AddCommand(Command.Create("StoreCheckPoint", "保存重生点", "保存重生点", StoreCheckPoint));
 
-            DevConsole.AddCommand(Command.Create("MiniMapAllVisible", "小地图全显", "小地图全显", MapForceAllVisible));
+            DevConsole.AddCommand(Command.Create("RevealMap", "地图全显", "地图全显", RevealMap));
 
             //敌人相关
             DevConsole.AddCommand(Command.Create<int>("TagEnemy", "标记敌人", "标记敌人", Parameter.Create("Choice", "0: 惊醒的, 1: 可到达的, 2: 所有的"), TagEnemies));
@@ -389,10 +389,8 @@ namespace Hikaria.AdminSystem.Features.Misc
         }
 
 
-        private static void MapForceAllVisible()
+        private static void RevealMap()
         {
-            CM_PageMap.Current.ForceAllVisible();
-
             GameObject coneObj = new();
             coneObj.transform.localScale = new Vector3(128f, 32f, 128f);
             foreach (AIG_CourseNode node in AIG_CourseNode.s_allNodes)
@@ -408,7 +406,19 @@ namespace Hikaria.AdminSystem.Features.Misc
                 }
             }
 
-            DevConsole.LogSuccess("已设置小地图全显");
+            foreach (var zone in Builder.CurrentFloor.allZones)
+            {
+                foreach (var area in zone.m_areas)
+                {
+                    var comps = area.GetComponentsInChildren<LG_MapLookatRevealerBase>();
+                    foreach (var comp in comps)
+                    {
+                        MapDataManager.WantToSetGUIObjVisible(comp.MapGUIObjID, comp.CurrentStatus);
+                    }
+                }
+            }
+
+            DevConsole.LogSuccess("已设置地图全显");
         }
 
         private static void KickPlayer(SNet_Player player)

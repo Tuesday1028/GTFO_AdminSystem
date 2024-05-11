@@ -28,8 +28,6 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         public override FeatureGroup Group => EntryPoint.Groups.InLevel;
 
-        public static TerminalLookup Instance { get; private set; }
-
         [FeatureConfig]
         public static TerminalSettings Settings { get; set; }
 
@@ -430,8 +428,6 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         public override void Init()
         {
-            Instance = this;
-
             DevConsole.AddCommand(Command.Create<int>("TerminalGetUplinkcodes", "获取终端上行验证密码", "获取终端上行验证密码", Parameter.Create("ID", "终端编号"), GetTerminalUplinkCodes));
             DevConsole.AddCommand(Command.Create<int>("TerminalGetPassword", "获取终端解锁密码", "获取终端解锁密码", Parameter.Create("ID", "终端编号"), GetTerminalPassword));
             DevConsole.AddCommand(Command.Create<int>("TerminalListCommands", "获取终端指令", "获取终端可用指令", Parameter.Create("ID", "终端编号"), ListTerminalCommands));
