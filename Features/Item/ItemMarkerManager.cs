@@ -100,6 +100,7 @@ namespace Hikaria.AdminSystem.Features.Item
         {
             if (bufferType == eBufferType.DropIn || bufferType == eBufferType.Checkpoint)
             {
+                ItemMarker.SearchGameObjects();
                 CoroutineManager.StartCoroutine(ItemMarker.LoadingItem().WrapToIl2Cpp());
             }
         }
@@ -250,6 +251,9 @@ namespace Hikaria.AdminSystem.Features.Item
 
             public static void SearchGameObjects()
             {
+                _AllItemInLevels.Clear();
+                _AllGameObjectsToInspect.Clear();
+
                 foreach (var itemInLevel in UnityEngine.Object.FindObjectsOfType<ItemInLevel>())
                 {
                     _AllItemInLevels.Add(itemInLevel);
@@ -694,7 +698,8 @@ namespace Hikaria.AdminSystem.Features.Item
                             }
                         });
                     }
-                    if ((!hsuActivator.m_isWardenObjective || hsuActivator.ObjectiveItemSolved) && hsuActivator.m_stateReplicator.State.status == eHSUActivatorStatus.ExtractionDone)
+                    if ((!hsuActivator.m_isWardenObjective || hsuActivator.ObjectiveItemSolved) &&
+                        (hsuActivator.m_stateReplicator == null || hsuActivator.m_stateReplicator.State.status == eHSUActivatorStatus.ExtractionDone))
                     {
                         Remove(hsuActivator.gameObject.GetInstanceID(), ItemType.FixedItems);
                     }
@@ -704,9 +709,7 @@ namespace Hikaria.AdminSystem.Features.Item
                 var doors = go.GetComponentsInChildren<LG_SecurityDoor>();
                 foreach (var door in doors)
                 {
-                    if (door.m_locks == null)
-                        continue;
-                    var doorLock = door.m_locks.TryCast<LG_SecurityDoor_Locks>();
+                    var doorLock = door.m_locks?.TryCast<LG_SecurityDoor_Locks>();
                     if (doorLock == null)
                         continue;
                     if (doorLock.m_lastStatus == eDoorStatus.Closed_LockedWithBulkheadDC)
@@ -756,7 +759,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     marker.SetTitle(bulkDC.m_terminalItem);
                     if (IsFirstLoadPerLevel)
                     {
-                        bulkDC.OnScanDoneCallback += new Action<LG_LayerType>(delegate (LG_LayerType layer)
+                        bulkDC.OnScanDoneCallback += new Action<LG_LayerType>((LG_LayerType layer) =>
                         {
                             Remove(bulkDC.m_connectedBulkheadDoors[layer].m_locks.Cast<LG_SecurityDoor_Locks>().m_intOpenDoor.gameObject.GetInstanceID(), ItemType.DoorLock);
                             foreach (ChainedPuzzleInstance chainedPuzzle in bulkDC.m_bulkheadScans.Values)
@@ -800,11 +803,7 @@ namespace Hikaria.AdminSystem.Features.Item
 
                     if (terminal.IsPasswordProtected)
                     {
-                        if (terminal.m_passwordLinkerJob == null)
-                        {
-                            continue;
-                        }
-                        var linkedTerminals = terminal.m_passwordLinkerJob.m_terminalsWithPasswordParts;
+                        var linkedTerminals = terminal.m_passwordLinkerJob?.m_terminalsWithPasswordParts;
                         if (linkedTerminals == null)
                         {
                             continue;
