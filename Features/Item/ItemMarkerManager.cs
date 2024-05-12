@@ -274,15 +274,15 @@ namespace Hikaria.AdminSystem.Features.Item
                 {
                     _AllGameObjectsToInspect.Add(obj.gameObject);
                 }
-                foreach (var obj in UnityEngine.Object.FindObjectsOfType<LG_SecurityDoor>())
-                {
-                    _AllGameObjectsToInspect.Add(obj.gameObject);
-                }
                 foreach (var obj in UnityEngine.Object.FindObjectsOfType<LG_BulkheadDoorController_Core>())
                 {
                     _AllGameObjectsToInspect.Add(obj.gameObject);
                 }
                 foreach (var obj in UnityEngine.Object.FindObjectsOfType<LG_DisinfectionStation>())
+                {
+                    _AllGameObjectsToInspect.Add(obj.gameObject);
+                }
+                foreach (var obj in UnityEngine.Object.FindObjectsOfType <LG_PowerGenerator_Core>())
                 {
                     _AllGameObjectsToInspect.Add(obj.gameObject);
                 }
