@@ -1,6 +1,6 @@
 ﻿using BepInEx;
 using Hikaria.AdminSystem.Extensions;
-using Hikaria.AdminSystem.Utilities;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.DevConsoleLite;
 using LevelGeneration;
 using Player;
@@ -131,7 +131,11 @@ namespace Hikaria.AdminSystem.Features.Player
                 Slot1 = 1,
                 Slot2 = 2,
                 Slot3 = 3,
-                Slot4 = 4
+                Slot4 = 4,
+                Slot5 = 5,
+                Slot6 = 6,
+                Slot7 = 7,
+                Slot8 = 8
             }
         }
 
@@ -154,7 +158,7 @@ namespace Hikaria.AdminSystem.Features.Player
                 return eDimensionIndex.Reality;
             });
             DevConsole.AddCommand(Command.Create<SlotIndex, SlotIndex>("WarpPlayerToPlayer", "传送玩家到玩家", "传送玩家到玩家", Parameter.Create("Slot", "槽位, 1-4"), Parameter.Create("Slot", "槽位, 1-4"), WarpPlayerToPlayer));
-            DevConsole.AddCommand(Command.Create<SlotIndex>("WarpAllPlayerToPlayer", "传送所有玩家到玩家", "传送所有玩家到玩家", Parameter.Create("Slot", "槽位, 1-4"), WarpAllPlayerToPlayer));
+            DevConsole.AddCommand(Command.Create<SlotIndex>("WarpAllPlayerToPlayer", "传送所有玩家到玩家", "传送所有玩家到玩家", Parameter.Create("Slot", "槽位, 1-4"), WarpAllPlayersToPlayer));
             DevConsole.AddCommand(Command.Create<eDimensionIndex>("WarpAllPlayerToDimension", "传送所有玩家到象限", "传送所有玩家到象限", Parameter.Create("DimensionIndex", "象限, 范围0-21"), WarpAllPlayerToDimension));
             DevConsole.AddCommand(Command.Create<SlotIndex, string>("WarpPlayerToStoredPos", "传送到存储地点", "传送到存储地点", Parameter.Create("Slot", "槽位, 1-4"), Parameter.Create("StoredName", "传送地点名称"), WarpPlayerToStoredPos));
             DevConsole.AddCommand(Command.Create<SlotIndex>("WarpPlayerToEye", "传送玩家到目标位置", "传送玩家到目标位置", Parameter.Create("Slot", "槽位, 1-4"), WarpPlayerToEyePos));
@@ -177,7 +181,7 @@ namespace Hikaria.AdminSystem.Features.Player
                         WarpPlayerToPlayer(Settings.Slot1, Settings.Slot2);
                         break;
                     case WarpInteraction.WarpAllPlayersToPlayer:
-                        WarpAllPlayerToPlayer(Settings.Slot2);
+                        WarpAllPlayersToPlayer(Settings.Slot2);
                         break;
                     case WarpInteraction.WarpPlayerToDimension:
                         WarpPlayerToDimension(Settings.Slot1, Settings.TargetDimensionIndex);
@@ -209,7 +213,7 @@ namespace Hikaria.AdminSystem.Features.Player
             }
         }
 
-        private static void WarpAllPlayerToPlayer(SlotIndex slot)
+        private static void WarpAllPlayersToPlayer(SlotIndex slot)
         {
             foreach (SlotIndex value in Enum.GetValues(typeof(SlotIndex)))
             {

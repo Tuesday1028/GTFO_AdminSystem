@@ -3,7 +3,7 @@ using BepInEx.Unity.IL2CPP.Utils.Collections;
 using ChainedPuzzles;
 using GameData;
 using Gear;
-using Hikaria.AdminSystem.Utilities;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
 using Hikaria.Core.Interfaces;
 using Hikaria.DevConsoleLite;
@@ -98,7 +98,7 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public void OnRecallComplete(eBufferType bufferType)
         {
-            if (bufferType == eBufferType.DropIn || bufferType == eBufferType.Checkpoint)
+            if (bufferType == eBufferType.DropIn || bufferType == eBufferType.Checkpoint || bufferType == eBufferType.Migration_B)
             {
                 ItemMarker.SearchGameObjects();
                 CoroutineManager.StartCoroutine(ItemMarker.LoadingItem().WrapToIl2Cpp());
@@ -510,18 +510,21 @@ namespace Hikaria.AdminSystem.Features.Item
             {
                 foreach (var itemMarker in _FixedItemMarkers.Values)
                 {
+                    if (itemMarker?.Marker == null) continue;
                     itemMarker.Marker.SetVisible(false);
                     GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
                 }
                 _FixedItemMarkers.Clear();
                 foreach (var itemMarker in _DynamicItemMarkers.Values)
                 {
+                    if (itemMarker?.Marker == null) continue;
                     itemMarker.Marker.SetVisible(false);
                     GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
                 }
                 _DynamicItemMarkers.Clear();
                 foreach (var itemMarker in _OtherItemMarkers.Values)
                 {
+                    if (itemMarker?.Marker == null) continue;
                     itemMarker.Marker.SetVisible(false);
                     GuiManager.NavMarkerLayer.RemoveMarker(itemMarker.Marker);
                 }

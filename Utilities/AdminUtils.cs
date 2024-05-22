@@ -3,7 +3,7 @@ using Player;
 using System.Linq;
 using System.Reflection;
 
-namespace Hikaria.AdminSystem.Utilities
+namespace Hikaria.AdminSystem.Utility
 {
     public static class AdminUtils
     {
@@ -17,7 +17,7 @@ namespace Hikaria.AdminSystem.Utilities
             return true;
         }
 
-        public static LocalPlayerAgent LocalPlayerAgent => PlayerManager.GetLocalPlayerAgent()?.TryCast<LocalPlayerAgent>() ?? null;
+        public static LocalPlayerAgent LocalPlayerAgent => PlayerManager.GetLocalPlayerAgent()?.TryCast<LocalPlayerAgent>();
 
         public static T CopyProperties<T>(T source, T target)
         {

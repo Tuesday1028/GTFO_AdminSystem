@@ -1,4 +1,4 @@
-﻿using Hikaria.AdminSystem.Utilities;
+﻿using Hikaria.AdminSystem.Utility;
 using Hikaria.DevConsoleLite;
 using LevelGeneration;
 using System.Collections.Generic;

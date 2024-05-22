@@ -3,7 +3,7 @@ using BepInEx.Unity.IL2CPP.Utils;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Enemies;
 using Hikaria.AdminSystem.Managers;
-using Hikaria.AdminSystem.Utilities;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
 using Hikaria.Core.Interfaces;
 using Hikaria.DevConsoleLite;

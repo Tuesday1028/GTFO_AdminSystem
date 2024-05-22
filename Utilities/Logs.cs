@@ -2,7 +2,7 @@
 using TheArchive.Interfaces;
 using TheArchive.Loader;
 
-namespace Hikaria.AdminSystem.Utilities
+namespace Hikaria.AdminSystem.Utility
 {
     internal static class Logs
 	{

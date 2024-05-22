@@ -4,7 +4,7 @@ using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Enemies;
 using GameData;
 using Gear;
-using Hikaria.AdminSystem.Utilities;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.DevConsoleLite;
 using Il2CppInterop.Runtime.InteropTypes;
 using Player;

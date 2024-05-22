@@ -4,7 +4,7 @@ using CellMenu;
 using Enemies;
 using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Managers;
-using Hikaria.AdminSystem.Utilities;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
 using Hikaria.DevConsoleLite;
 using LevelGeneration;
@@ -358,14 +358,10 @@ namespace Hikaria.AdminSystem.Features.Misc
 
         private static void ReviveAllPlayer()
         {
-            for (int i = 0; i < 4; i++)
+            foreach (var player in PlayerManager.PlayerAgentsInLevel)
             {
-                if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(i + 1, out PlayerAgent targetPlayer))
-                {
-                    continue;
-                }
-                AgentReplicatedActions.PlayerReviveAction(targetPlayer, AdminUtils.LocalPlayerAgent, targetPlayer.Position);
-                DevConsole.LogSuccess($"已复活玩家 {targetPlayer.PlayerName}");
+                AgentReplicatedActions.PlayerReviveAction(player, AdminUtils.LocalPlayerAgent, player.Position);
+                DevConsole.LogSuccess($"已复活玩家 {player.PlayerName}");
             }
         }
 

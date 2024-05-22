@@ -1,6 +1,6 @@
 ﻿using AIGraph;
 using CullingSystem;
-using Hikaria.AdminSystem.Utilities;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.DevConsoleLite;
 using Player;
 using TheArchive.Core.Attributes;

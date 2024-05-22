@@ -1,6 +1,6 @@
 ﻿using Agents;
 using Hikaria.AdminSystem.Extensions;
-using Hikaria.AdminSystem.Utilities;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
 using Hikaria.Core.Interfaces;
 using Hikaria.DevConsoleLite;

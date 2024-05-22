@@ -58,6 +58,9 @@ namespace Hikaria.AdminSystem.Features.Weapon
             [FSDescription("按下后可暂停自瞄，松开后恢复")]
             public KeyCode PauseAutoAimKey { get; set; } = KeyCode.LeftShift;
 
+            [FSDisplayName("反转暂停自瞄")]
+            public bool ReversePauseAutoAim { get; set; }
+
             [FSDisplayName("自动开火模式")]
             public AutoFireMode AutoFire { get; set; } = AutoFireMode.Off;
 
@@ -630,7 +633,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             internal bool HasTarget => m_Target != null && m_Target.Alive && m_TargetLimb != null;
 
-            private bool PauseAutoAim => Input.GetKey(Settings.PauseAutoAimKey) && m_BulletWeapon.AimButtonHeld && Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.Off;
+            private bool PauseAutoAim => ((!Settings.ReversePauseAutoAim && Input.GetKey(Settings.PauseAutoAimKey)) || (Settings.ReversePauseAutoAim && !Input.GetKey(Settings.PauseAutoAimKey)))
+                && m_BulletWeapon.AimButtonHeld && Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.Off;
         }
     }
 

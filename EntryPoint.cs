@@ -1,4 +1,4 @@
-﻿using Hikaria.AdminSystem.Utilities;
+﻿using Hikaria.AdminSystem.Utility;
 using System.Collections.Generic;
 using TheArchive.Core;
 using TheArchive.Core.Attributes;

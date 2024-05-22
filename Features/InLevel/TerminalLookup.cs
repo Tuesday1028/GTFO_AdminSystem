@@ -3,7 +3,7 @@ using BepInEx;
 using Clonesoft.Json;
 using GameData;
 using Hikaria.AdminSystem.Extensions;
-using Hikaria.AdminSystem.Utilities;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.DevConsoleLite;
 using LevelGeneration;
 using System.Collections.Generic;

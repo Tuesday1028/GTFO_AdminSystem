@@ -1,6 +1,6 @@
 ﻿using Gear;
 using Hikaria.AdminSystem.Features.Weapon;
-using Hikaria.AdminSystem.Utilities;
+using Hikaria.AdminSystem.Utility;
 using Player;
 using SNetwork;
 using System;

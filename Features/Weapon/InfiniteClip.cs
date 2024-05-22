@@ -1,5 +1,5 @@
 ﻿using Gear;
-using Hikaria.AdminSystem.Utilities;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.DevConsoleLite;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;

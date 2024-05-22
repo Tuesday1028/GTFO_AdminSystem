@@ -5,7 +5,7 @@ using Enemies;
 using GameData;
 using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Managers;
-using Hikaria.AdminSystem.Utilities;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.DevConsoleLite;
 using Player;
 using SNetwork;
