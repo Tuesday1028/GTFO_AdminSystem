@@ -90,7 +90,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     ItemMarker.DoEnterLevelOnceLoad();
                 }
             }
-            if (currentState == eGameStateName.AfterLevel)
+            if (currentState == eGameStateName.AfterLevel || currentState == eGameStateName.Lobby)
             {
                 ItemMarker.DoAfterLevelClear();
             }
@@ -1123,7 +1123,7 @@ namespace Hikaria.AdminSystem.Features.Item
                 if (SNet.LocalPlayer.IsOutOfSync)
                     yield break;
 
-                var yielder = new WaitForEndOfFrame();
+                var yielder = new WaitForFixedUpdate();
 
                 yield return yielder;
 

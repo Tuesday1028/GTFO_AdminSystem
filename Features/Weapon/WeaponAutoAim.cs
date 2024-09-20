@@ -5,6 +5,7 @@ using Gear;
 using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Features.Player;
 using Hikaria.AdminSystem.Managers;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.DevConsoleLite;
 using Player;
 using SNetwork;
@@ -45,6 +46,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             [FSDisplayName("隔墙自瞄")]
             public bool WallHackAim { get; set; }
+
+            [FSDisplayName("追踪子弹")]
+            [FSDescription("仅适用于穿透子弹")]
+            public bool MagicBullet { get; set; }
 
             [FSDisplayName("自瞄节点距离")]
             [FSDescription("默认为3个节点")]
@@ -238,7 +243,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 typeof(int)
             };
 
-            private static void Prefix(ref global::Weapon.WeaponHitData weaponRayData)
+            private static void Prefix(ref global::Weapon.WeaponHitData weaponRayData, Vector3 originPos)
             {
                 if (weaponRayData.owner == null || weaponRayData.owner.Owner == null || !weaponRayData.owner.Owner.IsLocal)
                 {
@@ -260,7 +265,11 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 }
                 if (!weaponAutoAim.HasTarget)
                 {
-                    return;
+                    weaponAutoAim.ForceUpdate();
+                    if (!weaponAutoAim.HasTarget)
+                    {
+                        return;
+                    }
                 }
 
                 if (!InputMapper.GetButtonKeyMouse(InputAction.Aim, eFocusState.FPS) && Settings.AutoFire != WeaponAutoAimSettings.AutoFireMode.FullyAuto)
@@ -271,7 +280,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 weaponRayData.maxRayDist = 2000f;
                 if (Settings.EnableTrajectoryRedirection)
                 {
-                    weaponRayData.fireDir = (weaponAutoAim.AimTargetPos - weaponRayData.owner.FPSCamera.Position).normalized;
+                    weaponRayData.fireDir = (weaponAutoAim.AimTargetPos - originPos).normalized;
                 }
             }
         }
@@ -375,6 +384,13 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 UpdateColor();
                 UpdateTargetEnemy();
                 UpdateAutoFire();
+            }
+
+
+            public void ForceUpdate()
+            {
+                UpdateColor();
+                UpdateTargetEnemy(true);
             }
 
             private void UpdateTargetEnemy(bool force = false)
@@ -631,7 +647,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             private float updateTick = 0.05f;
 
-            internal bool HasTarget => m_Target != null && m_Target.Alive && m_TargetLimb != null;
+            internal bool HasTarget => m_Target != null && m_Target.Alive && m_Target.Damage.Health > 0 && m_TargetLimb != null && m_TargetLimb.m_health > 0;
 
             private bool PauseAutoAim => ((!Settings.ReversePauseAutoAim && Input.GetKey(Settings.PauseAutoAimKey)) || (Settings.ReversePauseAutoAim && !Input.GetKey(Settings.PauseAutoAimKey)))
                 && m_BulletWeapon.AimButtonHeld && Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.Off;
