@@ -49,7 +49,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             [FSDisplayName("追踪子弹")]
             [FSDescription("仅适用于穿透子弹")]
-            public bool MagicBullet { get; set; }
+            public bool MagicBullet { get; set; } = true;
 
             [FSDisplayName("自瞄节点距离")]
             [FSDescription("默认为3个节点")]
@@ -243,6 +243,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 typeof(int)
             };
 
+            private static bool fireDirModified;
+
             private static void Prefix(ref global::Weapon.WeaponHitData weaponRayData, Vector3 originPos)
             {
                 if (weaponRayData.owner == null || weaponRayData.owner.Owner == null || !weaponRayData.owner.Owner.IsLocal)
@@ -263,15 +265,18 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     }
                     WeaponAutoAimHandler.Register(archetypeData.persistentID, weaponAutoAim);
                 }
+                bool skipForceUpdate = false;
                 if (!weaponAutoAim.HasTarget)
                 {
+                    if (!Settings.MagicBullet)
+                        return;
                     weaponAutoAim.ForceUpdate();
                     if (!weaponAutoAim.HasTarget)
-                    {
                         return;
-                    }
+                    skipForceUpdate = true;
                 }
-
+                if (!skipForceUpdate)
+                    weaponAutoAim.ForceUpdate();
                 if (!InputMapper.GetButtonKeyMouse(InputAction.Aim, eFocusState.FPS) && Settings.AutoFire != WeaponAutoAimSettings.AutoFireMode.FullyAuto)
                 {
                     return;
@@ -281,6 +286,18 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 if (Settings.EnableTrajectoryRedirection)
                 {
                     weaponRayData.fireDir = (weaponAutoAim.AimTargetPos - originPos).normalized;
+                    fireDirModified = true;
+                }
+                weaponAutoAim.TempIgnoreTargetEnemy();
+            }
+
+            private static void Postfix(ref global::Weapon.WeaponHitData weaponRayData)
+            {
+                // 用于修正子弹击发特效的方向，击发特效在命中判定完成之后
+                if (fireDirModified)
+                {
+                    weaponRayData.fireDir = weaponRayData.owner.FPSCamera.CameraRayDir;
+                    fireDirModified = false;
                 }
             }
         }
@@ -384,6 +401,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 UpdateColor();
                 UpdateTargetEnemy();
                 UpdateAutoFire();
+
+                IgnoredEnemies.Clear();
             }
 
 
@@ -560,6 +579,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 float tempRange = 100000f;
                 foreach (EnemyAgent enemy in AroundEnemies)
                 {
+                    if (IgnoredEnemies.Contains(enemy))
+                        continue;
                     switch (Settings.AimMode)
                     {
                         default:
@@ -618,9 +639,19 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 }
             }
 
+            public void TempIgnoreTargetEnemy()
+            {
+                if (m_Target == null)
+                    return;
+
+                IgnoredEnemies.Add(m_Target);
+            }
+
             public static WeaponAutoAimHandler Current { get; private set; }
 
             public List<EnemyAgent> AroundEnemies { get; private set; } = new();
+
+            private HashSet<EnemyAgent> IgnoredEnemies = new();
 
             private GameObject m_ReticleHolder;
 
