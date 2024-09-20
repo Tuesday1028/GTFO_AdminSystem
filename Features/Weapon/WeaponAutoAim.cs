@@ -41,7 +41,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
             [FSDisplayName("启用自瞄")]
             public bool EnableAutoAim { get; set; }
 
-            [FSDisplayName("启用弹道修正")]
+            [FSDisplayName("弹道修正")]
             public bool EnableTrajectoryRedirection { get; set; }
 
             [FSDisplayName("隔墙自瞄")]
@@ -50,6 +50,9 @@ namespace Hikaria.AdminSystem.Features.Weapon
             [FSDisplayName("追踪子弹")]
             [FSDescription("仅适用于穿透子弹")]
             public bool MagicBullet { get; set; } = true;
+
+            [FSDisplayName("追踪子弹最大修正角度")]
+            public float MagicBulletMaxCorrectionAngle { get; set; } = 30f;
 
             [FSDisplayName("自瞄节点距离")]
             [FSDescription("默认为3个节点")]
@@ -71,11 +74,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             [FSDisplayName("自瞄范围半径")]
             [FSDescription("单位: 像素")]
-            public float AimRange { get; set; } = 720f;
+            public float AimRadius { get; set; } = 540f;
 
-            [FSDisplayName("自瞄范围角度")]
-            [FSDescription("默认为90度")]
-            public float AimAngle { get; set; } = 90f;
+            [FSDisplayName("全范围自瞄")]
+            public bool IgnoreAimRadius { get; set; } = false;
 
             [FSDisplayName("装甲部位检测阈值")]
             [FSDescription("默认值为0.1")]
@@ -268,15 +270,15 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 bool skipForceUpdate = false;
                 if (!weaponAutoAim.HasTarget)
                 {
-                    if (!Settings.MagicBullet)
+                    if (!weaponAutoAim.IsPiercingBullet || !Settings.MagicBullet)
                         return;
-                    weaponAutoAim.ForceUpdate();
+                    weaponAutoAim.ForceUpdate(originPos);
                     if (!weaponAutoAim.HasTarget)
                         return;
                     skipForceUpdate = true;
                 }
                 if (!skipForceUpdate)
-                    weaponAutoAim.ForceUpdate();
+                    weaponAutoAim.ForceUpdate(originPos);
                 if (!InputMapper.GetButtonKeyMouse(InputAction.Aim, eFocusState.FPS) && Settings.AutoFire != WeaponAutoAimSettings.AutoFireMode.FullyAuto)
                 {
                     return;
@@ -289,6 +291,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     fireDirModified = true;
                 }
                 weaponAutoAim.TempIgnoreTargetEnemy();
+                weaponAutoAim.SetLastFireDir(weaponRayData.fireDir);
             }
 
             private static void Postfix(ref global::Weapon.WeaponHitData weaponRayData)
@@ -399,20 +402,21 @@ namespace Hikaria.AdminSystem.Features.Weapon
             private void Update()
             {
                 UpdateColor();
-                UpdateTargetEnemy();
+                UpdateTargetEnemy(m_Owner.FPSCamera.Position);
                 UpdateAutoFire();
 
                 IgnoredEnemies.Clear();
+                LastFireDir = Vector3.zero;
             }
 
 
-            public void ForceUpdate()
+            public void ForceUpdate(Vector3 sourcePos)
             {
                 UpdateColor();
-                UpdateTargetEnemy(true);
+                UpdateTargetEnemy(sourcePos, true);
             }
 
-            private void UpdateTargetEnemy(bool force = false)
+            private void UpdateTargetEnemy(Vector3 sourcePos, bool force = false)
             {
                 if (m_Target != null && m_TargetLimb != null)
                 {
@@ -437,9 +441,9 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 updateTick += Time.deltaTime;
                 if (updateTick >= 0.04f || force)
                 {
-                    UpdateAroundEnemy();
-                    UpdateBestEnemyTarget();
-                    UpdateTargetEnemyLimb();
+                    UpdateAroundEnemy(sourcePos);
+                    UpdateBestEnemyTarget(sourcePos);
+                    UpdateTargetEnemyLimb(sourcePos);
                     updateTick = 0f;
                 }
             }
@@ -475,7 +479,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 m_Reticle.UpdateColorsWithAlphaMul(1f);
             }
 
-            private void UpdateTargetEnemyLimb()
+            private void UpdateTargetEnemyLimb(Vector3 sourcePos)
             {
                 if (m_Target == null || PauseAutoAim)
                 {
@@ -491,7 +495,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                         foreach (var index in data.Armorspots)
                         {
                             Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
-                            if (!limb.IsDestroyed && m_Owner.CanFireHitObject(limb.gameObject))
+                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                             {
                                 m_TargetLimb = limb;
                                 return;
@@ -506,7 +510,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     foreach (var index in data.Weakspots)
                     {
                         Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
-                        if (!limb.IsDestroyed && m_Owner.CanFireHitObject(limb.gameObject))
+                        if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                         {
                             m_TargetLimb = limb;
                             return;
@@ -518,7 +522,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     foreach (var index in data.Normalspots)
                     {
                         Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
-                        if (!limb.IsDestroyed && m_Owner.CanFireHitObject(limb.gameObject))
+                        if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                         {
                             m_TargetLimb = limb;
                             return;
@@ -530,7 +534,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     foreach (var index in data.Armorspots)
                     {
                         Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
-                        if (!limb.IsDestroyed && m_Owner.CanFireHitObject(limb.gameObject))
+                        if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                         {
                             m_TargetLimb = limb;
                             return;
@@ -542,7 +546,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     foreach (var index in data.RealArmorSpots)
                     {
                         Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
-                        if (!limb.IsDestroyed && m_Owner.CanFireHitObject(limb.gameObject))
+                        if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                         {
                             m_TargetLimb = limb;
                             return;
@@ -568,7 +572,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 fireTimer = 0;
             }
 
-            private void UpdateBestEnemyTarget()
+            private void UpdateBestEnemyTarget(Vector3 sourcePos)
             {
                 if (AroundEnemies == null || AroundEnemies.Count == 0 || PauseAutoAim)
                 {
@@ -581,16 +585,23 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 {
                     if (IgnoredEnemies.Contains(enemy))
                         continue;
+                    if (IsPiercingBullet && Settings.MagicBullet && LastFireDir != Vector3.zero)
+                    {
+                        float angle = Vector3.Angle(enemy.AimTarget.position - sourcePos, LastFireDir);
+                        if (angle > Settings.MagicBulletMaxCorrectionAngle)
+                        {
+                            continue;
+                        }
+                    }
                     switch (Settings.AimMode)
                     {
                         default:
                         case WeaponAutoAimSettings.AutoAimMode.Crosshair:
-                            Vector3 enemyPos = m_Owner.FPSCamera.m_camera.WorldToScreenPoint(enemy.AimTarget.position);
-                            enemyPos.z = 0f;
-                            Vector3 center = new(Screen.width / 2, Screen.height / 2);
-                            float distance = Vector3.Distance(enemyPos, center);
-                            Vector3 vec = enemy.AimTarget.position - m_Owner.FPSCamera.Position;
-                            if (Vector3.Angle(m_Owner.FPSCamera.CameraRayDir, vec) < Settings.AimAngle && distance <= Settings.AimRange)
+                            Vector3 scrPos = m_Owner.FPSCamera.m_camera.WorldToScreenPoint(enemy.AimTarget.position);
+                            Vector2 center = new(Screen.width / 2, Screen.height / 2);
+                            float distance = Vector3.Distance(scrPos, center);
+                            Vector3 vec = enemy.AimTarget.position - sourcePos;
+                            if (Settings.IgnoreAimRadius || (scrPos.z > 0 && distance <= Settings.AimRadius))
                             {
                                 if (distance < tempRange)
                                 {
@@ -602,7 +613,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
                         case WeaponAutoAimSettings.AutoAimMode.Closest:
                             float distance2 = Vector3.Distance(enemy.AimTarget.position, m_Owner.Position);
                             Vector3 vec2 = enemy.AimTarget.position - m_Owner.FPSCamera.Position;
-                            if (Vector3.Angle(m_Owner.FPSCamera.CameraRayDir, vec2) < Settings.AimAngle && distance2 <= Settings.AimRange)
+                            Vector3 scrPos2 = m_Owner.FPSCamera.m_camera.WorldToScreenPoint(enemy.AimTarget.position);
+                            Vector2 center2 = new(Screen.width / 2, Screen.height / 2);
+                            float distance3 = Vector3.Distance(scrPos2, center2);
+                            if (Settings.IgnoreAimRadius || (scrPos2.z > 0 && distance3 <= Settings.AimRadius))
                             {
                                 if (distance2 < tempRange)
                                 {
@@ -616,7 +630,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 m_Target = target;
             }
 
-            private void UpdateAroundEnemy()
+            private void UpdateAroundEnemy(Vector3 sourcePos)
             {
                 AroundEnemies.Clear();
                 if (PauseAutoAim)
@@ -625,7 +639,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 }
                 foreach (EnemyAgent enemy in m_Owner.EnemyCollision.m_enemies)
                 {
-                    if (Settings.WallHackAim || m_Owner.CanSeeEnemyPlus(enemy))
+                    if (Settings.WallHackAim || AdminUtils.CanSeeEnemyPlus(sourcePos, enemy))
                     {
                         if (enemy.Alive && enemy.Damage.Health > 0f)
                         {
@@ -647,9 +661,16 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 IgnoredEnemies.Add(m_Target);
             }
 
+            public void SetLastFireDir(Vector3 dir)
+            {
+                LastFireDir = dir;
+            }
+
             public static WeaponAutoAimHandler Current { get; private set; }
 
             public List<EnemyAgent> AroundEnemies { get; private set; } = new();
+
+            public bool IsPiercingBullet => m_BulletWeapon.ArchetypeData?.PiercingBullets ?? false;
 
             private HashSet<EnemyAgent> IgnoredEnemies = new();
 
@@ -672,6 +693,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
             private Vector3 m_TargetedEulerAngles = new(0f, 0f, 45f);
 
             private float fireTimer;
+
+            private Vector3 LastFireDir = Vector3.zero;
 
             public static Dictionary<uint, WeaponAutoAimHandler> AutoAimInstances { get; private set; } = new();
             public static HashSet<WeaponAutoAimHandler> AllAutoAimInstances { get; private set; } = new();
