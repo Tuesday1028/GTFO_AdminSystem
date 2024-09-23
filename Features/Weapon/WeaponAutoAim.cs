@@ -51,6 +51,9 @@ namespace Hikaria.AdminSystem.Features.Weapon
             [FSDescription("仅适用于穿透子弹")]
             public bool MagicBullet { get; set; } = true;
 
+            [FSDisplayName("追踪子弹忽略不可见")]
+            public bool MagicBulletVisibleOnly { get; set; } = true;
+
             [FSDisplayName("追踪子弹最大修正角度")]
             public float MagicBulletMaxCorrectionAngle { get; set; } = 30f;
 
@@ -294,15 +297,15 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 weaponAutoAim.SetLastFireDir(weaponRayData.fireDir);
             }
 
-            private static void Postfix(ref global::Weapon.WeaponHitData weaponRayData)
-            {
-                // 用于修正子弹击发特效的方向，击发特效在命中判定完成之后
-                if (fireDirModified)
-                {
-                    weaponRayData.fireDir = weaponRayData.owner.FPSCamera.CameraRayDir;
-                    fireDirModified = false;
-                }
-            }
+            //private static void Postfix(ref global::Weapon.WeaponHitData weaponRayData)
+            //{
+            //    // 用于修正子弹击发特效的方向，击发特效在命中判定完成之后
+            //    if (fireDirModified)
+            //    {
+            //        weaponRayData.fireDir = weaponRayData.owner.FPSCamera.CameraRayDir;
+            //        fireDirModified = false;
+            //    }
+            //}
         }
 
         public class WeaponAutoAimHandler : MonoBehaviour
@@ -401,8 +404,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             private void Update()
             {
-                UpdateColor();
                 UpdateTargetEnemy(m_Owner.FPSCamera.Position);
+                UpdateColor();
                 UpdateAutoFire();
 
                 IgnoredEnemies.Clear();
@@ -412,8 +415,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             public void ForceUpdate(Vector3 sourcePos)
             {
-                UpdateColor();
                 UpdateTargetEnemy(sourcePos, true);
+                UpdateColor();
             }
 
             private void UpdateTargetEnemy(Vector3 sourcePos, bool force = false)
@@ -637,6 +640,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 {
                     return;
                 }
+
+                if (Settings.MagicBulletVisibleOnly)
+                    sourcePos = m_Owner.FPSCamera.Position;
+
                 foreach (EnemyAgent enemy in m_Owner.EnemyCollision.m_enemies)
                 {
                     if (Settings.WallHackAim || AdminUtils.CanSeeEnemyPlus(sourcePos, enemy))
@@ -701,7 +708,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             private float updateTick = 0.05f;
 
-            internal bool HasTarget => m_Target != null && m_Target.Alive && m_Target.Damage.Health > 0 && m_TargetLimb != null && m_TargetLimb.m_health > 0;
+            internal bool HasTarget => m_Target != null && m_Target.Alive && m_TargetLimb != null;
 
             private bool PauseAutoAim => ((!Settings.ReversePauseAutoAim && Input.GetKey(Settings.PauseAutoAimKey)) || (Settings.ReversePauseAutoAim && !Input.GetKey(Settings.PauseAutoAimKey)))
                 && m_BulletWeapon.AimButtonHeld && Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.Off;

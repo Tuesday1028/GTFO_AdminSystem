@@ -23,7 +23,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
     [DoNotSaveToConfig]
-    internal class WeaponEnhance : Feature
+    internal class WeaponEnhancement : Feature
     {
         public override string Name => "武器加强";
 
@@ -36,6 +36,9 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
         public class WeaponEnhanceSettings
         {
+            [FSDisplayName("无限弹夹容量")]
+            public bool EnableInfiniteClip { get; set; }
+
             [FSDisplayName("清晰瞄具")]
             [FSDescription("去除枪械瞄具污渍, 加强热成像瞄具")]
             public bool ClearSight { get; set; }
@@ -180,6 +183,18 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 DevConsole.LogVariable("静音枪", Settings.AutoReload);
             }));
+            DevConsole.AddCommand(Command.Create<bool?>("InfClip", "无限弹夹容量", "无限弹夹容量", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
+            {
+                if (!enable.HasValue)
+                {
+                    enable = !Settings.EnableInfiniteClip;
+                }
+                Settings.EnableInfiniteClip = enable.Value;
+                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 无限弹夹容量");
+            }, () =>
+            {
+                DevConsole.LogVariable("无限弹夹容量", Settings.EnableInfiniteClip);
+            }));
         }
 
         public override void OnGameDataInitialized()
@@ -295,9 +310,16 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             private static void Postfix(BulletWeapon __instance)
             {
-                if (Settings.AutoReload && IsWeaponOwner(__instance))
+                if (!IsWeaponOwner(__instance))
+                    return;
+                if (Settings.AutoReload)
                 {
                     __instance.m_inventory.DoReload();
+                }
+                if (Settings.EnableInfiniteClip)
+                {
+                    __instance.m_clip = __instance.ClipSize;
+                    __instance.UpdateAmmoStatus();
                 }
             }
         }
@@ -307,9 +329,16 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             private static void Postfix(Shotgun __instance)
             {
-                if (Settings.AutoReload && IsWeaponOwner(__instance))
+                if (!IsWeaponOwner(__instance))
+                    return;
+                if (Settings.AutoReload)
                 {
                     __instance.m_inventory.DoReload();
+                }
+                if (Settings.EnableInfiniteClip)
+                {
+                    __instance.m_clip = __instance.ClipSize;
+                    __instance.UpdateAmmoStatus();
                 }
             }
         }

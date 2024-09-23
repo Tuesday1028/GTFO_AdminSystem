@@ -98,11 +98,15 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public void OnRecallComplete(eBufferType bufferType)
         {
-            if (bufferType == eBufferType.DropIn || bufferType == eBufferType.Checkpoint || bufferType == eBufferType.Migration_B)
-            {
-                ItemMarker.SearchGameObjects();
-                CoroutineManager.StartCoroutine(ItemMarker.LoadingItem().WrapToIl2Cpp());
-            }
+            if (CurrentGameState < (int)eGameStateName.InLevel)
+                return;
+            ItemMarker.SearchGameObjects();
+            CoroutineManager.StartCoroutine(ItemMarker.LoadingItem().WrapToIl2Cpp());
+            //if (bufferType == eBufferType.DropIn || bufferType == eBufferType.Checkpoint || bufferType == eBufferType.Migration_B)
+            //{
+            //    ItemMarker.SearchGameObjects();
+            //    CoroutineManager.StartCoroutine(ItemMarker.LoadingItem().WrapToIl2Cpp());
+            //}
         }
 
         [ArchivePatch(typeof(ItemInLevel), nameof(ItemInLevel.OnDespawn))]
