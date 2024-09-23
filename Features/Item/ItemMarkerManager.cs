@@ -98,15 +98,11 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public void OnRecallComplete(eBufferType bufferType)
         {
-            if (CurrentGameState < (int)eGameStateName.InLevel)
-                return;
-            ItemMarker.SearchGameObjects();
-            CoroutineManager.StartCoroutine(ItemMarker.LoadingItem().WrapToIl2Cpp());
-            //if (bufferType == eBufferType.DropIn || bufferType == eBufferType.Checkpoint || bufferType == eBufferType.Migration_B)
-            //{
-            //    ItemMarker.SearchGameObjects();
-            //    CoroutineManager.StartCoroutine(ItemMarker.LoadingItem().WrapToIl2Cpp());
-            //}
+            if (bufferType == eBufferType.DropIn || bufferType == eBufferType.Checkpoint || bufferType == eBufferType.Migration_B)
+            {
+                ItemMarker.SearchGameObjects();
+                CoroutineManager.StartCoroutine(ItemMarker.LoadingItem().WrapToIl2Cpp());
+            }
         }
 
         [ArchivePatch(typeof(ItemInLevel), nameof(ItemInLevel.OnDespawn))]
@@ -1080,7 +1076,7 @@ namespace Hikaria.AdminSystem.Features.Item
                 while (false);
             }
 
-            public static void UpdateDynamicItemMarkersVisibility()
+            public static void UpdateDynamicItemMarkersVisiable()
             {
                 foreach (var marker in _DynamicItemMarkers.Values)
                 {
@@ -1149,7 +1145,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     RegisterItemInLevel(itemInLevel);
                 }
 
-                UpdateDynamicItemMarkersVisibility();
+                UpdateDynamicItemMarkersVisiable();
                 IsFirstLoadPerLevel = false;
             }
 
