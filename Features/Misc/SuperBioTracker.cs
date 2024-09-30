@@ -3,10 +3,12 @@ using AK;
 using Enemies;
 using Gear;
 using Player;
+using System.Collections.Generic;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Core.Localization;
+using TheArchive.Utilities;
 using UnityEngine;
 
 namespace Hikaria.AdminSystem.Features.Misc;
@@ -28,6 +30,8 @@ internal class SuperBioTracker : Feature
         public bool UseBotTag { get; set; }
         [FSDisplayName("忽略单次标记上限")]
         public bool IgnoreMaxTags { get; set; }
+        [FSDisplayName("标记点积限制")]
+        public float MaxTagDot { get; set; } = 10f;
     }
 
     public static new ILocalizationService Localization { get; set; }
@@ -60,6 +64,19 @@ internal class SuperBioTracker : Feature
             EnemyScanner.BotTag(__instance.Owner.CourseNode, __instance.Owner.Position, __instance.m_taggableEnemies);
             AllowAgentModePatch = false;
             AllowBotTag = true;
+
+            var result = new List<EnemyAgent>();
+            var right = __instance.Owner.transform.right;
+            foreach (var enemy in __instance.m_taggableEnemies)
+            {
+                float num = Mathf.Abs(Vector3.Dot(enemy.Position - __instance.m_graphics.m_scanOrigin, right));
+                if (num < Settings.MaxTagDot)
+                {
+                    result.Add(enemy);
+                }
+            }
+            __instance.m_taggableEnemies = result.ToIL2CPPListIfNecessary();
+
             return __instance.m_taggableEnemies.Count > 0;
         }
 

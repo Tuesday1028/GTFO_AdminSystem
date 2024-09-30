@@ -2,7 +2,6 @@
 using Enemies;
 using GameData;
 using Gear;
-using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Features.Player;
 using Hikaria.AdminSystem.Managers;
 using Hikaria.AdminSystem.Utility;
@@ -153,13 +152,30 @@ namespace Hikaria.AdminSystem.Features.Weapon
             }
         }
 
+        [ArchivePatch(typeof(Dam_EnemyDamageLimb), nameof(Dam_EnemyDamageLimb.BulletDamage))]
+        private class Dam_EnemyDamageLimb__BulletDamage__Patch
+        {
+            private static void Postfix(Dam_EnemyDamageLimb __instance, float dam, Vector3 position, Vector3 direction, float precisionMulti)
+            {
+                if (!Settings.EnableAutoAim)
+                    return;
+
+                if (SNet.IsMaster)
+                    return;
+
+                float num = __instance.ApplyWeakspotAndArmorModifiers(dam, precisionMulti);
+                num = __instance.ApplyDamageFromBehindBonus(num, position, direction, 1f);
+                __instance.m_base.RegisterDamage(num);
+            }
+        }
+
         private static bool IsWeaponOwner(BulletWeapon bulletWeapon)
         {
             if (bulletWeapon == null || bulletWeapon.Owner == null)
             {
                 return false;
             }
-            return bulletWeapon.Owner.Owner.IsLocal;
+            return bulletWeapon.Owner.IsLocallyOwned;
         }
 
         [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.OnWield))]
@@ -167,6 +183,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             private static void Postfix(BulletWeapon __instance)
             {
+                if (!Settings.EnableAutoAim)
+                    return;
                 if (GameStateManager.Current.m_currentStateName != eGameStateName.InLevel)
                 {
                     return;
@@ -212,6 +230,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             private static bool Prefix(PlayerEnemyCollision __instance, Vector3 pos, ref float __result)
             {
+                if (!Settings.EnableAutoAim)
+                    return true;
                 float num = 1f;
                 if (__instance.m_owner.CourseNode == null)
                 {
@@ -237,6 +257,28 @@ namespace Hikaria.AdminSystem.Features.Weapon
             }
         }
 
+        static bool IsLocalShotgunFireShots;
+
+        [ArchivePatch(typeof(Shotgun), nameof(Shotgun.Fire))]
+        private class Shotgun__Fire__Patch
+        {
+            private static void Prefix(Shotgun __instance)
+            {
+                if (!Settings.EnableAutoAim)
+                    return;
+                if (__instance.Owner.IsLocallyOwned)
+                    IsLocalShotgunFireShots = true;
+            }
+
+            private static void Postfix(Shotgun __instance)
+            {
+                if (!Settings.EnableAutoAim)
+                    return;
+                if (__instance.Owner.IsLocallyOwned)
+                    IsLocalShotgunFireShots = false;
+            }
+        }
+
         [ArchivePatch(typeof(global::Weapon), nameof(global::Weapon.CastWeaponRay))]
         public class Weapon__CastWeaponRay__Patch
         {
@@ -248,11 +290,17 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 typeof(int)
             };
 
-            private static bool fireDirModified;
+            //private static bool fireDirModified;
 
             private static void Prefix(ref global::Weapon.WeaponHitData weaponRayData, Vector3 originPos)
             {
-                if (weaponRayData.owner == null || weaponRayData.owner.Owner == null || !weaponRayData.owner.Owner.IsLocal)
+                if (!Settings.EnableAutoAim)
+                    return;
+                if (IsLocalShotgunFireShots) // 霰弹枪开火不会设置Owner
+                {
+                    weaponRayData.owner = AdminUtils.LocalPlayerAgent;
+                }
+                else if (weaponRayData.owner == null || !weaponRayData.owner.IsLocallyOwned)
                 {
                     return;
                 }
@@ -273,7 +321,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 bool skipForceUpdate = false;
                 if (!weaponAutoAim.HasTarget)
                 {
-                    if (!weaponAutoAim.IsPiercingBullet || !Settings.MagicBullet)
+                    if (!IsLocalShotgunFireShots && (!weaponAutoAim.IsPiercingBullet || !Settings.MagicBullet))
                         return;
                     weaponAutoAim.ForceUpdate(originPos);
                     if (!weaponAutoAim.HasTarget)
@@ -287,14 +335,21 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     return;
                 }
 
+                Vector3 originalFireDir = weaponRayData.fireDir;
+
+                weaponRayData.angOffsetX = 0;
+                weaponRayData.angOffsetY = 0;
                 weaponRayData.maxRayDist = 2000f;
                 if (Settings.EnableTrajectoryRedirection)
                 {
                     weaponRayData.fireDir = (weaponAutoAim.AimTargetPos - originPos).normalized;
-                    fireDirModified = true;
+                    //fireDirModified = true;
                 }
-                weaponAutoAim.TempIgnoreTargetEnemy();
-                weaponAutoAim.SetLastFireDir(weaponRayData.fireDir);
+                if (!IsLocalShotgunFireShots)
+                {
+                    weaponAutoAim.TempIgnoreTargetEnemy();
+                }
+                weaponAutoAim.SetLastFireDir(IsLocalShotgunFireShots ? originalFireDir : weaponRayData.fireDir);
             }
 
             //private static void Postfix(ref global::Weapon.WeaponHitData weaponRayData)

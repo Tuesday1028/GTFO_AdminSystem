@@ -100,8 +100,7 @@ namespace Hikaria.AdminSystem.Features.Item
         {
             if (CurrentGameState < (int)eGameStateName.InLevel)
                 return;
-            ItemMarker.SearchGameObjects();
-            CoroutineManager.StartCoroutine(ItemMarker.LoadingItem().WrapToIl2Cpp());
+            CoroutineManager.StartCoroutine(ItemMarker.LoadingItem(SNet.IsMaster ? 0f : 3f, !SNet.IsMaster).WrapToIl2Cpp());
             //if (bufferType == eBufferType.DropIn || bufferType == eBufferType.Checkpoint || bufferType == eBufferType.Migration_B)
             //{
             //    ItemMarker.SearchGameObjects();
@@ -1107,7 +1106,7 @@ namespace Hikaria.AdminSystem.Features.Item
                 }
             }
 
-            public static IEnumerator LoadingItem()
+            public static IEnumerator LoadingItem(float delay = 0f, bool isRecall = false)
             {
                 /*
                 foreach (var key in _FixedItemMarkers.Keys.ToList())
@@ -1123,6 +1122,12 @@ namespace Hikaria.AdminSystem.Features.Item
                     Remove(key, ItemType.InLevelCarry);
                 }
                 */
+
+                if (delay > 0f)
+                    yield return new WaitForSecondsRealtime(delay);
+
+                if (isRecall)
+                    SearchGameObjects();
 
                 if (SNet.LocalPlayer.IsOutOfSync)
                     yield break;
