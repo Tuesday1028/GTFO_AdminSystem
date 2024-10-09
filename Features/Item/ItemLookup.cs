@@ -83,7 +83,7 @@ namespace Hikaria.AdminSystem.Features.Item
                 var itemInLevel = __result.TryCast<ItemInLevel>();
                 if (itemInLevel == null) return;
                 string[] array = itemInLevel.ToString().Split(' ');
-                var key = array[1];
+                var key = array[1].ToUpperInvariant();
                 ItemsInLevel[key] = itemInLevel;
 
                 itemInLevel.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>

@@ -41,11 +41,6 @@ public class EntryPoint : IArchiveModule
 
     public string ModuleGroup => Groups.ModuleGroup;
 
-    public Dictionary<Language, string> ModuleGroupLanguages => new()
-    {
-        { Language.Chinese, "管理系统" }, { Language.English, "Admin System" }
-    };
-
     public static class Groups
     {
         static Groups()
@@ -72,7 +67,10 @@ public class EntryPoint : IArchiveModule
             Security.SetLanguage(Language.English, "Security");
         }
 
-        public static FeatureGroup ModuleGroup => FeatureGroups.GetOrCreateModuleGroup("Admin System");
+        public static FeatureGroup ModuleGroup => FeatureGroups.GetOrCreateModuleGroup("Admin System", new()
+        {
+            { Language.Chinese, "管理系统" }, { Language.English, "Admin System" }
+        }); 
 
         public static FeatureGroup Item => ModuleGroup.GetOrCreateSubGroup("Item");
 

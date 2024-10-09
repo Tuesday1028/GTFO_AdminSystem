@@ -290,8 +290,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 typeof(int)
             };
 
-            //private static bool fireDirModified;
-
             private static void Prefix(ref global::Weapon.WeaponHitData weaponRayData, Vector3 originPos)
             {
                 if (!Settings.EnableAutoAim)
@@ -321,14 +319,14 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 bool skipForceUpdate = false;
                 if (!weaponAutoAim.HasTarget)
                 {
-                    if (!IsLocalShotgunFireShots && (!weaponAutoAim.IsPiercingBullet || !Settings.MagicBullet))
+                    if (!Settings.MagicBullet || !weaponAutoAim.IsPiercingBullet)
                         return;
                     weaponAutoAim.ForceUpdate(originPos);
                     if (!weaponAutoAim.HasTarget)
                         return;
                     skipForceUpdate = true;
                 }
-                if (!skipForceUpdate)
+                if (!skipForceUpdate && IsLocalShotgunFireShots && Settings.MagicBullet && weaponAutoAim.IsPiercingBullet)
                     weaponAutoAim.ForceUpdate(originPos);
                 if (!InputMapper.GetButtonKeyMouse(InputAction.Aim, eFocusState.FPS) && Settings.AutoFire != WeaponAutoAimSettings.AutoFireMode.FullyAuto)
                 {
@@ -343,7 +341,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 if (Settings.EnableTrajectoryRedirection)
                 {
                     weaponRayData.fireDir = (weaponAutoAim.AimTargetPos - originPos).normalized;
-                    //fireDirModified = true;
                 }
                 if (!IsLocalShotgunFireShots)
                 {
