@@ -328,10 +328,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 }
                 if (!skipForceUpdate && IsLocalShotgunFireShots && Settings.MagicBullet && weaponAutoAim.IsPiercingBullet)
                     weaponAutoAim.ForceUpdate(originPos);
-                if (!InputMapper.GetButtonKeyMouse(InputAction.Aim, eFocusState.FPS) && Settings.AutoFire != WeaponAutoAimSettings.AutoFireMode.FullyAuto)
-                {
+                if (!weaponAutoAim.HasTarget)
                     return;
-                }
+                if (!InputMapper.GetButtonKeyMouse(InputAction.Aim, eFocusState.FPS) && Settings.AutoFire != WeaponAutoAimSettings.AutoFireMode.FullyAuto)
+                    return;
 
                 Vector3 originalFireDir = weaponRayData.fireDir;
 
@@ -760,7 +760,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             private float updateTick = 0.05f;
 
-            internal bool HasTarget => m_Target != null && m_Target.Alive && m_TargetLimb != null;
+            internal bool HasTarget => !PauseAutoAim && m_Target != null && m_Target.Alive && m_TargetLimb != null;
 
             private bool PauseAutoAim => ((!Settings.ReversePauseAutoAim && Input.GetKey(Settings.PauseAutoAimKey)) || (Settings.ReversePauseAutoAim && !Input.GetKey(Settings.PauseAutoAimKey)))
                 && m_BulletWeapon.AimButtonHeld && Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.Off;
