@@ -34,7 +34,14 @@ namespace Hikaria.AdminSystem.Utility
                     PropertyInfo property = target.GetType().GetProperty(sourceProp.Name);
                     if (property.PropertyType != typeof(Il2CppObjectBase) || property.PropertyType != typeof(UnityEngine.Object))
                     {
-                        property.SetValue(target, value);
+                        if (property.PropertyType.IsByRef)
+                        {
+                            property.SetValue(target, CopyProperties(value, new()));
+                        }
+                        else
+                        {
+                            property.SetValue(target, value);
+                        }
                     }
                 }
             }

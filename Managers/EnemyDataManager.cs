@@ -42,7 +42,7 @@ namespace Hikaria.AdminSystem.Managers
                 switch (limb.m_type)
                 {
                     case eLimbDamageType.Armor:
-                        if (limb.m_armorDamageMulti < ArmorMultiThreshold)
+                        if (limb.m_armorDamageMulti <= ArmorMultiThreshold)
                             data.RealArmorSpots.Add(limb.m_limbID, limb.m_armorDamageMulti);
                         else
                             data.Armorspots.Add(limb.m_limbID, limb.m_armorDamageMulti);

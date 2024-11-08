@@ -66,6 +66,9 @@
     <Reference Include="MonoMod.RuntimeDetour">
       <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\GTFO\BepInEx\core\MonoMod.RuntimeDetour.dll</HintPath>
     </Reference>
+    <Reference Include="Shards-ASM">
+      <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\GTFO\BepInEx\interop\Shards-ASM.dll</HintPath>
+    </Reference>
     <Reference Include="SNet_ASM">
       <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\GTFO\BepInEx\interop\SNet_ASM.dll</HintPath>
     </Reference>
@@ -77,6 +80,9 @@
     </Reference>
     <Reference Include="TheArchive.IL2CPP">
       <HintPath>..\GTFO_TheArchive\TheArchive.IL2CPP\bin\R_BIE\TheArchive.IL2CPP.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\GTFO\BepInEx\interop\Unity.TextMeshPro.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\GTFO\BepInEx\interop\UnityEngine.CoreModule.dll</HintPath>

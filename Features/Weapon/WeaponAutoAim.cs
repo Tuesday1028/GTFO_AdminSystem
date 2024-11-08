@@ -199,6 +199,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     weaponAutoAim = __instance.gameObject.AddComponent<WeaponAutoAimHandler>();
                 }
                 weaponAutoAim.Setup(__instance, __instance.Owner, __instance.Owner.FPSCamera);
+                weaponAutoAim.enabled = Settings.EnableAutoAim;
             }
         }
 
@@ -221,6 +222,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     return;
                 }
                 weaponAutoAim.DoClear();
+                weaponAutoAim.enabled = false;
             }
         }
 
@@ -298,35 +300,33 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 {
                     weaponRayData.owner = AdminUtils.LocalPlayerAgent;
                 }
-                else if (weaponRayData.owner == null || !weaponRayData.owner.IsLocallyOwned)
+                else if (!weaponRayData.owner?.IsLocallyOwned ?? true)
                 {
                     return;
                 }
-                ArchetypeDataBlock archetypeData = weaponRayData.owner.Inventory.WieldedItem.ArchetypeData;
+                ArchetypeDataBlock archetypeData = weaponRayData.owner.Inventory.WieldedItem?.ArchetypeData ?? null;
                 if (archetypeData == null)
-                {
                     return;
-                }
                 if (!WeaponAutoAimHandler.TryGetInstance(archetypeData.persistentID, out WeaponAutoAimHandler weaponAutoAim))
                 {
                     weaponAutoAim = weaponRayData.owner.Inventory.WieldedItem.GetComponent<WeaponAutoAimHandler>();
                     if (weaponAutoAim == null)
-                    {
                         return;
-                    }
                     WeaponAutoAimHandler.Register(archetypeData.persistentID, weaponAutoAim);
                 }
+                if (!Settings.EnableTrajectoryRedirection || weaponAutoAim.PauseAutoAim)
+                    return;
                 bool skipForceUpdate = false;
                 if (!weaponAutoAim.HasTarget)
                 {
-                    if (!Settings.MagicBullet || !weaponAutoAim.IsPiercingBullet)
+                    if (!IsLocalShotgunFireShots && !(Settings.MagicBullet && weaponAutoAim.IsPiercingBullet))
                         return;
                     weaponAutoAim.ForceUpdate(originPos);
                     if (!weaponAutoAim.HasTarget)
                         return;
                     skipForceUpdate = true;
                 }
-                if (!skipForceUpdate && IsLocalShotgunFireShots && Settings.MagicBullet && weaponAutoAim.IsPiercingBullet)
+                if (!skipForceUpdate && (IsLocalShotgunFireShots || (Settings.MagicBullet && weaponAutoAim.IsPiercingBullet)))
                     weaponAutoAim.ForceUpdate(originPos);
                 if (!weaponAutoAim.HasTarget)
                     return;
@@ -389,10 +389,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     {
                         return m_TargetLimb.DamageTargetPos;
                     }
-                    else if (m_Target != null)
-                    {
-                        return m_Target.AimTarget.position;
-                    }
+                    //else if (m_Target != null)
+                    //{
+                    //    return m_Target.AimTarget.position;
+                    //}
                     return m_Owner.FPSCamera.CameraRayPos;
                 }
             }
@@ -467,12 +467,22 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             public void ForceUpdate(Vector3 sourcePos)
             {
+                if (PauseAutoAim)
+                    return;
                 UpdateTargetEnemy(sourcePos, true);
                 UpdateColor();
             }
 
             private void UpdateTargetEnemy(Vector3 sourcePos, bool force = false)
             {
+                if (PauseAutoAim)
+                {
+                    m_Target = null;
+                    m_TargetLimb = null;
+                    m_HasTarget = false;
+                    m_Reticle.transform.localScale = Vector3.zero;
+                    return;
+                }
                 if (m_Target != null && m_TargetLimb != null)
                 {
                     m_ReticleHolder.transform.position = m_PlayerCamera.WorldToScreenPoint(m_TargetLimb.DamageTargetPos);
@@ -505,7 +515,9 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             private void UpdateColor()
             {
-                if (m_HasTarget && !PauseAutoAim)
+                if (PauseAutoAim)
+                    return;
+                if (m_HasTarget)
                 {
                     m_Reticle.m_hitColor = m_TargetLimb == null ? Settings.UnTargetedColor.ToUnityColor() : (m_TargetLimb.m_type == eLimbDamageType.Weakspot ? Settings.TargetedWeakspotColor.ToUnityColor() : Settings.TargetedColor.ToUnityColor());
                 }
@@ -538,6 +550,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 if (m_Target == null || PauseAutoAim)
                 {
+                    m_TargetLimb = null;
                     return;
                 }
 
@@ -613,7 +626,9 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             private void UpdateAutoFire(bool force = false)
             {
-                if (HasTarget && !PauseAutoAim && ((Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.SemiAuto && InputMapper.GetButtonKeyMouse(InputAction.Aim, eFocusState.FPS)) || Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.FullyAuto) && m_BulletWeapon.GetCurrentClip() > 0)
+                if (PauseAutoAim)
+                    return;
+                if (HasTarget && ((Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.SemiAuto && InputMapper.GetButtonKeyMouse(InputAction.Aim, eFocusState.FPS)) || Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.FullyAuto) && m_BulletWeapon.GetCurrentClip() > 0)
                 {
                     fireTimer -= Time.deltaTime;
                     if (fireTimer <= 0 || force)
@@ -638,11 +653,9 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 float tempRange = 100000f;
                 foreach (EnemyAgent enemy in AroundEnemies)
                 {
-                    if (IgnoredEnemies.Contains(enemy))
-                        continue;
                     if (IsPiercingBullet && Settings.MagicBullet && LastFireDir != Vector3.zero)
                     {
-                        float angle = Vector3.Angle(enemy.AimTarget.position - sourcePos, LastFireDir);
+                        float angle = Math.Abs(Vector3.Angle(enemy.AimTarget.position - sourcePos, LastFireDir));
                         if (angle > Settings.MagicBulletMaxCorrectionAngle)
                         {
                             continue;
@@ -689,15 +702,15 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 AroundEnemies.Clear();
                 if (PauseAutoAim)
-                {
                     return;
-                }
 
                 if (Settings.MagicBulletVisibleOnly)
                     sourcePos = m_Owner.FPSCamera.Position;
 
                 foreach (EnemyAgent enemy in m_Owner.EnemyCollision.m_enemies)
                 {
+                    if (IgnoredEnemies.Contains(enemy))
+                        continue;
                     if (Settings.WallHackAim || AdminUtils.CanSeeEnemyPlus(sourcePos, enemy))
                     {
                         if (enemy.Alive && enemy.Damage.Health > 0f)
@@ -760,10 +773,11 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             private float updateTick = 0.05f;
 
-            internal bool HasTarget => !PauseAutoAim && m_Target != null && m_Target.Alive && m_TargetLimb != null;
+            public bool HasTarget => m_Target != null && m_Target.Alive && m_TargetLimb != null;
 
-            private bool PauseAutoAim => ((!Settings.ReversePauseAutoAim && Input.GetKey(Settings.PauseAutoAimKey)) || (Settings.ReversePauseAutoAim && !Input.GetKey(Settings.PauseAutoAimKey)))
-                && m_BulletWeapon.AimButtonHeld && Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.Off;
+            public bool PauseAutoAim => ((!Settings.ReversePauseAutoAim && Input.GetKey(Settings.PauseAutoAimKey)) || (Settings.ReversePauseAutoAim && !Input.GetKey(Settings.PauseAutoAimKey)))
+                //&& m_BulletWeapon.AimButtonHeld 
+                && Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.Off;
         }
     }
 

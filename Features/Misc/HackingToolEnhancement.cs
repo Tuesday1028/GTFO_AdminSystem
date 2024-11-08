@@ -5,7 +5,7 @@ using TheArchive.Core.FeaturesAPI;
 namespace Hikaria.AdminSystem.Features.Misc;
 
 [EnableFeatureByDefault]
-public class HackingToolEnhance : Feature
+public class HackingToolEnhancement : Feature
 {
     public override string Name => "入侵工具增强";
 

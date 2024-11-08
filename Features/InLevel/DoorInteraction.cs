@@ -1,4 +1,5 @@
-﻿using Hikaria.AdminSystem.Utility;
+﻿using Clonesoft.Json;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.DevConsoleLite;
 using LevelGeneration;
 using System.Collections.Generic;
@@ -6,8 +7,6 @@ using System.Linq;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
-using TheArchive.Core.FeaturesAPI.Components;
-using TheArchive.Core.FeaturesAPI.Settings;
 using TheArchive.Core.Localization;
 
 namespace Hikaria.AdminSystem.Features.InLevel
@@ -30,24 +29,93 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         public class DoorInteractionSettings
         {
+            [JsonIgnore]
             [FSDisplayName("门类型")]
             public eLG_DoorType DoorType { get; set; } = eLG_DoorType.Security;
-
+            [JsonIgnore]
             [FSIdentifier("安全门")]
             [FSDisplayName("使用ZoneID")]
             [FSDescription("操作安全门时使用ZoneID, 否则使用门编号")]
             public bool UseZoneID { get; set; } = false;
+            [JsonIgnore]
             [FSIdentifier("安全门")]
             [FSDisplayName("安全门通往区域编号")]
             public int ZoneID { get; set; }
+            [JsonIgnore]
             [FSDisplayName("门编号")]
             [FSDescription("在地图上查看, 操作WeakDoor时必须填写该项")]
             public int DoorID { get; set; }
+            [JsonIgnore]
+            private LevelGeneration.eDoorInteractionType _interactionType = LevelGeneration.eDoorInteractionType.Open;
+            [JsonIgnore]
             [FSDisplayName("操作类型")]
-            public eDoorInteractionType InteractionType { get; set; } = eDoorInteractionType.Open;
-
-            [FSDisplayName("操作")]
-            public FButton AttemptInteraction { get; set; } = new FButton("操作", "操作门");
+            public eDoorInteractionType InteractionType
+            {
+                get
+                {
+                    return _interactionType switch
+                    {
+                        LevelGeneration.eDoorInteractionType.Unlock => eDoorInteractionType.Unlock,
+                        LevelGeneration.eDoorInteractionType.Close => eDoorInteractionType.Close,
+                        LevelGeneration.eDoorInteractionType.Open => eDoorInteractionType.Open,
+                        LevelGeneration.eDoorInteractionType.DoDamage => eDoorInteractionType.DoDamage
+                    };
+                }
+                set
+                {
+                    _interactionType = value switch
+                    {
+                        eDoorInteractionType.Unlock => LevelGeneration.eDoorInteractionType.Unlock,
+                        eDoorInteractionType.Close => LevelGeneration.eDoorInteractionType.Close,
+                        eDoorInteractionType.Open => LevelGeneration.eDoorInteractionType.Open,
+                        eDoorInteractionType.DoDamage => LevelGeneration.eDoorInteractionType.DoDamage
+                    };
+                    if (DoorType == eLG_DoorType.Security)
+                    {
+                        LG_SecurityDoor secDoor;
+                        if (UseZoneID)
+                        {
+                            secDoor = SecurityDoors.FirstOrDefault(p => p.Value.LinkedToZoneData != null && p.Value.LinkedToZoneData.Alias == Settings.ZoneID).Value;
+                            if (secDoor == null)
+                            {
+                                return;
+                            }
+                        }
+                        else if (!SecurityDoors.TryGetValue(DoorID, out secDoor))
+                        {
+                            return;
+                        }
+                        if (secDoor.LastStatus != eDoorStatus.Open && value == eDoorInteractionType.Open)
+                        {
+                            secDoor.ForceOpenSecurityDoor();
+                        }
+                        else
+                        {
+                            secDoor.m_sync.AttemptDoorInteraction(_interactionType, 0f, 0f, AdminUtils.LocalPlayerAgent.Position, AdminUtils.LocalPlayerAgent);
+                        }
+                    }
+                    else if (DoorType == eLG_DoorType.Weak)
+                    {
+                        if (!WeakDoors.TryGetValue(DoorID, out var weakDoor))
+                        {
+                            return;
+                        }
+                        if (weakDoor.WeakLocks != null && weakDoor.WeakLocks.Count > 0)
+                        {
+                            pWeakLockInteraction unlock = new()
+                            {
+                                open = true,
+                                type = eWeakLockInteractionType.Melt
+                            };
+                            foreach (var weaklock in weakDoor.WeakLocks)
+                            {
+                                weaklock.AttemptInteract(unlock);
+                            }
+                        }
+                        weakDoor.m_sync.AttemptDoorInteraction(_interactionType, float.MaxValue, 0f, AdminUtils.LocalPlayerAgent.Position, AdminUtils.LocalPlayerAgent);
+                    }
+                }
+            }
 
             [Localized]
             public enum eDoorInteractionType
@@ -71,7 +139,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
             {
                 Weak = 1,
                 Security = 2,
-                Apex = 3
+                //Apex = 3
             }
         }
 
@@ -119,57 +187,6 @@ namespace Hikaria.AdminSystem.Features.InLevel
             private static void Prefix(LG_SecurityDoor __instance)
             {
                 SecurityDoors.Remove(__instance.m_serialNumber);
-            }
-        }
-
-        public override void OnButtonPressed(ButtonSetting setting)
-        {
-            if (setting.ButtonID == "操作门")
-            {
-                if (Settings.DoorType == DoorInteractionSettings.eLG_DoorType.Security)
-                {
-                    LG_SecurityDoor secDoor;
-                    if (Settings.UseZoneID)
-                    {
-                        secDoor = SecurityDoors.FirstOrDefault(p => p.Value.LinkedToZoneData != null && p.Value.LinkedToZoneData.Alias == Settings.ZoneID).Value;
-                        if (secDoor == null)
-                        {
-                            return;
-                        }
-                    }
-                    else if (!SecurityDoors.TryGetValue(Settings.DoorID, out secDoor))
-                    {
-                        return;
-                    }
-                    if (secDoor.LastStatus != eDoorStatus.Open && Settings.InteractionType == DoorInteractionSettings.eDoorInteractionType.Open)
-                    {
-                        secDoor.ForceOpenSecurityDoor();
-                    }
-                    else
-                    {
-                        secDoor.m_sync.AttemptDoorInteraction((eDoorInteractionType)Settings.InteractionType, 0f, 0f, AdminUtils.LocalPlayerAgent.Position, AdminUtils.LocalPlayerAgent);
-                    }
-                }
-                else if (Settings.DoorType == DoorInteractionSettings.eLG_DoorType.Weak)
-                {
-                    if (!WeakDoors.TryGetValue(Settings.DoorID, out var weakDoor))
-                    {
-                        return;
-                    }
-                    if (weakDoor.WeakLocks != null && weakDoor.WeakLocks.Count > 0)
-                    {
-                        pWeakLockInteraction unlock = new()
-                        {
-                            open = true,
-                            type = eWeakLockInteractionType.Melt
-                        };
-                        foreach (var weaklock in weakDoor.WeakLocks)
-                        {
-                            weaklock.AttemptInteract(unlock);
-                        }
-                    }
-                    weakDoor.m_sync.AttemptDoorInteraction((eDoorInteractionType)Settings.InteractionType, 0f, 0f, AdminUtils.LocalPlayerAgent.Position, AdminUtils.LocalPlayerAgent);
-                }
             }
         }
 

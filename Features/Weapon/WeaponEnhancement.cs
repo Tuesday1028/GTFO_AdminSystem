@@ -25,7 +25,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
     [DoNotSaveToConfig]
     internal class WeaponEnhancement : Feature
     {
-        public override string Name => "武器加强";
+        public override string Name => "武器增强";
 
         public override string Description => "增强武器属性";
 
@@ -37,7 +37,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         public class WeaponEnhanceSettings
         {
             [FSDisplayName("无限弹夹容量")]
-            public bool EnableInfiniteClip { get; set; }
+            public bool InfiniteClip { get; set; }
 
             [FSDisplayName("清晰瞄具")]
             [FSDescription("去除枪械瞄具污渍, 加强热成像瞄具")]
@@ -187,13 +187,13 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 if (!enable.HasValue)
                 {
-                    enable = !Settings.EnableInfiniteClip;
+                    enable = !Settings.InfiniteClip;
                 }
-                Settings.EnableInfiniteClip = enable.Value;
+                Settings.InfiniteClip = enable.Value;
                 DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 无限弹夹容量");
             }, () =>
             {
-                DevConsole.LogVariable("无限弹夹容量", Settings.EnableInfiniteClip);
+                DevConsole.LogVariable("无限弹夹容量", Settings.InfiniteClip);
             }));
         }
 
@@ -316,7 +316,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 {
                     __instance.m_inventory.DoReload();
                 }
-                if (Settings.EnableInfiniteClip)
+                if (Settings.InfiniteClip)
                 {
                     __instance.m_clip = __instance.ClipSize;
                     __instance.UpdateAmmoStatus();
@@ -335,7 +335,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 {
                     __instance.m_inventory.DoReload();
                 }
-                if (Settings.EnableInfiniteClip)
+                if (Settings.InfiniteClip)
                 {
                     __instance.m_clip = __instance.ClipSize;
                     __instance.UpdateAmmoStatus();
@@ -486,11 +486,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
         }
 
         private static Vector2 FalloffBlocker = new(1000f, 1001f);
-
         private static int EnemyDamagableLayerMask;
-
         private static int BulletPiercingPassMask;
-
         private static int BulletWeaponRayMask;
     }
 }

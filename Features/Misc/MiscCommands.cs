@@ -579,6 +579,15 @@ namespace Hikaria.AdminSystem.Features.Misc
             }
             value = Math.Max(-100f, Math.Min(value, 100f));
             playerAgent.GiveAmmoRel(AdminUtils.LocalPlayerAgent, 0f, 0f, value / 100f);
+
+            var sentryGuns = GameObject.FindObjectsOfType<SentryGunInstance>();
+            foreach (var sg in sentryGuns)
+            {
+                if (sg.Owner?.GlobalID == playerAgent.GlobalID)
+                {
+                    sg.GiveAmmoRel(AdminUtils.LocalPlayerAgent, 0f, 0f, value / 100f);
+                }
+            }
             DevConsole.LogSuccess($"{playerAgent.PlayerName} 工具弹药 {(value >= 0f ? "增加" : "减少")} {Math.Abs(value)}%");
         }
 

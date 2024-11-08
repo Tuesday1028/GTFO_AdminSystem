@@ -1,14 +1,16 @@
-﻿using AIGraph;
-using GameData;
+﻿using GameData;
 using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.DevConsoleLite;
+using Il2CppInterop.Runtime;
+using Il2CppInterop.Runtime.Runtime;
 using LevelGeneration;
 using Player;
 using SNetwork;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -122,8 +124,8 @@ namespace Hikaria.AdminSystem.Features.Item
         {
             DevConsole.AddCommand(Command.Create<int, string>("Pickup", "捡起物品", "捡起指定物品", Parameter.Create("Slot", "槽位, 1-4"), Parameter.Create("itemName", "物品名称"), PlayerPickupItem));
             DevConsole.AddCommand(Command.Create<int>("PickupEye", "捡起目标物品", "捡起目标物品", Parameter.Create("Slot", "槽位, 1-4"), PickupItemInEyePos));
-            DevConsole.AddCommand(Command.Create<string, string>("SpawnItemName", "生成物品(Name)", "在目标处生成指定物品", Parameter.Create("name", "物品名字"), Parameter.Create("mode", "生成类型, Pickup 或 Instance"), SpawnItem));
-            DevConsole.AddCommand(Command.Create<uint, string>("SpawnItemID", "生成物品(ID)", "在目标处生成指定物品", Parameter.Create("ID", "物品ID"), Parameter.Create("mode", "生成类型, Pickup 或 Instance"), SpawnItem));
+            DevConsole.AddCommand(Command.Create<string, int>("SpawnItemName", "生成物品(Name)", "在目标处生成指定物品", Parameter.Create("name", "物品名字"), Parameter.Create("mode", "生成类型, ItemMode"), SpawnItem));
+            DevConsole.AddCommand(Command.Create<uint, int>("SpawnItemID", "生成物品(ID)", "在目标处生成指定物品", Parameter.Create("ID", "物品ID"), Parameter.Create("mode", "生成类型, ItemMode"), SpawnItem));
             DevConsole.AddCommand(Command.Create("ListItemData", "列出物品名字ID", "列出所有可生成物品的名字和ID", ListItemData));
             DevConsole.AddCommand(Command.Create<string>("SpawnMine", "生成拌雷", "生成拌雷", Parameter.Create("Type", "类型, Explosive 或 Glue"), SpawnMine));
             DevConsole.AddCommand(Command.Create<int>("ListItemsInZone", "统计地区中资源数量", "统计地区中资源数量", Parameter.Create("ZoneID", "地区ID"), ListItemsInZone));
@@ -169,7 +171,7 @@ namespace Hikaria.AdminSystem.Features.Item
             DevConsole.LogError("目标物品为空");
         }
 
-        private static void SpawnItem(string itemName, string spawnmode)
+        private static void SpawnItem(string itemName, int spawnmode)
         {
             itemName = itemName.ToUpperInvariant();
             if (NameIDLookup.TryGetValue(itemName, out uint value))
@@ -182,9 +184,8 @@ namespace Hikaria.AdminSystem.Features.Item
             }
         }
 
-        private static void SpawnItem(uint id, string spawnmode)
+        private static void SpawnItem(uint id, int spawnmode)
         {
-            spawnmode = spawnmode.ToLowerInvariant();
             if (!IDBlockLookup.TryGetValue(id, out ItemDataBlock value))
             {
                 DevConsole.LogError($"不存在ID为{id}的物品");
@@ -197,7 +198,14 @@ namespace Hikaria.AdminSystem.Features.Item
             {
                 maxAmmo = 100f;
             }
-            ItemMode mode = spawnmode == "instance" ? ItemMode.Instance : ItemMode.Pickup;
+            ItemMode mode = spawnmode switch
+            {
+                0 => ItemMode.FirstPerson,
+                1 => ItemMode.ThirdPerson,
+                2 => ItemMode.Pickup,
+                3 => ItemMode.Instance,
+                _ => ItemMode.Pickup
+            };
             pItemData_Custom custom = new()
             {
                 ammo = maxAmmo,
@@ -208,14 +216,20 @@ namespace Hikaria.AdminSystem.Features.Item
             {
                 custom = custom,
                 itemID_gearCRC = persistID,
-                originCourseNode = new pCourseNode(),
-                originLayer = LG_LayerType.MainLayer,
-                replicatorRef = new SNetStructs.pReplicator(),
                 slot = slot
             };
+            //if (!AIG_GeomorphNodeVolume.TryGetCourseNode(AdminUtils.LocalPlayerAgent.DimensionIndex, AdminUtils.LocalPlayerAgent.FPSCamera.CameraRayPos, out var node))
+            //{
+            //    node = AdminUtils.LocalPlayerAgent.CourseNode;
+            //}
+            //var lg_PickupItem = GOUtil.SpawnChildAndGetComp<LG_PickupItem>(AssetShardManager.GetLoadedAsset<GameObject>("Assets/AssetPrefabs/Complex/Generic/FunctionMarkers/Pickup_Item.prefab"));
+            //lg_PickupItem.SetupCommon();
+            //lg_PickupItem.SpawnNode = node;
+            //var item = ItemSpawnManager.SpawnItem(id, mode, AdminUtils.LocalPlayerAgent.FPSCamera.CameraRayPos, AdminUtils.LocalPlayerAgent.Rotation, true, data, lg_PickupItem.m_root);
+
+            //var callback = new ItemReplicationManager.delItemCallback(OnSpawnCallback);
             ItemReplicationManager.SpawnItem(data, null, mode, AdminUtils.LocalPlayerAgent.FPSCamera.CameraRayPos, default, AdminUtils.LocalPlayerAgent.CourseNode, AdminUtils.LocalPlayerAgent);
         }
-
 
         private static void ListItemData()
         {
