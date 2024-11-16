@@ -152,23 +152,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
             }
         }
 
-        [ArchivePatch(typeof(Dam_EnemyDamageLimb), nameof(Dam_EnemyDamageLimb.BulletDamage))]
-        private class Dam_EnemyDamageLimb__BulletDamage__Patch
-        {
-            private static void Postfix(Dam_EnemyDamageLimb __instance, float dam, Vector3 position, Vector3 direction, float precisionMulti)
-            {
-                if (!Settings.EnableAutoAim)
-                    return;
-
-                if (SNet.IsMaster)
-                    return;
-
-                float num = __instance.ApplyWeakspotAndArmorModifiers(dam, precisionMulti);
-                num = __instance.ApplyDamageFromBehindBonus(num, position, direction, 1f);
-                __instance.m_base.RegisterDamage(num);
-            }
-        }
-
         private static bool IsWeaponOwner(BulletWeapon bulletWeapon)
         {
             if (bulletWeapon == null || bulletWeapon.Owner == null)
@@ -335,6 +318,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
                 Vector3 originalFireDir = weaponRayData.fireDir;
 
+                weaponRayData.randomSpread = 0;
                 weaponRayData.angOffsetX = 0;
                 weaponRayData.angOffsetY = 0;
                 weaponRayData.maxRayDist = 2000f;

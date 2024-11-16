@@ -9,7 +9,7 @@ using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 
-namespace Hikaria.AdminSystem.Features.WardenObjective
+namespace Hikaria.AdminSystem.Features.InLevel
 {
     [DisallowInGameToggle]
     [EnableFeatureByDefault]

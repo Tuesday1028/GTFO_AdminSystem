@@ -1,13 +1,16 @@
-﻿using Enemies;
+﻿using Clonesoft.Json;
+using Enemies;
+using GameData;
 using Gear;
-using Hikaria.AdminSystem.Features.Player;
 using Hikaria.AdminSystem.Managers;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.DevConsoleLite;
-using SNetwork;
+using System.Collections.Generic;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
+using TheArchive.Core.Localization;
+using TheArchive.Core.ModulesAPI;
 using UnityEngine;
 
 namespace Hikaria.AdminSystem.Features.Weapon
@@ -18,7 +21,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
     {
         public override string Name => "自动扳机";
 
-        public override string Description => "使用枪械时启用自动扳机";
+        public override string Description => "使用枪械时启用自动扳机\n<color=red>本功能与自动瞄准冲突</color>";
 
         public override FeatureGroup Group => EntryPoint.Groups.Weapon;
 
@@ -27,37 +30,16 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
         public class WeaponAutoTriggerSettings
         {
-
             [FSDisplayName("状态")]
             [FSDescription("枪械处于瞄准状态并瞄准敌人时自动开火")]
             public bool Enabled { get; set; }
 
             [FSDisplayName("暂停自动扳机按键")]
             [FSDescription("按下后可暂停自动扳机，松开后恢复")]
-            public KeyCode PauseAutoFireKey { get; set; } = KeyCode.LeftShift;
+            public KeyCode PauseAutoTriggerKey { get; set; } = KeyCode.LeftShift;
 
             [FSDisplayName("反转暂停自动扳机")]
             public bool ReversePauseAutoFire { get; set; }
-
-            [FSDisplayName("蓄力保持时间")]
-            [FSDescription("默认值为0.5")]
-            [FSSlider(0f, 1f, FSSlider.SliderStyle.FloatTwoDecimal)]
-            public float ChargeupTimer { get; set; } = 0.5f;
-
-            [FSDisplayName("衰减距离判定阈值")]
-            [FSDescription("默认值为15")]
-            [FSSlider(5f, 15f, FSSlider.SliderStyle.FloatOneDecimal)]
-            public float FalloffThreshold { get; set; } = 15f;
-
-            [FSDisplayName("伤害衰减阈值")]
-            [FSDescription("默认值为0.25")]
-            [FSSlider(0f, 1f, FSSlider.SliderStyle.FloatTwoDecimal)]
-            public float DamageFalloffThreshold { get; set; } = 0.25f;
-
-            [FSDisplayName("霰弹枪单次伤害阈值")]
-            [FSDescription("默认值为0.75")]
-            [FSSlider(0f, 1f, FSSlider.SliderStyle.FloatTwoDecimal)]
-            public float ShotgunDamagePerFireThreshold { get; set; } = 0.75f;
 
             [FSDisplayName("装甲部位检测阈值")]
             [FSDescription("默认值为0.1")]
@@ -74,6 +56,73 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     EnemyDataManager.ClearGeneratedEnemyDamageData();
                 }
             }
+
+            [FSInline]
+            [JsonIgnore]
+            [FSDisplayName("当前武器参数调节")]
+            public List<WeaponAutoTriggerPreference> Preferences
+            {
+                get
+                {
+                    List<WeaponAutoTriggerPreference> result = new();
+                    if (CurrentWeaponPref != null)
+                    {
+                        result.Add(CurrentWeaponPref);
+                    }
+                    return result;
+                }
+                set
+                {
+                }
+            }
+        }
+
+        private static WeaponAutoTriggerPreference CurrentWeaponPref;
+
+        [Localized]
+        public enum AutoTriggerLogicType
+        {
+            Generic = 0,
+            WeakspotOnly = 1,
+            //NormalOnly = 2
+        }
+
+        private static CustomSetting<Dictionary<uint, WeaponAutoTriggerPreference>> PreferencesLookup = new("WeaponAutoTriggerPreferences.json", new());
+
+        public class WeaponAutoTriggerPreference
+        {
+            public WeaponAutoTriggerPreference() { }
+            public WeaponAutoTriggerPreference(ArchetypeDataBlock block)
+            {
+                ArchetypeDataID = block.persistentID;
+                ArchetypeName = block.PublicName;
+            }
+
+            [FSReadOnly]
+            [FSHeader("当前武器参数设置")]
+            [FSDisplayName("武器ID")]
+            public uint ArchetypeDataID { get; set; }
+            [FSReadOnly]
+            [FSDisplayName("武器名称")]
+            public string ArchetypeName { get; set; }
+            [FSDisplayName("自动开火逻辑")]
+            public AutoTriggerLogicType AutoTriggerLogic { get; set; } = AutoTriggerLogicType.Generic;
+            [FSDisplayName("可靠性")]
+            [FSDescription("默认值为1")]
+            [FSSlider(0, 1f, FSSlider.SliderStyle.FloatTwoDecimal)]
+            public float Reliability { get; set; } = 1f;
+            [FSDisplayName("衰减距离判定阈值")]
+            [FSDescription("最大值为15")]
+            [FSSlider(5f, 15f, FSSlider.SliderStyle.FloatOneDecimal)]
+            public float FalloffThreshold { get; set; } = 12f;
+            [FSDisplayName("伤害衰减阈值")]
+            [FSDescription("默认值为0.25")]
+            [FSSlider(0f, 1f, FSSlider.SliderStyle.FloatTwoDecimal)]
+            public float DamageFalloffThreshold { get; set; } = 0.25f;
+            [FSDisplayName("霰弹枪单次伤害阈值")]
+            [FSDescription("默认值为0.75, 非霰弹类武器请忽略此项")]
+            [FSSlider(0f, 1f, FSSlider.SliderStyle.FloatTwoDecimal)]
+            public float ShotgunDamagePerFireThreshold { get; set; } = 0.75f;
         }
 
         public override void Init()
@@ -93,30 +142,35 @@ namespace Hikaria.AdminSystem.Features.Weapon
         }
 
         private static bool IsWieldBulletWeapon;
-        private static float StopChargeTimer;
-        private static float FireDelayTimer;
-        private static EnemyAgent CurrentTargetEnemy;
 
-        [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.OnWield))]
-        private class BulletWeapon__OnWield__Patch
+        [ArchivePatch(typeof(BulletWeaponArchetype), nameof(BulletWeaponArchetype.OnWield))]
+        private class BulletWeaponArchetype__OnWield__Patch
         {
-            private static void Postfix(BulletWeapon __instance)
+            private static void Postfix(BulletWeaponArchetype __instance)
             {
-                if (__instance.Owner?.IsLocallyOwned ?? false)
+                if (__instance.m_owner?.IsLocallyOwned ?? false)
                 {
                     IsWieldBulletWeapon = true;
+
+                    var data = __instance.m_archetypeData;
+                    if (!PreferencesLookup.Value.TryGetValue(data.persistentID, out CurrentWeaponPref))
+                    {
+                        CurrentWeaponPref = new(data);
+                        PreferencesLookup.Value.Add(data.persistentID, CurrentWeaponPref);
+                    }
                 }
             }
         }
 
-        [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.OnUnWield))]
-        private class BulletWeapon__OnUnWield__Patch
+        [ArchivePatch(typeof(BulletWeaponArchetype), nameof(BulletWeaponArchetype.OnUnWield))]
+        private class BulletWeaponArchetype__OnUnWield__Patch
         {
-            private static void Prefix(BulletWeapon __instance)
+            private static void Postfix(BulletWeaponArchetype __instance)
             {
-                if (__instance.Owner?.IsLocallyOwned ?? false)
+                if (__instance.m_owner?.IsLocallyOwned ?? false)
                 {
                     IsWieldBulletWeapon = false;
+                    CurrentWeaponPref = null;
                 }
             }
         }
@@ -161,20 +215,30 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     return;
 
                 var weapon = __instance.m_weapon;
-
                 if (weapon.m_clip <= 0 && !weapon.m_inventory.CanReloadCurrent())
                     return;
 
-                // 非瞄准、开火时忽略
                 if (!weapon.AimButtonHeld || weapon.FireButton || weapon.FireButtonPressed)
                     return;
 
-                var pauseKeyPressed = Input.GetKey(Settings.PauseAutoFireKey);
+                var pauseKeyPressed = Input.GetKey(Settings.PauseAutoTriggerKey);
                 if ((Settings.ReversePauseAutoFire && !pauseKeyPressed) || (!Settings.ReversePauseAutoFire && pauseKeyPressed))
                     return;
 
+                if (CurrentWeaponPref == null)
+                    return;
+
                 var camera = owner.FPSCamera;
-                if (!Physics.Raycast(camera.Position, camera.CameraRayDir, out var rayHit, weapon.MaxRayDist, LayerManager.MASK_BULLETWEAPON_RAY))
+                camera.UpdateCameraRay();
+
+                float spread = 0f;
+                var factor = Random.Range(0f, 1f);
+                if (factor > CurrentWeaponPref.Reliability && Clock.Time - weapon.m_lastFireTime <= weapon.m_fireRecoilCooldown)
+                {
+                    spread = 0.025f;
+                }
+
+                if (!Physics.SphereCast(camera.Position, spread, camera.CameraRayDir, out var rayHit, weapon.MaxRayDist, LayerManager.MASK_BULLETWEAPON_RAY))
                     return;
 
                 var rayObj = rayHit.collider.gameObject;
@@ -196,31 +260,26 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 if (!targetEnemy.Alive)
                     return;
 
-                if (OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var tentry) && tentry.EnableOneShotKill)
-                {
-                    goto fire;
-                }
-
                 var damageData = EnemyDataManager.GetOrGenerateEnemyDamageData(targetEnemy);
                 if (damageData.IsImmortal)
                     return;
 
-                var firePosition = camera.Position;
-                var fireDir = camera.CameraRayDir;
-                var fireDistance = rayHit.distance;
                 var data = weapon.ArchetypeData;
+                var fireDir = camera.CameraRayDir;
+                var firePosition = camera.Position;
+                var fireDistance = rayHit.distance;
                 var shotgun = weapon.TryCast<Shotgun>();
                 bool isShotgun = shotgun != null;
                 float totalDamage = 0f;
                 if (isShotgun)
                 {
+                    var up = weapon.MuzzleAlign.up;
+                    var right = weapon.MuzzleAlign.right;
                     var id = targetEnemy.GlobalID;
-                    Vector3 up = weapon.MuzzleAlign.up;
-                    Vector3 right = weapon.MuzzleAlign.right;
                     float randomSpread = data.ShotgunBulletSpread;
                     float baseDamage = data.GetDamageWithBoosterEffect(owner, weapon.ItemDataBlock.inventorySlot);
                     baseDamage = AgentModifierManager.ApplyModifier(targetEnemy, AgentModifier.ProjectileResistance, baseDamage);
-                    float expectTotalDamage = baseDamage * data.ShotgunBulletCount * Settings.ShotgunDamagePerFireThreshold;
+                    float expectTotalDamage = baseDamage * data.ShotgunBulletCount * CurrentWeaponPref.ShotgunDamagePerFireThreshold;
                     float realDamage = 0f;
                     float tempFireDistance = 0f;
                     for (int i = 0; i < data.ShotgunBulletCount; i++)
@@ -306,7 +365,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     goto fire;
                 }
 
-                if (fireDistance > (data.DamageFalloff.y - data.DamageFalloff.x) * Settings.DamageFalloffThreshold + data.DamageFalloff.x)
+                if (fireDistance > (data.DamageFalloff.y - data.DamageFalloff.x) * CurrentWeaponPref.DamageFalloffThreshold + data.DamageFalloff.x)
                     return;
 
                 if (!isShotgun)
@@ -323,9 +382,12 @@ namespace Hikaria.AdminSystem.Features.Weapon
                         goto fire;
                     }
 
-                    if (fireDistance <= Mathf.Min(Settings.FalloffThreshold, data.DamageFalloff.x))
+                    if (CurrentWeaponPref.AutoTriggerLogic != AutoTriggerLogicType.WeakspotOnly)
                     {
-                        goto fire;
+                        if (fireDistance <= Mathf.Min(CurrentWeaponPref.FalloffThreshold, data.DamageFalloff.x))
+                        {
+                            goto fire;
+                        }
                     }
 
                     if (damageData.HasWeakSpot)
@@ -357,7 +419,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     return;
 
                 var owner = __instance.m_owner;
-                if (owner == null || !owner.IsLocallyOwned)
+                if (!owner?.IsLocallyOwned ?? true)
                     return;
 
                 OverrideFireButtonPressed = false;

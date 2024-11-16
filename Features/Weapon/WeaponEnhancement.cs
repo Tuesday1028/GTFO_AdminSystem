@@ -85,6 +85,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
             [FSDescription("启用后可以在特殊部位单次打出超过最大生命值上限的伤害")]
             public bool IgnoreLimbMaxHealthClamp { get; set; }
 
+            [FSDisplayName("多部位穿透")]
+            [FSDescription("启用后可以穿透同一敌人的多个部位")]
+            public bool MultiLimbPierce { get; set; }
+
             /*
             [FSHeader("特殊弹药")]
             [FSDisplayName("爆炸子弹")]
@@ -304,6 +308,17 @@ namespace Hikaria.AdminSystem.Features.Weapon
             }
         }
 
+        [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.BulletHit))]
+        private class BulletWeapon__BulletHit__Patch
+        {
+            private static void Prefix(ref uint damageSearchID)
+            {
+                if (Settings.MultiLimbPierce)
+                {
+                    damageSearchID = 0;
+                }
+            }
+        }
 
         [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.Fire))]
         private class BulletWeapon__Fire__Patch
