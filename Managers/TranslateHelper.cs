@@ -5,7 +5,7 @@ using TheArchive.Core.ModulesAPI;
 
 namespace Hikaria.AdminSystem.Managers
 {
-    public class TranslateManager
+    public class TranslateHelper
     {
         public static string EnemyName(uint id)
         {

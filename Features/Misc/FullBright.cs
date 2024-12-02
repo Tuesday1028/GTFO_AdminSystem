@@ -1,5 +1,5 @@
 ﻿using Clonesoft.Json;
-using Hikaria.DevConsoleLite;
+using Hikaria.QC;
 using Player;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
@@ -24,6 +24,7 @@ public class FullBright : Feature
     public class FullBrightSettings
     {
         [FSDisplayName("启用")]
+        [Command("FullBright", "视野全亮", MonoTargetType.Registry)]
         public bool Enabled
         {
             get
@@ -122,16 +123,8 @@ public class FullBright : Feature
 
     public override void Init()
     {
-        DevConsole.AddCommand(Command.Create("FullBright", "地图全亮", "地图全亮", ToggleFullBright));
+        QuantumRegistry.RegisterObject(Settings);
     }
-
-    private static void ToggleFullBright()
-    {
-        Settings.Enabled = !Settings.Enabled;
-
-        DevConsole.LogSuccess($"已{(Settings.Enabled ? "启用" : "禁用")}点亮全图");
-    }
-
 
     [ArchivePatch(typeof(LocalPlayerAgent), nameof(LocalPlayerAgent.Setup))] 
     private class LocalPlayerAgent__Setup__Patch

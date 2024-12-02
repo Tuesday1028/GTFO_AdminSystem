@@ -1,12 +1,12 @@
 ﻿using AIGraph;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
 using ChainedPuzzles;
 using GameData;
 using Gear;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
 using Hikaria.Core.Interfaces;
-using Hikaria.DevConsoleLite;
+using Hikaria.QC;
 using LevelGeneration;
 using Player;
 using SNetwork;
@@ -17,7 +17,6 @@ using System.Linq;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
-using TheArchive.Interfaces;
 using UnityEngine;
 
 namespace Hikaria.AdminSystem.Features.Item
@@ -33,14 +32,13 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public override FeatureGroup Group => EntryPoint.Groups.Item;
 
-        public static new IArchiveLogger FeatureLogger { get; set; }
-
         [FeatureConfig]
         public static ItemMarkerSettings Settings { get; set; }
 
         public class ItemMarkerSettings
         {
-            [FSDisplayName("启用物品标记")]
+            [FSDisplayName("物品标记")]
+            [Command("ItemMarker", MonoTargetType.Registry)]
             public bool EnableItemMarker
             {
                 get
@@ -56,21 +54,8 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public override void Init()
         {
-            DevConsole.AddCommand(Command.Create<bool?>("ItemMarker", "物品标记", "物品标记", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.EnableItemMarker;
-                }
-
-                Settings.EnableItemMarker = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 物品标记");
-            }, () =>
-            {
-                DevConsole.LogVariable("物品标记", Settings.EnableItemMarker);
-            }));
-
             GameEventAPI.RegisterSelf(this);
+            QuantumRegistry.RegisterObject(Settings);
 
             LG_Factory.OnFactoryBuildDone += new Action(OnFactoryBuildDone);
         }
@@ -100,12 +85,7 @@ namespace Hikaria.AdminSystem.Features.Item
         {
             if (CurrentGameState < (int)eGameStateName.InLevel)
                 return;
-            CoroutineManager.StartCoroutine(ItemMarker.LoadingItem(SNet.IsMaster ? 0f : 3f, !SNet.IsMaster).WrapToIl2Cpp());
-            //if (bufferType == eBufferType.DropIn || bufferType == eBufferType.Checkpoint || bufferType == eBufferType.Migration_B)
-            //{
-            //    ItemMarker.SearchGameObjects();
-            //    CoroutineManager.StartCoroutine(ItemMarker.LoadingItem().WrapToIl2Cpp());
-            //}
+            UnityMainThreadDispatcher.Enqueue(ItemMarker.LoadingItem(SNet.IsMaster ? 0f : 3f, !SNet.IsMaster));
         }
 
         [ArchivePatch(typeof(ItemInLevel), nameof(ItemInLevel.OnDespawn))]
@@ -117,6 +97,18 @@ namespace Hikaria.AdminSystem.Features.Item
                 ItemMarker.Remove(__instance.GetInstanceID(), ItemMarker.ItemType.FixedItems);
                 ItemMarker.Remove(__instance.GetInstanceID(), ItemMarker.ItemType.InLevelCarry);
                 ItemMarker._AllItemInLevels.Remove(__instance);
+            }
+        }
+
+        [ArchivePatch(typeof(ItemReplicationManager), nameof(ItemReplicationManager.OnItemSpawn))]
+        private class ItemReplicationManager__OnItemSpawn__Patch
+        {
+            private static void Postfix(ItemReplicator replicator)
+            {
+                var item = replicator.Item?.TryCast<ItemInLevel>();
+                if (item == null)
+                    return;
+                ItemMarker.RegisterItemInLevel(item);
             }
         }
 
@@ -299,7 +291,7 @@ namespace Hikaria.AdminSystem.Features.Item
             public static HashSet<ItemInLevel> _AllItemInLevels = new();
             public static HashSet<GameObject> _AllGameObjectsToInspect = new();
 
-            public static bool MarkItems;
+            public static bool MarkItems = true;
             private static bool IsFirstLoadPerLevel = true;
 
             private static readonly Color _GenericColor = Color.blue; //Dark Blue
@@ -505,7 +497,7 @@ namespace Hikaria.AdminSystem.Features.Item
             {
                 if (IsFirstLoadPerLevel)
                 {
-                    CoroutineManager.StartCoroutine(LoadingItem().WrapToIl2Cpp());
+                    UnityMainThreadDispatcher.Enqueue(LoadingItem());
                 }
             }
 
@@ -555,7 +547,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     SetCourseNodeForItemInLevel(item);
                     if (item.CourseNode == null)
                     {
-                        FeatureLogger.Error($"'{item.name}' CourseNode is null, remove!");
+                        Logs.LogError($"'{item.name}' CourseNode is null, remove!");
                         _AllItemInLevels.Remove(item);
                         continue;
                     }

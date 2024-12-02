@@ -1,4 +1,5 @@
-﻿using Hikaria.DevConsoleLite;
+﻿using Hikaria.AdminSystem.Utilities;
+using Hikaria.QC;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -22,42 +23,21 @@ namespace Hikaria.AdminSystem.Features.Player
         public class DisableStaminaSettings
         {
             [FSDisplayName("禁用心率")]
+            [Command("DisableStamina", MonoTargetType.Registry)]
             public bool DisableStamina { get; set; }
 
             [FSDisplayName("禁用附近敌人对自身移动速度的影响")]
+            [Command("NearbyEnemyMoveSpeedMultiplier", MonoTargetType.Registry)]
             public bool DisableNearByEnemyMoveSpeedMultiplier { get; set; }
         }
 
         public override void Init()
         {
-            DevConsole.AddCommand(Command.Create<bool?>("DisableStamina", "禁用心率", "禁用心率", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.DisableStamina;
-                }
-                Settings.DisableStamina = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 禁用心率");
-            }, () =>
-            {
-                DevConsole.LogVariable("禁用心率", Settings.DisableStamina);
-            }));
-            DevConsole.AddCommand(Command.Create<bool?>("DisableNearByEnemyMoveSpeedMultiplier", "禁用附近敌人对自身移动速度的影响", "禁用附近敌人对自身移动速度的影响", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.DisableNearByEnemyMoveSpeedMultiplier;
-                }
-                Settings.DisableNearByEnemyMoveSpeedMultiplier = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 禁用附近敌人对自身移动速度的影响");
-            }, () =>
-            {
-                DevConsole.LogVariable("禁用附近敌人对自身移动速度的影响", Settings.DisableNearByEnemyMoveSpeedMultiplier);
-            }));
+            QuantumRegistry.RegisterObject(Settings);
         }
 
         [ArchivePatch(typeof(PlayerStamina), nameof(PlayerStamina.LateUpdate))]
-        private class PlayerStamina_LateUpdate_Patch
+        private class PlayerStamina__LateUpdate__Patch
         {
             private static void Postfix(PlayerStamina __instance)
             {

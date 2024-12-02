@@ -1,13 +1,12 @@
-﻿using Clonesoft.Json;
+﻿using Hikaria.AdminSystem.Suggestions.Suggestors.Attributes;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
-using Hikaria.DevConsoleLite;
+using Hikaria.QC;
 using LevelGeneration;
 using System.Collections.Generic;
 using System.Linq;
 using TheArchive.Core.Attributes;
-using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
-using TheArchive.Core.Localization;
 
 namespace Hikaria.AdminSystem.Features.InLevel
 {
@@ -20,142 +19,18 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         public override FeatureGroup Group => EntryPoint.Groups.InLevel;
 
-        [FeatureConfig]
-        public static DoorInteractionSettings Settings { get; set; }
+        private static Dictionary<int, LG_SecurityDoor> SecurityDoorsInLevel = new();
 
-        private static Dictionary<int, LG_SecurityDoor> SecurityDoors = new();
-
-        private static Dictionary<int, LG_WeakDoor> WeakDoors = new();
-
-        public class DoorInteractionSettings
-        {
-            [JsonIgnore]
-            [FSDisplayName("门类型")]
-            public eLG_DoorType DoorType { get; set; } = eLG_DoorType.Security;
-            [JsonIgnore]
-            [FSIdentifier("安全门")]
-            [FSDisplayName("使用ZoneID")]
-            [FSDescription("操作安全门时使用ZoneID, 否则使用门编号")]
-            public bool UseZoneID { get; set; } = false;
-            [JsonIgnore]
-            [FSIdentifier("安全门")]
-            [FSDisplayName("安全门通往区域编号")]
-            public int ZoneID { get; set; }
-            [JsonIgnore]
-            [FSDisplayName("门编号")]
-            [FSDescription("在地图上查看, 操作WeakDoor时必须填写该项")]
-            public int DoorID { get; set; }
-            [JsonIgnore]
-            private LevelGeneration.eDoorInteractionType _interactionType = LevelGeneration.eDoorInteractionType.Open;
-            [JsonIgnore]
-            [FSDisplayName("操作类型")]
-            public eDoorInteractionType InteractionType
-            {
-                get
-                {
-                    return _interactionType switch
-                    {
-                        LevelGeneration.eDoorInteractionType.Unlock => eDoorInteractionType.Unlock,
-                        LevelGeneration.eDoorInteractionType.Close => eDoorInteractionType.Close,
-                        LevelGeneration.eDoorInteractionType.Open => eDoorInteractionType.Open,
-                        LevelGeneration.eDoorInteractionType.DoDamage => eDoorInteractionType.DoDamage
-                    };
-                }
-                set
-                {
-                    _interactionType = value switch
-                    {
-                        eDoorInteractionType.Unlock => LevelGeneration.eDoorInteractionType.Unlock,
-                        eDoorInteractionType.Close => LevelGeneration.eDoorInteractionType.Close,
-                        eDoorInteractionType.Open => LevelGeneration.eDoorInteractionType.Open,
-                        eDoorInteractionType.DoDamage => LevelGeneration.eDoorInteractionType.DoDamage
-                    };
-                    if (DoorType == eLG_DoorType.Security)
-                    {
-                        LG_SecurityDoor secDoor;
-                        if (UseZoneID)
-                        {
-                            secDoor = SecurityDoors.FirstOrDefault(p => p.Value.LinkedToZoneData != null && p.Value.LinkedToZoneData.Alias == Settings.ZoneID).Value;
-                            if (secDoor == null)
-                            {
-                                return;
-                            }
-                        }
-                        else if (!SecurityDoors.TryGetValue(DoorID, out secDoor))
-                        {
-                            return;
-                        }
-                        if (secDoor.LastStatus != eDoorStatus.Open && value == eDoorInteractionType.Open)
-                        {
-                            secDoor.ForceOpenSecurityDoor();
-                        }
-                        else
-                        {
-                            secDoor.m_sync.AttemptDoorInteraction(_interactionType, 0f, 0f, AdminUtils.LocalPlayerAgent.Position, AdminUtils.LocalPlayerAgent);
-                        }
-                    }
-                    else if (DoorType == eLG_DoorType.Weak)
-                    {
-                        if (!WeakDoors.TryGetValue(DoorID, out var weakDoor))
-                        {
-                            return;
-                        }
-                        if (weakDoor.WeakLocks != null && weakDoor.WeakLocks.Count > 0)
-                        {
-                            pWeakLockInteraction unlock = new()
-                            {
-                                open = true,
-                                type = eWeakLockInteractionType.Melt
-                            };
-                            foreach (var weaklock in weakDoor.WeakLocks)
-                            {
-                                weaklock.AttemptInteract(unlock);
-                            }
-                        }
-                        weakDoor.m_sync.AttemptDoorInteraction(_interactionType, float.MaxValue, 0f, AdminUtils.LocalPlayerAgent.Position, AdminUtils.LocalPlayerAgent);
-                    }
-                }
-            }
-
-            [Localized]
-            public enum eDoorInteractionType
-            {
-                Open = 0,
-                //SetLockedWithChainedPuzzle_Alarm = 1,
-                //SetLockedWithChainedPuzzle = 2,
-                //SetLockedNoKey = 3,
-                //ActivateChainedPuzzle = 4,
-                Unlock = 5,
-                Close = 6,
-                DoDamage = 7,
-                //SetGluedMaxEnabled = 8,
-                //SetGluedMaxDisabled = 9,
-                //SetGlueLevel = 10,
-                //Approach = 11
-            }
-
-            [Localized]
-            public enum eLG_DoorType
-            {
-                Weak = 1,
-                Security = 2,
-                //Apex = 3
-            }
-        }
-
-        public override void Init()
-        {
-            DevConsole.AddCommand(Command.Create<int>("ToggleSecurityDoor", "开关安全门", "开启关闭安全门", Parameter.Create("ZoneID", "通往区域的ID"), ToggleSecurityDoor));
-        }
+        private static Dictionary<int, LG_WeakDoor> WeakDoorsInLevel = new();
 
         [ArchivePatch(typeof(LG_WeakDoor), nameof(LG_WeakDoor.Setup))]
         private class LG_WeakDoor__Setup__Patch
         {
             private static void Postfix(LG_WeakDoor __instance)
             {
-                if (!WeakDoors.TryAdd(__instance.m_serialNumber, __instance))
+                if (!WeakDoorsInLevel.TryAdd(__instance.m_serialNumber, __instance))
                 {
-                    WeakDoors[__instance.m_serialNumber] = __instance;
+                    WeakDoorsInLevel[__instance.m_serialNumber] = __instance;
                 }
             }
         }
@@ -165,7 +40,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
         {
             private static void Prefix(LG_WeakDoor __instance)
             {
-                WeakDoors.Remove(__instance.m_serialNumber);
+                WeakDoorsInLevel.Remove(__instance.m_serialNumber);
             }
         }
 
@@ -174,9 +49,9 @@ namespace Hikaria.AdminSystem.Features.InLevel
         {
             private static void Postfix(LG_SecurityDoor __instance)
             {
-                if (!SecurityDoors.TryAdd(__instance.m_serialNumber, __instance))
+                if (!SecurityDoorsInLevel.TryAdd(__instance.m_serialNumber, __instance))
                 {
-                    SecurityDoors[__instance.m_serialNumber] = __instance;
+                    SecurityDoorsInLevel[__instance.m_serialNumber] = __instance;
                 }
             }
         }
@@ -186,28 +61,116 @@ namespace Hikaria.AdminSystem.Features.InLevel
         {
             private static void Prefix(LG_SecurityDoor __instance)
             {
-                SecurityDoors.Remove(__instance.m_serialNumber);
+                SecurityDoorsInLevel.Remove(__instance.m_serialNumber);
             }
         }
 
-        private static void ToggleSecurityDoor(int toZoneID)
+        [Command("InteractWeakDoor")]
+        private static void WeakDoorInteraction([WeakDoorInLevel] int id, eDoorInteractionType interactionType = eDoorInteractionType.Open)
         {
-            var pair = SecurityDoors.FirstOrDefault(p => p.Value.LinkedToZoneData.Alias == toZoneID);
+            if (WeakDoorsInLevel.TryGetValue(id, out var door))
+            {
+                door.m_sync.AttemptDoorInteraction(interactionType, float.MaxValue, float.MaxValue, AdminUtils.LocalPlayerAgent.Position, AdminUtils.LocalPlayerAgent);
+                ConsoleLogs.LogToConsole($"WeakDoor_{id} {interactionType}");
+            }
+        }
+
+        [Command("InteractSecurityDoor")]
+        private static void SecurityDoorInteraction([SecurityDoorInLevel] int id, eDoorInteractionType interactionType = eDoorInteractionType.Open)
+        {
+            if (SecurityDoorsInLevel.TryGetValue(id, out var door))
+            {
+                door.m_sync.AttemptDoorInteraction(interactionType, float.MaxValue, float.MaxValue, AdminUtils.LocalPlayerAgent.Position, AdminUtils.LocalPlayerAgent);
+                ConsoleLogs.LogToConsole($"SecurityDoor_{id} {interactionType}");
+            }
+        }
+
+        [Command("OperateSecurityDoor")]
+        private static void SecurityDoorInteraction([ZoneAlias] int alias)
+        {
+            var pair = SecurityDoorsInLevel.FirstOrDefault(p => p.Value.LinkedToZoneData.Alias == alias);
             LG_SecurityDoor door = pair.Value;
             if (door == null)
             {
-                DevConsole.Log($"<color=red>不存在通往</color><color=orange>ZONE_{toZoneID}</color><color=red>的安全门</color>");
+                ConsoleLogs.LogToConsole($"<color=red>不存在通往</color><color=orange>ZONE_{alias}</color><color=red>的安全门</color>");
                 return;
             }
             if (door.LastStatus != eDoorStatus.Open)
             {
                 door.ForceOpenSecurityDoor();
-                DevConsole.Log($"<color=green>通往</color><color=orange>ZONE_{toZoneID}</color><color=green>的安全门已开启</color>");
+                ConsoleLogs.LogToConsole($"<color=green>通往</color><color=orange>ZONE_{alias}</color><color=green>的安全门已开启</color>");
             }
             else
             {
                 door.m_sync.AttemptDoorInteraction(eDoorInteractionType.Close, 0f, 0f, AdminUtils.LocalPlayerAgent.Position, AdminUtils.LocalPlayerAgent);
-                DevConsole.Log($"<color=red>通往</color><color=orange>ZONE_{toZoneID}</color><color=red>的安全门已关闭</color>");
+                ConsoleLogs.LogToConsole($"<color=red>通往</color><color=orange>ZONE_{alias}</color><color=red>的安全门已关闭</color>");
+            }
+        }
+
+        public struct WeakDoorInLevelTag : IQcSuggestorTag
+        {
+
+        }
+
+        public sealed class WeakDoorInLevelAttribute : SuggestorTagAttribute
+        {
+            private readonly IQcSuggestorTag[] _tags = { new WeakDoorInLevelTag() };
+
+            public override IQcSuggestorTag[] GetSuggestorTags()
+            {
+                return _tags;
+            }
+        }
+
+        public class WeakDoorInLevelSuggestor : BasicCachedQcSuggestor<int>
+        {
+            protected override bool CanProvideSuggestions(SuggestionContext context, SuggestorOptions options)
+            {
+                return context.HasTag<WeakDoorInLevelTag>();
+            }
+
+            protected override IQcSuggestion ItemToSuggestion(int item)
+            {
+                return new RawSuggestion(item.ToString());
+            }
+
+            protected override IEnumerable<int> GetItems(SuggestionContext context, SuggestorOptions options)
+            {
+                return WeakDoorsInLevel.Keys;
+            }
+        }
+
+
+        public struct SecurityDoorInLevelTag : IQcSuggestorTag
+        {
+
+        }
+
+        public sealed class SecurityDoorInLevelAttribute : SuggestorTagAttribute
+        {
+            private readonly IQcSuggestorTag[] _tags = { new SecurityDoorInLevelTag() };
+
+            public override IQcSuggestorTag[] GetSuggestorTags()
+            {
+                return _tags;
+            }
+        }
+
+        public class SecurityDoorInLevelSuggestor : BasicCachedQcSuggestor<int>
+        {
+            protected override bool CanProvideSuggestions(SuggestionContext context, SuggestorOptions options)
+            {
+                return context.HasTag<SecurityDoorInLevelTag>();
+            }
+
+            protected override IQcSuggestion ItemToSuggestion(int item)
+            {
+                return new RawSuggestion(item.ToString());
+            }
+
+            protected override IEnumerable<int> GetItems(SuggestionContext context, SuggestorOptions options)
+            {
+                return SecurityDoorsInLevel.Keys;
             }
         }
     }

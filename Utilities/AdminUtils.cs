@@ -1,5 +1,4 @@
 ﻿using Enemies;
-using Hikaria.AdminSystem.Extensions;
 using Il2CppInterop.Runtime.InteropTypes;
 using Player;
 using System.Linq;
@@ -10,7 +9,7 @@ namespace Hikaria.AdminSystem.Utility
 {
     public static class AdminUtils
     {
-        public static bool TryGetPlayerAgentFromSlotIndex(int slot, out PlayerAgent player)
+        public static bool TryGetPlayerAgentBySlotIndex(int slot, out PlayerAgent player)
         {
             slot--;
             if (!PlayerManager.TryGetPlayerAgent(ref slot, out player))

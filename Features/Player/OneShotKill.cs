@@ -1,10 +1,10 @@
 ﻿using Agents;
 using Gear;
-using Hikaria.AdminSystem.Extensions;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
 using Hikaria.Core.Interfaces;
-using Hikaria.DevConsoleLite;
+using Hikaria.QC;
 using Player;
 using SNetwork;
 using System.Collections.Generic;
@@ -17,7 +17,6 @@ namespace Hikaria.AdminSystem.Features.Player
 {
     [DoNotSaveToConfig]
     [EnableFeatureByDefault]
-    [DisallowInGameToggle]
     public class OneShotKill : Feature, IOnSessionMemberChanged
     {
         public override string Name => "秒杀";
@@ -26,84 +25,31 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public override FeatureGroup Group => EntryPoint.Groups.Player;
 
-        [FeatureConfig]
-        public static OneShotKillSettings Settings { get; set; }
 
-        public class OneShotKillSettings
-        {
-            [FSDisplayName("玩家设置")]
-            [FSReadOnly]
-            [FSInline]
-            public List<OneShotKillEntry> PlayerSettings
-            {
-                get
-                {
-                    return OneShotKillLookup.Values.ToList();
-                }
-                set
-                {
-                }
-            }
-        }
-
-        public class OneShotKillEntry
-        {
-            [FSSeparator]
-            [FSReadOnly]
-            [FSDisplayName("昵称")]
-            public string Name
-            {
-                get
-                {
-                    if (SNet.TryGetPlayer(Lookup, out var player))
-                    {
-                        return player.NickName;
-                    }
-                    return Lookup.ToString();
-                }
-                set
-                {
-                }
-            }
-
-            [FSIgnore]
-            public ulong Lookup { get; set; }
-
-            [FSDisplayName("秒杀敌人")]
-            public bool EnableOneShotKill { get; set; }
-        }
-
-        public static Dictionary<ulong, OneShotKillEntry> OneShotKillLookup { get; set; } = new();
+        public static Dictionary<ulong, bool> OneShotKillLookup { get; set; } = new();
 
         public override void Init()
         {
             GameEventAPI.RegisterSelf(this);
-            DevConsole.AddCommand(Command.Create<int, bool?>("OneShotKill", "秒杀敌人", "秒杀敌人", Parameter.Create("Slot", "玩家所在槽位"), Parameter.Create("Enable", "True: 启用, False: 禁用"), (slot, enable) =>
+        }
+
+        [Command("OneShotKill", "一击必杀")]
+        private static void ToggleOneShotKill(int slot)
+        {
+            if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !OneShotKillLookup.TryGetValue(player.Owner.Lookup, out var enable))
             {
-                if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var player) || !OneShotKillLookup.TryGetValue(player.Owner.Lookup, out var entry))
-                {
-                    DevConsole.LogError("输入有误");
-                    return;
-                }
-                if (!enable.HasValue)
-                {
-                    enable = entry.EnableOneShotKill;
-                }
-                entry.EnableOneShotKill = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} {player.Owner.NickName} 秒杀敌人");
-            }));
+                ConsoleLogs.LogToConsole("输入有误", LogLevel.Error);
+                return;
+            }
+            OneShotKillLookup[player.Owner.Lookup] = !enable;
+            ConsoleLogs.LogToConsole($"已{(OneShotKillLookup[player.Owner.Lookup] ? "启用" : "禁用")} {player.Owner.NickName} 秒杀敌人");
         }
 
         public void OnSessionMemberChanged(SNet_Player player, SessionMemberEvent playerEvent)
         {
             if (playerEvent == SessionMemberEvent.JoinSessionHub)
             {
-                OneShotKillEntry entry = new()
-                {
-                    Lookup = player.Lookup,
-                    EnableOneShotKill = false
-                };
-                OneShotKillLookup.TryAdd(player.Lookup, entry);
+                OneShotKillLookup.TryAdd(player.Lookup, false);
             }
             else if (playerEvent == SessionMemberEvent.LeftSessionHub)
             {
@@ -129,9 +75,9 @@ namespace Hikaria.AdminSystem.Features.Player
                 {
                     return;
                 }
-                if (OneShotKillLookup.TryGetValue(weaponRayData.owner.Owner.Lookup, out var entry))
+                if (OneShotKillLookup.TryGetValue(weaponRayData.owner.Owner.Lookup, out var enable))
                 {
-                    if (entry.EnableOneShotKill)
+                    if (enable)
                     {
                         doDamage = true;
                     }
@@ -150,9 +96,9 @@ namespace Hikaria.AdminSystem.Features.Player
                     return;
                 }
                 ulong lookup = player.Owner.Lookup;
-                if (OneShotKillLookup.TryGetValue(lookup, out var entry) && entry.EnableOneShotKill)
+                if (OneShotKillLookup.TryGetValue(lookup, out var enable) && enable)
                 {
-                    dam = 10000000000f;
+                    dam = float.MaxValue;
                 }
             }
         }
@@ -168,9 +114,9 @@ namespace Hikaria.AdminSystem.Features.Player
                     return;
                 }
                 ulong lookup = player.Owner.Lookup;
-                if (OneShotKillLookup.TryGetValue(lookup, out var entry) && entry.EnableOneShotKill)
+                if (OneShotKillLookup.TryGetValue(lookup, out var enable) && enable)
                 {
-                    dam = 10000000000f;
+                    dam = float.MaxValue;
                 }
             }
         }
@@ -180,9 +126,9 @@ namespace Hikaria.AdminSystem.Features.Player
         {
             private static void Prefix(ref float dam)
             {
-                if (SNet.IsMaster && OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var entry) && entry.EnableOneShotKill)
+                if (SNet.IsMaster && OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var enable) && enable)
                 {
-                    dam = 10000000000f;
+                    dam = float.MaxValue;
                 }
             }
         }
@@ -201,9 +147,9 @@ namespace Hikaria.AdminSystem.Features.Player
                 {
                     return;
                 }
-                if (OneShotKillLookup.TryGetValue(player.Owner.Lookup, out var entry) && entry.EnableOneShotKill)
+                if (OneShotKillLookup.TryGetValue(player.Owner.Lookup, out var enable) && enable)
                 {
-                    data.damage.Set(10000000000f, __instance.HealthMax);
+                    data.damage.Set(float.MaxValue, __instance.HealthMax);
                 }
             }
         }
@@ -222,9 +168,9 @@ namespace Hikaria.AdminSystem.Features.Player
                 {
                     return;
                 }
-                if (OneShotKillLookup.TryGetValue(player.Owner.Lookup, out var entry) && entry.EnableOneShotKill)
+                if (OneShotKillLookup.TryGetValue(player.Owner.Lookup, out var enable) && enable)
                 {
-                    data.damage.Set(10000000000f, __instance.HealthMax);
+                    data.damage.Set(float.MaxValue, __instance.HealthMax);
                 }
             }
         }
@@ -234,9 +180,9 @@ namespace Hikaria.AdminSystem.Features.Player
         {
             private static void Prefix(Dam_EnemyDamageBase __instance, ref pExplosionDamageData data)
             {
-                if (SNet.IsMaster && OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var entry) && entry.EnableOneShotKill)
+                if (SNet.IsMaster && OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var enable) && enable)
                 {
-                    data.damage.Set(10000000000f, __instance.HealthMax);
+                    data.damage.Set(float.MaxValue, __instance.HealthMax);
                 }
             }
         }

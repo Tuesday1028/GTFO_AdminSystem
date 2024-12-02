@@ -6,15 +6,13 @@ using TheArchive.Core.Localization;
 
 namespace Hikaria.AdminSystem;
 
-[ArchiveDependency(DevConsoleLite.Plugin.PluginInfo.GUID)]
+[ArchiveDependency(QC.PluginInfo.GUID)]
 [ArchiveDependency(Core.PluginInfo.GUID)]
 [ArchiveModule(PluginInfo.GUID, PluginInfo.NAME, PluginInfo.VERSION)]
 public class EntryPoint : IArchiveModule
 {
     public void Init()
     {
-        Instance = this;
-
         Logs.LogMessage("OK");
     }
 
@@ -29,8 +27,6 @@ public class EntryPoint : IArchiveModule
     public void OnExit()
     {
     }
-
-    public static EntryPoint Instance { get; private set; }
 
     public bool ApplyHarmonyPatches => false;
 
@@ -64,6 +60,9 @@ public class EntryPoint : IArchiveModule
 
             Security.SetLanguage(Language.Chinese, "安全");
             Security.SetLanguage(Language.English, "Security");
+
+            Dev.SetLanguage(Language.Chinese, "开发者选项");
+            Dev.SetLanguage(Language.English, "Develop");
         }
 
         public static FeatureGroup ModuleGroup => FeatureGroups.GetOrCreateModuleGroup("Admin System", new()
@@ -84,5 +83,7 @@ public class EntryPoint : IArchiveModule
         public static FeatureGroup Security => ModuleGroup.GetOrCreateSubGroup("Security");
 
         public static FeatureGroup InLevel => ModuleGroup.GetOrCreateSubGroup("InLevel");
+
+        public static FeatureGroup Dev => ModuleGroup.GetOrCreateSubGroup("Develop");
     }
 }

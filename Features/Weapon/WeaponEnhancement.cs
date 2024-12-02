@@ -1,18 +1,10 @@
-﻿using Agents;
-using AK;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
-using Enemies;
-using GameData;
+﻿using GameData;
 using Gear;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
-using Hikaria.DevConsoleLite;
-using Il2CppInterop.Runtime.InteropTypes;
+using Hikaria.QC;
 using Player;
-using SNetwork;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -36,27 +28,33 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
         public class WeaponEnhanceSettings
         {
+            [Command("InfClip", MonoTargetType.Registry)]
             [FSDisplayName("无限弹夹容量")]
             public bool InfiniteClip { get; set; }
 
+            [Command("ClearSight", MonoTargetType.Registry)]
             [FSDisplayName("清晰瞄具")]
             [FSDescription("去除枪械瞄具污渍, 加强热成像瞄具")]
             public bool ClearSight { get; set; }
 
+            [Command("NoDamageFalloff", MonoTargetType.Registry)]
             [FSDisplayName("无伤害衰减")]
             [FSDescription("枪械伤害没有距离衰减")]
             public bool NoDamageFalloff { get; set; }
 
+            [Command("NoSpread", MonoTargetType.Registry)]
             [FSDisplayName("无弹道扩散")]
             [FSDescription("枪械弹道无扩散, 散弹子弹散步减小")]
             public bool NoSpread { get; set; }
 
+            [Command("NoRecoil", MonoTargetType.Registry)]
             [FSDisplayName("无后座")]
             [FSDescription("枪械无后坐力")]
             public bool NoRecoil { get; set; }
 
             private bool _wallHack;
 
+            [Command("WallHack", MonoTargetType.Registry)]
             [FSDisplayName("子弹穿墙")]
             [FSDescription("枪械子弹穿墙")]
             public bool WallHack
@@ -73,18 +71,22 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 }
             }
 
+            [Command("SilentWeapon", MonoTargetType.Registry)]
             [FSDisplayName("无声枪")]
             [FSDescription("枪械无开火声音, 即不惊怪(仅客机可用)")]
             public bool SilentWeapon { get; set; }
 
+            [Command("AutoReload", MonoTargetType.Registry)]
             [FSDisplayName("自动上弹")]
             [FSDescription("优先消耗后备弹药")]
             public bool AutoReload { get; set; }
 
+            [Command("IgnoreLimbMaxHealthClamp", MonoTargetType.Registry)]
             [FSDisplayName("特殊部位伤害溢出")]
             [FSDescription("启用后可以在特殊部位单次打出超过最大生命值上限的伤害")]
             public bool IgnoreLimbMaxHealthClamp { get; set; }
 
+            [Command("MultiLimbPierce", MonoTargetType.Registry)]
             [FSDisplayName("多部位穿透")]
             [FSDescription("启用后可以穿透同一敌人的多个部位")]
             public bool MultiLimbPierce { get; set; }
@@ -101,104 +103,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
             */
         }
 
+
         public override void Init()
         {
-            DevConsole.AddCommand(Command.Create<bool?>("ClearSight", "清晰瞄具", "清晰瞄具", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.ClearSight;
-                }
-                Settings.ClearSight = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 清晰瞄具");
-            }, () =>
-            {
-                DevConsole.LogVariable("清晰瞄具", Settings.ClearSight);
-            }));
-            DevConsole.AddCommand(Command.Create<bool?>("NoDamageFalloff", "无伤害衰减", "无伤害衰减", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.NoDamageFalloff;
-                }
-                Settings.NoDamageFalloff = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 无伤害衰减");
-            }, () =>
-            {
-                DevConsole.LogVariable("无伤害衰减", Settings.NoDamageFalloff);
-            }));
-            DevConsole.AddCommand(Command.Create<bool?>("NoSpread", "无弹道扩散", "无弹道扩散", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.NoSpread;
-                }
-                Settings.NoSpread = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 无弹道扩散");
-            }, () =>
-            {
-                DevConsole.LogVariable("无弹道扩散", Settings.NoSpread);
-            }));
-            DevConsole.AddCommand(Command.Create<bool?>("NoRecoil", "无后座", "无后座", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.NoRecoil;
-                }
-                Settings.NoRecoil = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 无后座");
-            }, () =>
-            {
-                DevConsole.LogVariable("无后座", Settings.NoRecoil);
-            }));
-            DevConsole.AddCommand(Command.Create<bool?>("WallHack", "子弹穿墙", "子弹穿墙", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.WallHack;
-                }
-                Settings.WallHack = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 子弹穿墙");
-            }, () =>
-            {
-                DevConsole.LogVariable("子弹穿墙", Settings.WallHack);
-            }));
-            DevConsole.AddCommand(Command.Create<bool?>("SilentWeapon", "静音枪", "静音枪", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.SilentWeapon;
-                }
-                Settings.SilentWeapon = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 静音枪");
-            }, () =>
-            {
-                DevConsole.LogVariable("静音枪", Settings.SilentWeapon);
-            }));
-            DevConsole.AddCommand(Command.Create<bool?>("AutoReload", "自动上弹", "优先消耗后备弹药", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.AutoReload;
-                }
-                Settings.AutoReload = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 自动上弹");
-            }, () =>
-            {
-                DevConsole.LogVariable("静音枪", Settings.AutoReload);
-            }));
-            DevConsole.AddCommand(Command.Create<bool?>("InfClip", "无限弹夹容量", "无限弹夹容量", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.InfiniteClip;
-                }
-                Settings.InfiniteClip = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 无限弹夹容量");
-            }, () =>
-            {
-                DevConsole.LogVariable("无限弹夹容量", Settings.InfiniteClip);
-            }));
+            QuantumRegistry.RegisterObject(Settings);
         }
 
         public override void OnGameDataInitialized()
@@ -457,22 +365,17 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
         private static void SetupClearSight(GameObject baseGO, bool enable)
         {
-            foreach (var item in baseGO.GetComponentsInChildren<Transform>())
+            foreach (var renderer in baseGO.GetComponentsInChildren<MeshRenderer>())
             {
-                string childName = item.name.ToLowerInvariant();
+                string childName = renderer.name.ToLowerInvariant();
                 foreach (var compName in ClearSightCompNames)
                 {
                     if (!childName.Contains(compName))
                     {
                         continue;
                     }
-                    MeshRenderer meshRenderer = item.gameObject.GetComponent<MeshRenderer>();
-                    if (meshRenderer == null)
-                    {
-                        continue;
-                    }
-                    Material material = meshRenderer.material;
-                    Shader shader = meshRenderer.material.shader;
+                    Material material = renderer.material;
+                    Shader shader = renderer.material.shader;
                     for (int j = 0; j < shader.GetPropertyCount(); j++)
                     {
                         string propName = shader.GetPropertyName(j).ToLowerInvariant();

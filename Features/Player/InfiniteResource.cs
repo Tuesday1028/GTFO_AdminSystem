@@ -1,13 +1,12 @@
-﻿using Hikaria.AdminSystem.Utility;
+﻿using Hikaria.AdminSystem.Utilities;
+using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
 using Hikaria.Core.Interfaces;
-using Hikaria.DevConsoleLite;
+using Hikaria.QC;
 using Player;
 using SNetwork;
 using System.Collections.Generic;
-using System.Linq;
 using TheArchive.Core.Attributes;
-using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 
 namespace Hikaria.AdminSystem.Features.Player
@@ -19,129 +18,76 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public override FeatureGroup Group => EntryPoint.Groups.Player;
 
-        [FeatureConfig]
-        public static InfiniteResourceSettings Settings { get; set; }
-
-        public static Dictionary<ulong, InfiniteResourceEntry> InfResourceLookup { get; set; } = new();
+        public static Dictionary<ulong, InfiniteResourceSettings> InfResourceLookup { get; set; } = new();
 
         public class InfiniteResourceSettings
         {
-            [FSDisplayName("玩家设置")]
-            [FSReadOnly]
-            public List<InfiniteResourceEntry> PlayerSettings
-            {
-                get
-                {
-                    return InfResourceLookup.Values.ToList();
-                }
-                set
-                {
-                }
-            }
-        }
-
-        public class InfiniteResourceEntry
-        {
-            [FSSeparator]
-            [FSDisplayName("昵称")]
-            [FSReadOnly]
-            public string NickName
-            {
-                get
-                {
-                    if (SNet.TryGetPlayer(Lookup, out var player))
-                    {
-                        return player.NickName;
-                    }
-                    return Lookup.ToString();
-                }
-                set
-                {
-                }
-            }
-
-            [FSIgnore]
-            public ulong Lookup { get; set; }
-            [FSDisplayName("无限资源")]
             public bool InfResource { get; set; }
-            [FSDisplayName("禁用资源")]
-            [FSDescription("对自身没用")]
             public bool NoResource { get; set; }
-            [FSDisplayName("无限哨戒炮")]
             public bool InfSentry { get; set; }
-            [FSDisplayName("强制部署")]
-            [FSDescription("对自身没用")]
             public bool ForceDeploy { get; set; }
         }
 
         public override void Init()
         {
             GameEventAPI.RegisterSelf(this);
-            DevConsole.AddCommand(Command.Create<int, bool?>("InfResource", "无限资源", "无限资源", Parameter.Create("Slot", "玩家所在槽位"), Parameter.Create("Enable", "True: 启用, False: 禁用"), (slot, enable) =>
+        }
+
+        [Command("InfResource", "无限资源")]
+        private static void ToggleInfResource(int slot)
+        {
+            if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !InfResourceLookup.TryGetValue(player.Owner.Lookup, out var entry))
             {
-                if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var player) || !InfResourceLookup.TryGetValue(player.Owner.Lookup, out var entry))
-                {
-                    DevConsole.LogError("输入有误");
-                    return;
-                }
-                if (!enable.HasValue)
-                {
-                    enable = entry.InfResource;
-                }
-                entry.InfResource = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} {player.Owner.NickName} 无限资源");
-            }));
-            DevConsole.AddCommand(Command.Create<int, bool?>("NoResource", "禁用资源", "禁用资源", Parameter.Create("Slot", "玩家所在槽位"), Parameter.Create("Enable", "True: 启用, False: 禁用"), (slot, enable) =>
+                ConsoleLogs.LogToConsole("输入有误", LogLevel.Error);
+                return;
+            }
+            entry.InfResource = !entry.InfResource;
+            ConsoleLogs.LogToConsole($"已{(entry.InfResource ? "启用" : "禁用")} {player.Owner.NickName} 无限资源");
+        }
+
+
+        [Command("NoResource", "禁用资源")]
+        private static void ToggleNoResource(int slot)
+        {
+            if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !InfResourceLookup.TryGetValue(player.Owner.Lookup, out var entry))
             {
-                if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var player) || !InfResourceLookup.TryGetValue(player.Owner.Lookup, out var entry))
-                {
-                    DevConsole.LogError("输入有误");
-                    return;
-                }
-                if (!enable.HasValue)
-                {
-                    enable = entry.NoResource;
-                }
-                entry.NoResource = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} {player.Owner.NickName} 禁用资源");
-            }));
-            DevConsole.AddCommand(Command.Create<int, bool?>("InfSentry", "无限哨戒炮", "无限哨戒炮", Parameter.Create("Slot", "玩家所在槽位"), Parameter.Create("Enable", "True: 启用, False: 禁用"), (slot, enable) =>
+                ConsoleLogs.LogToConsole("输入有误", LogLevel.Error);
+                return;
+            }
+            entry.NoResource = !entry.NoResource;
+            ConsoleLogs.LogToConsole($"已{(entry.NoResource ? "启用" : "禁用")} {player.Owner.NickName} 禁用资源");
+        }
+
+        [Command("InfSentry", "无限哨戒炮")]
+        private static void ToggleInfSentry(int slot)
+        {
+            if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !InfResourceLookup.TryGetValue(player.Owner.Lookup, out var entry))
             {
-                if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var player) || !InfResourceLookup.TryGetValue(player.Owner.Lookup, out var entry))
-                {
-                    DevConsole.LogError("输入有误");
-                    return;
-                }
-                if (!enable.HasValue)
-                {
-                    enable = entry.InfSentry;
-                }
-                entry.InfSentry = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} {player.Owner.NickName} 无限哨戒炮");
-            }));
-            DevConsole.AddCommand(Command.Create<int, bool?>("ForceDeploy", "强制部署", "强制部署", Parameter.Create("Slot", "玩家所在槽位"), Parameter.Create("Enable", "True: 启用, False: 禁用"), (slot, enable) =>
+                ConsoleLogs.LogToConsole("输入有误", LogLevel.Error);
+                return;
+            }
+            entry.InfSentry = !entry.InfSentry;
+            ConsoleLogs.LogToConsole($"已{(entry.InfSentry ? "启用" : "禁用")} {player.Owner.NickName} 无限哨戒炮");
+        }
+
+        [Command("ForceDeploy", "强制部署")]
+        private static void ToggleForceDeploy(int slot)
+        {
+            if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !InfResourceLookup.TryGetValue(player.Owner.Lookup, out var entry))
             {
-                if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var player) || !InfResourceLookup.TryGetValue(player.Owner.Lookup, out var entry))
-                {
-                    DevConsole.LogError("输入有误");
-                    return;
-                }
-                if (!enable.HasValue)
-                {
-                    enable = entry.ForceDeploy;
-                }
-                entry.ForceDeploy = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} {player.Owner.NickName} 强制部署");
-            }));
+                ConsoleLogs.LogToConsole("输入有误", LogLevel.Error);
+                return;
+            }
+            entry.ForceDeploy = !entry.ForceDeploy;
+            ConsoleLogs.LogToConsole($"已{(entry.ForceDeploy ? "启用" : "禁用")} {player.Owner.NickName} 强制部署");
         }
 
         public void OnSessionMemberChanged(SNet_Player player, SessionMemberEvent playerEvent)
         {
             if (playerEvent == SessionMemberEvent.JoinSessionHub)
             {
-                InfiniteResourceEntry entry = new()
+                InfiniteResourceSettings entry = new()
                 {
-                    Lookup = player.Lookup,
                     InfResource = false,
                     InfSentry = false,
                     NoResource = false,
@@ -356,7 +302,7 @@ namespace Hikaria.AdminSystem.Features.Player
                     PlayerBackpackManager.Current.m_itemStatusSync.Send(status, SNet_ChannelType.GameNonCritical, player);
                     status.slot = InventorySlot.GearClass;
                     PlayerBackpackManager.Current.m_itemStatusSync.Send(status, SNet_ChannelType.GameNonCritical, player);
-                    if (AdminUtils.TryGetPlayerAgentFromSlotIndex(player.PlayerSlotIndex(), out var playerAgent))
+                    if (AdminUtils.TryGetPlayerAgentBySlotIndex(player.PlayerSlotIndex(), out var playerAgent))
                     {
                         playerAgent.Sync.WantsToWieldSlot(InventorySlot.None);
                     }
@@ -410,9 +356,9 @@ namespace Hikaria.AdminSystem.Features.Player
         public override void OnGameStateChanged(int state)
         {
             eGameStateName current = (eGameStateName)state;
-            if (current == eGameStateName.AfterLevel)
+            if (current == eGameStateName.InLevel)
             {
-                foreach (var item in Settings.PlayerSettings)
+                foreach (var item in InfResourceLookup.Values)
                 {
                     item.NoResource = false;
                     item.InfResource = false;

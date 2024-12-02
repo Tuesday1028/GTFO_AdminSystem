@@ -1,72 +1,30 @@
 ﻿using Agents;
-using Hikaria.AdminSystem.Extensions;
+using Hikaria.AdminSystem.Suggestion.Suggestors.Attributes;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
 using Hikaria.Core.Interfaces;
-using Hikaria.DevConsoleLite;
+using Hikaria.QC;
 using Player;
 using SNetwork;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 
 namespace Hikaria.AdminSystem.Features.Player
 {
-    [DoNotSaveToConfig]
     public class GodMode : Feature, IOnSessionMemberChanged
     {
         public override string Name => "无敌模式";
 
         public override FeatureGroup Group => EntryPoint.Groups.Player;
 
-        public static Dictionary<ulong, GodModeEntry> GodModeLookup { get; set; } = new();
-        [FeatureConfig]
-        public static GodModeSettings Settings { get; set; }
+        public static Dictionary<ulong, GodModeSettings> GodModeLookup { get; set; } = new();
 
         public class GodModeSettings
         {
-            [FSDisplayName("玩家设置")]
-            [FSReadOnly]
-            [FSInline]
-            public List<GodModeEntry> PlayerSettings
-            {
-                get
-                {
-                    return GodModeLookup.Values.ToList();
-                }
-                set
-                {
-                }
-            }
-        }
-
-        public class GodModeEntry
-        {
-            [FSDisplayName("昵称")]
-            [FSSeparator]
-            [FSReadOnly]
-            public string NickName
-            {
-                get
-                {
-                    if (SNet.TryGetPlayer(Lookup, out var player))
-                    {
-                        return player.NickName;
-                    }
-                    return Lookup.ToString();
-                }
-                set
-                {
-
-                }
-            }
-
-            [FSIgnore]
-            public ulong Lookup { get; set; }
-
             [FSDisplayName("忽略所有伤害")]
             public bool IgnoreAllDamage { get; set; }
 
@@ -77,54 +35,46 @@ namespace Hikaria.AdminSystem.Features.Player
             public bool CannotDie { get; set; }
         }
 
-
         public override void Init()
         {
             GameEventAPI.RegisterSelf(this);
-            DevConsole.AddCommand(Command.Create<int, bool?>("IgnoreAllDamage", "无敌", "无敌", Parameter.Create("Slot", "玩家所在槽位"), Parameter.Create("Enable", "True: 启用, False: 禁用"), (slot, enable) =>
-            {
-                if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var player) || !GodModeLookup.TryGetValue(player.Owner.Lookup, out var entry))
-                {
-                    DevConsole.LogError("输入有误");
-                    return;
-                }
-                if (!enable.HasValue)
-                {
-                    enable = entry.IgnoreAllDamage;
-                }
-                entry.IgnoreAllDamage = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} {player.Owner.NickName} 无敌模式");
-            }));
-            DevConsole.AddCommand(Command.Create<int, bool?>("IgnoreInfection", "免毒", "免毒", Parameter.Create("Slot", "玩家所在槽位"), Parameter.Create("Enable", "True: 启用, False: 禁用"), (slot, enable) =>
-            {
-                if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var player) || !GodModeLookup.TryGetValue(player.Owner.Lookup, out var entry))
-                {
-                    DevConsole.LogError("输入有误");
-                    return;
-                }
-                if (!enable.HasValue)
-                {
-                    enable = entry.IgnoreInfection;
-                }
-                entry.IgnoreInfection = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} {player.Owner.NickName} 免毒");
-            }));
-            DevConsole.AddCommand(Command.Create<int, bool?>("CannotDie", "无法倒地", "无法倒地", Parameter.Create("Slot", "玩家所在槽位"), Parameter.Create("Enable", "True: 启用, False: 禁用"), (slot, enable) =>
-            {
-                if (!AdminUtils.TryGetPlayerAgentFromSlotIndex(slot, out var player) || !GodModeLookup.TryGetValue(player.Owner.Lookup, out var entry))
-                {
-                    DevConsole.LogError("输入有误");
-                    return;
-                }
-                if (!enable.HasValue)
-                {
-                    enable = entry.CannotDie;
-                }
-                entry.CannotDie = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} {player.Owner.NickName} 无法倒地");
-            }));
         }
 
+        [Command("IgnoreAllDamage")]
+        private static void ToggleIgnoreAllDamage([PlayerSlotIndex] int slot)
+        {
+            if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !GodModeLookup.TryGetValue(player.Owner.Lookup, out var entry))
+            {
+                ConsoleLogs.LogToConsole("输入有误", LogLevel.Error);
+                return;
+            }
+            entry.IgnoreAllDamage = !entry.IgnoreAllDamage;
+            ConsoleLogs.LogToConsole($"已{(entry.IgnoreAllDamage ? "启用" : "禁用")} {player.Owner.NickName} 免疫伤害");
+        }
+
+        [Command("IgnoreInfection")]
+        private static void ToggleIgnoreInfection(int slot)
+        {
+            if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !GodModeLookup.TryGetValue(player.Owner.Lookup, out var entry))
+            {
+                ConsoleLogs.LogToConsole("输入有误", LogLevel.Error);
+                return;
+            }
+            entry.IgnoreInfection = !entry.IgnoreInfection;
+            ConsoleLogs.LogToConsole($"已{(entry.IgnoreInfection ? "启用" : "禁用")} {player.Owner.NickName} 免疫感染");
+        }
+
+        [Command("CannotDie")]
+        private static void ToggleCannotDie(int slot)
+        {
+            if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !GodModeLookup.TryGetValue(player.Owner.Lookup, out var entry))
+            {
+                ConsoleLogs.LogToConsole("输入有误", LogLevel.Error);
+                return;
+            }
+            entry.CannotDie = !entry.CannotDie;
+            ConsoleLogs.LogToConsole($"已{(entry.CannotDie ? "启用" : "禁用")} {player.Owner.NickName} 免疫倒地");
+        }
 
         public override void OnGameStateChanged(int state)
         {
@@ -144,9 +94,8 @@ namespace Hikaria.AdminSystem.Features.Player
         {
             if (playerEvent == SessionMemberEvent.JoinSessionHub)
             {
-                GodModeEntry entry = new()
+                GodModeSettings entry = new()
                 {
-                    Lookup = player.Lookup,
                     IgnoreAllDamage = false,
                     IgnoreInfection = false,
                     CannotDie = false
@@ -187,7 +136,7 @@ namespace Hikaria.AdminSystem.Features.Player
                     return;
                 }
                 AgentReplicatedActions.PlayerReviveAction(player, AdminUtils.LocalPlayerAgent, player.Position);
-                DevConsole.Log($"<color=green>已复活玩家 {player.PlayerName}</color>");
+                ConsoleLogs.LogToConsole($"<color=green>已复活玩家 {player.PlayerName}</color>");
             }
         }
 

@@ -1,6 +1,8 @@
 ﻿using AK;
 using BepInEx.Unity.IL2CPP.Utils;
+using Hikaria.QC;
 using LevelGeneration;
+using System;
 using System.Collections;
 using System.Linq;
 using TheArchive.Core.Attributes;
@@ -14,21 +16,28 @@ namespace Hikaria.AdminSystem.Features.Misc
     [EnableFeatureByDefault]
     [DoNotSaveToConfig]
     [DisallowInGameToggle]
-    public class CommandAutoComplete : Feature
+    public class TerminalCommandAutoComplete : Feature
     {
         public override string Name => "自动完成指令";
 
         public override FeatureGroup Group => EntryPoint.Groups.Misc;
 
         [FeatureConfig]
-        public static CommandAutoCompleteSetting Settings { get; set; }
+        public static TerminalCommandAutoCompleteSettings Settings { get; set; }
 
-        public class CommandAutoCompleteSetting
+        public class TerminalCommandAutoCompleteSettings
         {
-            [FSDisplayName("启用自动指令")]
+            [Command("TerminalAutoCommand", MonoTargetType.Registry)]
+            [FSDisplayName("自动指令")]
             public bool EnableAutoCommand { get; set; }
+            [Command("DisableTerminalValidation", MonoTargetType.Registry)]
             [FSDisplayName("禁用指令验证")]
             public bool DisableCodeValiation { get; set; }
+        }
+
+        public override void Init()
+        {
+            QuantumRegistry.RegisterObject(Settings);
         }
 
         [ArchivePatch(typeof(LG_ComputerTerminalCommandInterpreter), nameof(LG_ComputerTerminalCommandInterpreter.EvaluateInput))]
@@ -51,7 +60,7 @@ namespace Hikaria.AdminSystem.Features.Misc
                     return;
                 }
 
-                if (Settings.EnableAutoCommand && !string.IsNullOrEmpty(param) && param.Equals("UNLOCK"))
+                if (Settings.EnableAutoCommand && !string.IsNullOrEmpty(param) && param.Equals("UNLOCK", StringComparison.OrdinalIgnoreCase))
                 {
                     param = __instance.m_terminal.m_password.ToUpperInvariant();
                     return;

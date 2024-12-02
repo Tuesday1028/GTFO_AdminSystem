@@ -51,8 +51,8 @@
     <Reference Include="Hikaria.Core">
       <HintPath>..\Hikaria.Core\Hikaria.Core\bin\Release\net6.0\Hikaria.Core.dll</HintPath>
     </Reference>
-    <Reference Include="Hikaria.DevConsoleLite">
-      <HintPath>..\Hikaria.DevConsole\bin\Release\Hikaria.DevConsoleLite.dll</HintPath>
+    <Reference Include="Hikaria.QuantumConsole">
+      <HintPath>..\Hikaria.QuantumConsole\bin\x64\Release\net6.0\Hikaria.QuantumConsole.dll</HintPath>
     </Reference>
     <Reference Include="Il2CppInterop.Runtime">
       <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\GTFO\BepInEx\core\Il2CppInterop.Runtime.dll</HintPath>

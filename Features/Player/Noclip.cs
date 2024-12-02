@@ -1,7 +1,8 @@
 ﻿using AIGraph;
 using CullingSystem;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
-using Hikaria.DevConsoleLite;
+using Hikaria.QC;
 using Player;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
@@ -22,51 +23,33 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public override FeatureGroup Group => EntryPoint.Groups.Player;
 
-        [FeatureConfig]
-        public static NoClipSettings Settings { get; set; }
-
-        public class NoClipSettings
-        {
-            [FSDisplayName("启用穿墙")]
-            public bool EnableNoClip
-            {
-                get
-                {
-                    return NoclipHandler.FreecamEnabled;
-                }
-                set
-                {
-                    if (CurrentGameState != (int)eGameStateName.InLevel)
-                    {
-                        return;
-                    }
-                    if (value)
-                    {
-                        NoclipHandler.SetEnable();
-                    }
-                    else
-                    {
-                        NoclipHandler.SetDisable();
-                    }
-                }
-            }
-        }
-
         public override void Init()
         {
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<NoclipHandler>();
-            DevConsole.AddCommand(Command.Create<bool?>("NoClip", "穿墙", "穿墙", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
+        }
+
+        private static bool _enableNoClip;
+        private static bool _enableFreeCam;
+
+        [Command("NoClip", "穿墙模式")]
+        private static void ToggleNoClip()
+        {
+            _enableNoClip = !_enableNoClip;
+            if (CurrentGameState == (int)eGameStateName.InLevel)
             {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.EnableNoClip;
-                }
-                Settings.EnableNoClip = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 穿墙");
-            }, () =>
-            {
-                DevConsole.LogVariable("穿墙", Settings.EnableNoClip);
-            }));
+                if (_enableNoClip)
+                    NoclipHandler.SetEnable();
+                else
+                    NoclipHandler.SetDisable();
+            }
+            ConsoleLogs.LogToConsole($"已{(_enableNoClip ? "启用" : "禁用")} 穿墙模式");
+        }
+
+        [Command("FreeCam", "自由视角")]
+        private static void ToggleFreeCam()
+        {
+            FocusStateManager.ToggleFreeflight();
+            ConsoleLogs.LogToConsole($"已{(FocusStateManager.CurrentState == eFocusState.Freeflight ? "启用" : "禁用")} 自由视角");
         }
 
         public override void OnGameStateChanged(int state)
@@ -74,7 +57,7 @@ namespace Hikaria.AdminSystem.Features.Player
             eGameStateName current = (eGameStateName)state;
             if (current == eGameStateName.InLevel)
             {
-                if (Settings.EnableNoClip)
+                if (_enableNoClip)
                 {
                     NoclipHandler.SetEnable();
                 }
@@ -85,7 +68,7 @@ namespace Hikaria.AdminSystem.Features.Player
             }
             if (current == eGameStateName.AfterLevel)
             {
-                Settings.EnableNoClip = false;
+                _enableNoClip = false;
                 NoclipHandler.SetDisable();
             }
         }
@@ -118,7 +101,7 @@ namespace Hikaria.AdminSystem.Features.Player
             private FPSCameraHolder _FPSCamHolder;
             private AIG_CourseNode _LastNode;
 
-            private static bool CanUpdate => GameStateManager.CurrentStateName == eGameStateName.InLevel && !DevConsole.IsOpen && GuiManager.Current.m_lastFocusState == eFocusState.FPS;
+            private static bool CanUpdate => GameStateManager.CurrentStateName == eGameStateName.InLevel && !QuantumConsole.Instance.IsActive && GuiManager.Current.m_lastFocusState == eFocusState.FPS;
 
             private void Awake()
             {

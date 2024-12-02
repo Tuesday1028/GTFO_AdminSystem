@@ -3,8 +3,9 @@ using Enemies;
 using GameData;
 using Gear;
 using Hikaria.AdminSystem.Managers;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
-using Hikaria.DevConsoleLite;
+using Hikaria.QC;
 using System.Collections.Generic;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
@@ -32,6 +33,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             [FSDisplayName("状态")]
             [FSDescription("枪械处于瞄准状态并瞄准敌人时自动开火")]
+            [Command("AutoTrigger", MonoTargetType.Registry)]
             public bool Enabled { get; set; }
 
             [FSDisplayName("暂停自动扳机按键")]
@@ -48,12 +50,12 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 get
                 {
-                    return EnemyDataManager.ArmorMultiThreshold;
+                    return EnemyDataHelper.ArmorMultiThreshold;
                 }
                 set
                 {
-                    EnemyDataManager.ArmorMultiThreshold = value;
-                    EnemyDataManager.ClearGeneratedEnemyDamageData();
+                    EnemyDataHelper.ArmorMultiThreshold = value;
+                    EnemyDataHelper.ClearGeneratedEnemyDamageData();
                 }
             }
 
@@ -125,23 +127,12 @@ namespace Hikaria.AdminSystem.Features.Weapon
             public float ShotgunDamagePerFireThreshold { get; set; } = 0.75f;
         }
 
+        private static bool IsWieldBulletWeapon;
+
         public override void Init()
         {
-            DevConsole.AddCommand(Command.Create<bool?>("AutoTrigger", "自动扳机", "自动扳机", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.Enabled;
-                }
-                Settings.Enabled = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 自动扳机");
-            }, () =>
-            {
-                DevConsole.LogVariable("自动扳机", Settings.Enabled);
-            }));
+            QuantumRegistry.RegisterObject(Settings);
         }
-
-        private static bool IsWieldBulletWeapon;
 
         [ArchivePatch(typeof(BulletWeaponArchetype), nameof(BulletWeaponArchetype.OnWield))]
         private class BulletWeaponArchetype__OnWield__Patch
@@ -215,8 +206,14 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     return;
 
                 var weapon = __instance.m_weapon;
-                if (weapon.m_clip <= 0 && !weapon.m_inventory.CanReloadCurrent())
+                if (weapon.m_clip <= 0)
+                {
+                    if (!weapon.m_inventory.CanReloadCurrent())
+                        return;
+                    else if (!weapon.IsReloading)
+                        weapon.m_inventory.TriggerReload();
                     return;
+                }
 
                 if (!weapon.AimButtonHeld || weapon.FireButton || weapon.FireButtonPressed)
                     return;
@@ -260,7 +257,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 if (!targetEnemy.Alive)
                     return;
 
-                var damageData = EnemyDataManager.GetOrGenerateEnemyDamageData(targetEnemy);
+                var damageData = EnemyDataHelper.GetOrGenerateEnemyDamageData(targetEnemy);
                 if (damageData.IsImmortal)
                     return;
 

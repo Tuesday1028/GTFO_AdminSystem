@@ -1,5 +1,6 @@
 ﻿using CellMenu;
-using Hikaria.DevConsoleLite;
+using Hikaria.AdminSystem.Utilities;
+using Hikaria.QC;
 using Player;
 using SNetwork;
 using System.Collections.Generic;
@@ -18,32 +19,23 @@ namespace Hikaria.AdminSystem.Features.Misc
 
         public override string Description => "允许玩家在游戏内更换装备";
 
+        public override bool InlineSettingsIntoParentMenu => true;
+
         public override FeatureGroup Group => EntryPoint.Groups.Misc;
 
         [FeatureConfig]
-        public static SwapGearSettings Settings { get; set; }
+        public static SwapGearInLevelSettings Settings { get; set; }
 
-        public class SwapGearSettings
+        public class SwapGearInLevelSettings
         {
-            [FSDisplayName("游戏内更换装备")]
+            [FSDisplayName("解锁装备")]
+            [Command("SwapGearInLevel", "游戏内更换装备", MonoTargetType.Registry)]
             public bool EnableSwapGearInLevel { get; set; } = true;
         }
 
         public override void Init()
         {
-            DevConsole.AddCommand(Command.Create<bool?>("SwapGearInLevel", "游戏内更换装备", "游戏内更换装备", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.EnableSwapGearInLevel;
-                }
-
-                Settings.EnableSwapGearInLevel = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 游戏内更换装备");
-            }, () =>
-            {
-                DevConsole.LogVariable("游戏内更换装备", Settings.EnableSwapGearInLevel);
-            }));
+            QuantumRegistry.RegisterObject(Settings);
         }
 
 

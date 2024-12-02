@@ -1,5 +1,6 @@
 ﻿using CellMenu;
-using Hikaria.DevConsoleLite;
+using Hikaria.AdminSystem.Utilities;
+using Hikaria.QC;
 using Player;
 using SNetwork;
 using TheArchive.Core.Attributes;
@@ -12,37 +13,30 @@ namespace Hikaria.AdminSystem.Features.Player
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
     [DoNotSaveToConfig]
-    public class MiniMapWarp : Feature
+    public class MapClickWarp : Feature
     {
-        public override string Name => "小地图传送";
+        public override string Name => "地图点击传送";
 
-        public override string Description => "玩家通过点击小地图传送到点击位置";
+        public override string Description => "玩家通过点击地图传送到点击位置";
+
+        public override bool InlineSettingsIntoParentMenu => true;
 
         [FeatureConfig]
-        public static MiniMapWarpSettings Settings { get; set; }
+        public static MapClickWarpSettings Settings { get; set; }
 
-        public class MiniMapWarpSettings
+        public class MapClickWarpSettings
         {
-            [FSDisplayName("小地图传送")]
-            public bool EnableMiniMapWarp { get; set; }
+            [FSDisplayName("地图点击传送")]
+            [Command("MapClickWarp", MonoTargetType.Registry)]
+            public bool EnableMapClickWarp { get; set; }
         }
+
 
         public override FeatureGroup Group => EntryPoint.Groups.Player;
 
         public override void Init()
         {
-            DevConsole.AddCommand(Command.Create<bool?>("MiniMapWarp", "小地图传送", "小地图传送", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.EnableMiniMapWarp;
-                }
-                Settings.EnableMiniMapWarp = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 小地图传送");
-            }, () =>
-            {
-                DevConsole.LogVariable("小地图传送", Settings.EnableMiniMapWarp);
-            }));
+            QuantumRegistry.RegisterObject(Settings);
         }
 
         [ArchivePatch(typeof(CM_PageMap), nameof(CM_PageMap.DrawWithPixels))]
@@ -50,13 +44,13 @@ namespace Hikaria.AdminSystem.Features.Player
         {
             private static void Postfix(SNet_Player player, Vector2 pos)
             {
-                if (!Settings.EnableMiniMapWarp)
+                if (!Settings.EnableMapClickWarp)
                     return;
                 PlayerAgent playerAgent = player.PlayerAgent.Cast<PlayerAgent>();
                 Vector3 vector;
                 vector = new Vector3(pos.x / CM_PageMap.WorldToUIDisScale, playerAgent.Position.y, pos.y / CM_PageMap.WorldToUIDisScale);
                 playerAgent.RequestWarpToSync(playerAgent.DimensionIndex, vector, playerAgent.TargetLookDir, PlayerAgent.WarpOptions.ShowScreenEffectForLocal);
-                DevConsole.Log($"<color=orange>{playerAgent.PlayerName} 已传送至 ({(int)vector.x},{(int)vector.y},{(int)vector.z})</color>");
+                ConsoleLogs.LogToConsole($"<color=orange>{playerAgent.PlayerName} 已传送至 ({(int)vector.x},{(int)vector.y},{(int)vector.z})</color>");
             }
         }
 
@@ -65,7 +59,7 @@ namespace Hikaria.AdminSystem.Features.Player
             eGameStateName current = (eGameStateName)state;
             if (current == eGameStateName.AfterLevel)
             {
-                Settings.EnableMiniMapWarp = false;
+                Settings.EnableMapClickWarp = false;
             }
         }
     }

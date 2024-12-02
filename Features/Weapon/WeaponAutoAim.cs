@@ -4,8 +4,9 @@ using GameData;
 using Gear;
 using Hikaria.AdminSystem.Features.Player;
 using Hikaria.AdminSystem.Managers;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
-using Hikaria.DevConsoleLite;
+using Hikaria.QC;
 using Player;
 using SNetwork;
 using System;
@@ -38,6 +39,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         public class WeaponAutoAimSettings
         {
             [FSDisplayName("启用自瞄")]
+            [Command("AutoAim", MonoTargetType.Registry)]
             public bool EnableAutoAim { get; set; }
 
             [FSDisplayName("弹道修正")]
@@ -87,12 +89,12 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 get
                 {
-                    return EnemyDataManager.ArmorMultiThreshold;
+                    return EnemyDataHelper.ArmorMultiThreshold;
                 }
                 set
                 {
-                    EnemyDataManager.ArmorMultiThreshold = value;
-                    EnemyDataManager.ClearGeneratedEnemyDamageData();
+                    EnemyDataHelper.ArmorMultiThreshold = value;
+                    EnemyDataHelper.ClearGeneratedEnemyDamageData();
                 }
             }
 
@@ -124,19 +126,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
         public override void Init()
         {
+            QuantumRegistry.RegisterObject(Settings);
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<WeaponAutoAimHandler>();
-            DevConsole.AddCommand(Command.Create<bool?>("AutoAim", "自瞄", "自瞄", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.EnableAutoAim;
-                }
-                Settings.EnableAutoAim = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 自瞄");
-            }, () =>
-            {
-                DevConsole.LogVariable("自瞄", Settings.EnableAutoAim);
-            }));
         }
 
         public override void OnGameStateChanged(int state)
@@ -538,11 +529,11 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     return;
                 }
 
-                EnemyDataManager.EnemyDamageData data = EnemyDataManager.GetOrGenerateEnemyDamageData(m_Target);
+                EnemyDataHelper.EnemyDamageData data = EnemyDataHelper.GetOrGenerateEnemyDamageData(m_Target);
 
                 if (data.IsImmortal)
                 {
-                    if (OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var tentry) && tentry.EnableOneShotKill)
+                    if (OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var enable) && enable)
                     {
                         foreach (var index in data.Armorspots)
                         {
@@ -593,7 +584,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                         }
                     }
                 }
-                if (data.HasRealArmorSpot && OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var entry) && entry.EnableOneShotKill)
+                if (data.HasRealArmorSpot && OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var enable2) && enable2)
                 {
                     foreach (var index in data.RealArmorSpots)
                     {

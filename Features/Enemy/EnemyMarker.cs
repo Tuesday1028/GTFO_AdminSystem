@@ -3,10 +3,9 @@ using BepInEx.Unity.IL2CPP.Utils;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Enemies;
 using Hikaria.AdminSystem.Managers;
-using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
 using Hikaria.Core.Interfaces;
-using Hikaria.DevConsoleLite;
+using Hikaria.QC;
 using Player;
 using SNetwork;
 using System;
@@ -23,11 +22,14 @@ namespace Hikaria.AdminSystem.Features.Enemy
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
     [DoNotSaveToConfig]
+    [CommandPrefix("Enemy")]
     internal class EnemyMarker : Feature, IOnSessionMemberChanged, IOnRecallComplete
     {
         public override string Name => "敌人标记";
 
         public override string Description => "实时显示敌人类别、位置、血量、状态和距离信息";
+
+        public override bool InlineSettingsIntoParentMenu => true;
 
         public override FeatureGroup Group => EntryPoint.Groups.Enemy;
 
@@ -37,6 +39,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
         public class EnemyMarkerSettings
         {
             [FSDisplayName("敌人标记")]
+            [Command("EnemyMarker", MonoTargetType.Registry)]
             public bool EnableEnemyMarker
             {
                 get
@@ -53,33 +56,23 @@ namespace Hikaria.AdminSystem.Features.Enemy
                 }
             }
 
-            private bool _enableEnemyMarker;
-
             [FSDisplayName("标记最大区域间隔")]
+            [Command("MarkerRange", "敌人标记最大区域间隔")]
             public int MaxDetectionNodeRange { get; set; } = 3;
         }
+
+        private static bool _enableEnemyMarker = true;
+
 
         public override void Init()
         {
             GameEventAPI.RegisterSelf(this);
+            QuantumRegistry.RegisterObject(Settings);
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<EnemyMarkerHandler>();
-            DevConsole.AddCommand(Command.Create<bool?>("EnemyMarker", "敌人标记", "实时显示敌人类别、位置、血量、状态和距离信息", Parameter.Create("Enable", "True: 启用, False: 禁用"), enable =>
-            {
-                if (!enable.HasValue)
-                {
-                    enable = !Settings.EnableEnemyMarker;
-                }
-
-                Settings.EnableEnemyMarker = enable.Value;
-                DevConsole.LogSuccess($"已{(enable.Value ? "启用" : "禁用")} 敌人标记");
-            }, () =>
-            {
-                DevConsole.LogVariable("敌人标记", Settings.EnableEnemyMarker);
-            }));
         }
 
         [ArchivePatch(typeof(LocalPlayerAgent), nameof(LocalPlayerAgent.Setup))]
-        private class LocalPlayerAgent_Setup_Patch
+        private class LocalPlayerAgent__Setup__Patch
         {
             private static void Postfix(LocalPlayerAgent __instance)
             {
@@ -107,7 +100,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
         {
             private void Awake()
             {
-                player = AdminUtils.LocalPlayerAgent;
+                player = GetComponent<LocalPlayerAgent>();
             }
 
             private void Start()
@@ -126,7 +119,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
                         {
                             try
                             {
-                                if (Settings.EnableEnemyMarker)
+                                if (_enableEnemyMarker)
                                 {
                                     if (player.CourseNode == null)
                                     {
@@ -211,7 +204,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
                     {
                         color = Color.red;
                     }
-                    marker.SetTitle($"<color=#FFFFFF><b>敌人: {TranslateManager.EnemyName(agent.EnemyDataID)}\nHP: {agent.Damage.Health:F2}\n状态: <sprite=0 color=#{ColorExt.ToHex(color)}>\n距离: {distance:F2}</b></color>");
+                    marker.SetTitle($"<color=#FFFFFF><b>敌人: {TranslateHelper.EnemyName(agent.EnemyDataID)}\nHP: {agent.Damage.Health:F2}\n状态: <sprite=0 color=#{ColorExt.ToHex(color)}>\n距离: {distance:F2}</b></color>");
                     yield return yielder;
                 }
             }
