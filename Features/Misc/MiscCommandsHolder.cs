@@ -10,6 +10,7 @@ using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
 using Hikaria.QC;
+using Hikaria.QC.Suggestors.Tags;
 using LevelGeneration;
 using Player;
 using SNetwork;
@@ -91,7 +92,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         }
 
         [Command("FireTargeting", "发射追踪粒子")]
-        private static void FireTargeting(int type, [PlayerSlotIndex] int slot, int count = 1)
+        private static void FireTargeting(ProjectileType type, [PlayerSlotIndex] int slot, int count = 1)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out PlayerAgent player))
             {
@@ -100,7 +101,7 @@ namespace Hikaria.AdminSystem.Features.Misc
             }
             while (count > 0)
             {
-                ProjectileManager.WantToFireTargeting((ProjectileType)type, player, AdminUtils.LocalPlayerAgent.EyePosition + AdminUtils.LocalPlayerAgent.Forward * 0.25f, AdminUtils.LocalPlayerAgent.Forward, count, 100);
+                ProjectileManager.WantToFireTargeting(type, player, AdminUtils.LocalPlayerAgent.EyePosition + AdminUtils.LocalPlayerAgent.Forward * 0.25f, AdminUtils.LocalPlayerAgent.Forward, count, 100);
                 count--;
             }
         }
@@ -380,7 +381,7 @@ namespace Hikaria.AdminSystem.Features.Misc
             ConsoleLogs.LogToConsole("----------------------------------------------------------------");
         }
 
-        [Command("ListEnemyInZone", "列出敌人")]
+        [Command("ListEnemiesInZone", "列出敌人")]
         private static void ListEnemiesInZone([ZoneAlias] int alias)
         {
             if (GameStateManager.CurrentStateName != eGameStateName.InLevel)
@@ -468,7 +469,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         }
 
         [Command("SetEnemyTarget", "设置敌人目标")]
-        private static void SetEnemyTarget([PlayerSlotIndex] int slot, EnemyChoiceType choice)
+        private static void SetEnemyTarget([PlayerSlotIndex] int slot, EnemyChoiceType choice = EnemyChoiceType.Awake)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player))
             {
@@ -628,7 +629,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var targetPlayer))
             {
-                ConsoleLogs.LogToConsole($"不存在slot为 {slot} 的玩家", LogLevel.Error);
+                ConsoleLogs.LogToConsole($"不存在 slot 为 {slot} 的玩家", LogLevel.Error);
                 return;
             }
             AgentReplicatedActions.PlayerReviveAction(targetPlayer, AdminUtils.LocalPlayerAgent, targetPlayer.Position);
@@ -659,6 +660,41 @@ namespace Hikaria.AdminSystem.Features.Misc
                     pItemData_Custom custom = itemInLevel.pItemData.custom;
                     custom.ammo = ammoInPack;
                     itemInLevel.GetSyncComponent().AttemptPickupInteraction(ePickupItemInteractionType.Place, SNet.LocalPlayer, custom, AdminUtils.LocalPlayerAgent.FPSCamera.CameraRayPos, AdminUtils.LocalPlayerAgent.Rotation, aig_CourseNode, true, true);
+                    ConsoleLogs.LogToConsole($"已将 {item.ArchetypeName} 丢弃");
+                    return;
+                }
+            }
+            ConsoleLogs.LogToConsole("丢弃失败", LogLevel.Error);
+        }
+
+        [Command("DropItem", "丢弃物品")]
+        private static void DropItem([PlayerSlotIndex] int slot, [Suggestions(InventorySlot.ResourcePack, InventorySlot.Consumable, InventorySlot.InLevelCarry)] InventorySlot itemSlot)
+        {
+            if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var targetPlayer))
+            {
+                ConsoleLogs.LogToConsole($"不存在 slot 为 {slot} 的玩家", LogLevel.Error);
+                return;
+            }
+            if (itemSlot != InventorySlot.ResourcePack && itemSlot != InventorySlot.Consumable && itemSlot != InventorySlot.InLevelCarry)
+            {
+                ConsoleLogs.LogToConsole($"非法物品栏位 {itemSlot}", LogLevel.Error);
+                return;
+            }
+            if (!PlayerBackpackManager.TryGetBackpack(targetPlayer.Owner, out var backpack) || !backpack.TryGetBackpackItem(itemSlot, out var backpackItem) || backpackItem.Instance == null)
+            {
+                ConsoleLogs.LogToConsole($"无法获取物品", LogLevel.Error);
+                return;
+            }
+            if (PlayerBackpackManager.TryGetItemInLevelFromItemData(backpackItem.Instance.Get_pItemData(), out var item))
+            {
+                ItemInLevel itemInLevel = item.Cast<ItemInLevel>();
+                var localPlayer = AdminUtils.LocalPlayerAgent;
+                if (AIG_CourseNode.TryGetCourseNode(localPlayer.DimensionIndex, localPlayer.Position, 0f, out var node))
+                {
+                    float ammoInPack = backpack.AmmoStorage.GetAmmoInPack(PlayerAmmoStorage.GetAmmoTypeFromSlot(itemSlot));
+                    pItemData_Custom custom = itemInLevel.pItemData.custom;
+                    custom.ammo = ammoInPack;
+                    itemInLevel.GetSyncComponent().AttemptPickupInteraction(ePickupItemInteractionType.Place, targetPlayer.Owner, custom, localPlayer.FPSCamera.CameraRayPos, localPlayer.Rotation, node, true, true);
                     ConsoleLogs.LogToConsole($"已将 {item.ArchetypeName} 丢弃");
                     return;
                 }
@@ -977,15 +1013,10 @@ namespace Hikaria.AdminSystem.Features.Misc
 
 
         [Command("FogTransition", "改变雾气")]
-        private static void StartFogTransition(uint fogDataID, int dimensionIndex, int duration = 1)
+        private static void StartFogTransition([FogSettingsDataBlockID] uint fogDataID, eDimensionIndex dimensionIndex, int duration = 1)
         {
-            if (dimensionIndex < 0 || dimensionIndex > 21)
-            {
-                ConsoleLogs.LogToConsole("非法象限");
-                return;
-            }
-            EnvironmentStateManager.AttemptStartFogTransition(fogDataID, duration, (eDimensionIndex)dimensionIndex);
-            ConsoleLogs.LogToConsole($"开始变更雾气, 象限: {(eDimensionIndex)dimensionIndex}, ID: {fogDataID}, 过渡时长 {duration} 秒");
+            EnvironmentStateManager.AttemptStartFogTransition(fogDataID, duration, dimensionIndex);
+            ConsoleLogs.LogToConsole($"开始变更雾气, 象限: {dimensionIndex}, ID: {fogDataID}, 过渡时长 {duration} 秒");
         }
 
         [Command("FinishWardenObjectiveChain", "完成任务")]

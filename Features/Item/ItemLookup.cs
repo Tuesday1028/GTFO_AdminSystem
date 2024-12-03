@@ -239,7 +239,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     ammo = 100f,
                 });
                 itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.Pickup, playerAgent.Owner);
-            })), ItemMode.Pickup, localPlayer.FPSCamera.CameraRayPos, playerAgent.Rotation, playerAgent.CourseNode, playerAgent);
+            })), ItemMode.Pickup, playerAgent.Position, playerAgent.Rotation, playerAgent.CourseNode, playerAgent);
         }
 
         [Command("GiveItemByName")]
@@ -281,7 +281,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     ammo = 100f,
                 });
                 itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.Pickup, playerAgent.Owner);
-            })), ItemMode.Pickup, localPlayer.FPSCamera.CameraRayPos, playerAgent.Rotation, playerAgent.CourseNode, playerAgent);
+            })), ItemMode.Pickup, playerAgent.Position, playerAgent.Rotation, playerAgent.CourseNode, playerAgent);
         }
 
         [Command("ListItemData")]

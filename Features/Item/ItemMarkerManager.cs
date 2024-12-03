@@ -108,7 +108,8 @@ namespace Hikaria.AdminSystem.Features.Item
                 var item = replicator.Item?.TryCast<ItemInLevel>();
                 if (item == null)
                     return;
-                ItemMarker.RegisterItemInLevel(item);
+                ItemMarker.RegisterItemInLevel(item, true);
+                ItemMarker._AllItemInLevels.Add(item);
             }
         }
 
@@ -318,7 +319,7 @@ namespace Hikaria.AdminSystem.Features.Item
                         navMarker = GuiManager.NavMarkerLayer.PlaceCustomMarker(NavMarkerOption.WaypointTitle, item.gameObject, item.gameObject.name, 0, false);
                     }
                     navMarker.SetVisible(MarkItems);
-                    if (!item.internalSync.GetCurrentState().placement.node.TryGet(out var node) || node.m_zone.ID != AdminUtils.LocalPlayerAgent.CourseNode.m_zone.ID)
+                    if (item.CourseNode == null && (!item.internalSync.GetCurrentState().placement.node.TryGet(out var node) || node.m_zone.ID != AdminUtils.LocalPlayerAgent.CourseNode.m_zone.ID))
                     {
                         navMarker.SetVisible(false);
                     }
@@ -824,7 +825,7 @@ namespace Hikaria.AdminSystem.Features.Item
                 }
             }
 
-            public static void RegisterItemInLevel(ItemInLevel itemInLevel)
+            public static void RegisterItemInLevel(ItemInLevel itemInLevel, bool manualRegister = false)
             {
                 do
                 {
@@ -836,7 +837,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     var marker = Place(resourcePackItem, ItemType.Resource);
                     marker.SetColor(ColorType.PickupItems);
                     marker.SetTitle(resourcePackItem.m_terminalItem);
-                    if (IsFirstLoadPerLevel)
+                    if (IsFirstLoadPerLevel || manualRegister)
                     {
                         resourcePackItem.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                         {
@@ -866,7 +867,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     var marker = Place(consumable, ItemType.Consumable);
                     marker.SetColor(ColorType.PickupItems);
                     marker.SetTitle(consumable.PublicName);
-                    if (IsFirstLoadPerLevel)
+                    if (IsFirstLoadPerLevel || manualRegister)
                     {
                         consumable.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                         {
@@ -896,7 +897,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     var marker = Place(smallPickupItem, ItemType.SmallPickupItems);
                     marker.SetColor(ColorType.Objective);
                     marker.SetTitle(name);
-                    if (IsFirstLoadPerLevel)
+                    if (IsFirstLoadPerLevel || manualRegister)
                     {
                         smallPickupItem.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                         {
@@ -928,7 +929,7 @@ namespace Hikaria.AdminSystem.Features.Item
                         var marker = Place(carry, ItemType.InLevelCarry);
                         marker.SetColor(ColorType.GeneratorItems);
                         marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
-                        if (IsFirstLoadPerLevel)
+                        if (IsFirstLoadPerLevel || manualRegister)
                         {
                             carry.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                             {
@@ -961,7 +962,7 @@ namespace Hikaria.AdminSystem.Features.Item
                         var marker = Place(carry, ItemType.InLevelCarry);
                         marker.SetColor(ColorType.FogItems);
                         marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
-                        if (IsFirstLoadPerLevel)
+                        if (IsFirstLoadPerLevel || manualRegister)
                         {
                             carry.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                             {
@@ -987,7 +988,7 @@ namespace Hikaria.AdminSystem.Features.Item
                         var marker = Place(carry, ItemType.InLevelCarry);
                         marker.SetColor(ColorType.Objective);
                         marker.SetTitle(carry.m_terminalItem, carry.ArchetypeName);
-                        if (IsFirstLoadPerLevel)
+                        if (IsFirstLoadPerLevel || manualRegister)
                         {
                             carry.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                             {
@@ -1027,7 +1028,7 @@ namespace Hikaria.AdminSystem.Features.Item
                         var marker = Place(key, ItemType.PickupItems);
                         marker.SetColor(ColorType.BulkheadItems);
                         marker.SetTitle(key.m_terminalItem, key.ArchetypeName);
-                        if (IsFirstLoadPerLevel)
+                        if (IsFirstLoadPerLevel || manualRegister)
                         {
                             key.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                             {
@@ -1049,7 +1050,7 @@ namespace Hikaria.AdminSystem.Features.Item
                         var marker = Place(key, ItemType.PickupItems);
                         marker.SetColor(ColorType.KeycardItems);
                         marker.SetTitle(key.m_terminalItem, key.ArchetypeName);
-                        if (IsFirstLoadPerLevel)
+                        if (IsFirstLoadPerLevel || manualRegister)
                         {
                             key.GetSyncComponent().Cast<LG_PickupItem_Sync>().OnSyncStateChange += new Action<ePickupItemStatus, pPickupPlacement, PlayerAgent, bool>((status, placement, player, isRecall) =>
                             {
