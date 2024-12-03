@@ -153,7 +153,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     return;
                 itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, SNet.LocalPlayer, new()
                 {
-                    ammo = 100f,
+                    ammo = maxAmmo,
                 });
             })), itemMode, localPlayer.FPSCamera.CameraRayPos, localPlayer.Rotation, localPlayer.CourseNode, localPlayer);
         }
@@ -195,7 +195,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     return;
                 itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, SNet.LocalPlayer, new()
                 {
-                    ammo = 100f,
+                    ammo = maxAmmo,
                 });
             })), itemMode, localPlayer.FPSCamera.CameraRayPos, localPlayer.Rotation, localPlayer.CourseNode, localPlayer);
         }
@@ -236,7 +236,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     return;
             itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, playerAgent.Owner, new()
                 {
-                    ammo = 100f,
+                    ammo = maxAmmo,
                 });
                 itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.Pickup, playerAgent.Owner);
             })), ItemMode.Pickup, playerAgent.Position, playerAgent.Rotation, playerAgent.CourseNode, localPlayer);
@@ -278,7 +278,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     return;
                 itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, playerAgent.Owner, new()
                 {
-                    ammo = 100f,
+                    ammo = maxAmmo,
                 });
                 itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.Pickup, playerAgent.Owner);
             })), ItemMode.Pickup, playerAgent.Position, playerAgent.Rotation, playerAgent.CourseNode, localPlayer);
