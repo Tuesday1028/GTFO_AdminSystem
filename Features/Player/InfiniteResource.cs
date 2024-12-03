@@ -11,14 +11,16 @@ using TheArchive.Core.FeaturesAPI;
 
 namespace Hikaria.AdminSystem.Features.Player
 {
-    [DoNotSaveToConfig]
+    [EnableFeatureByDefault]
+    [DisallowInGameToggle]
+    [HideInModSettings]
     public class InfiniteResource : Feature, IOnSessionMemberChanged
     {
         public override string Name => "无限资源";
 
         public override FeatureGroup Group => EntryPoint.Groups.Player;
 
-        public static Dictionary<ulong, InfiniteResourceSettings> InfResourceLookup { get; set; } = new();
+        private static Dictionary<ulong, InfiniteResourceSettings> InfResourceLookup = new();
 
         public class InfiniteResourceSettings
         {

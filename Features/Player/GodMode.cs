@@ -10,28 +10,27 @@ using SNetwork;
 using System;
 using System.Collections.Generic;
 using TheArchive.Core.Attributes;
-using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 
 namespace Hikaria.AdminSystem.Features.Player
 {
+    [EnableFeatureByDefault]
+    [DisallowInGameToggle]
+    [HideInModSettings]
     public class GodMode : Feature, IOnSessionMemberChanged
     {
         public override string Name => "无敌模式";
 
         public override FeatureGroup Group => EntryPoint.Groups.Player;
 
-        public static Dictionary<ulong, GodModeSettings> GodModeLookup { get; set; } = new();
+        private static Dictionary<ulong, GodModeSettings> GodModeLookup = new();
 
         public class GodModeSettings
         {
-            [FSDisplayName("忽略所有伤害")]
             public bool IgnoreAllDamage { get; set; }
 
-            [FSDisplayName("忽略感染")]
             public bool IgnoreInfection { get; set; }
 
-            [FSDisplayName("无法倒地")]
             public bool CannotDie { get; set; }
         }
 

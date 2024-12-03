@@ -8,15 +8,14 @@ using Hikaria.QC;
 using Player;
 using SNetwork;
 using System.Collections.Generic;
-using System.Linq;
 using TheArchive.Core.Attributes;
-using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 
 namespace Hikaria.AdminSystem.Features.Player
 {
-    [DoNotSaveToConfig]
     [EnableFeatureByDefault]
+    [DisallowInGameToggle]
+    [HideInModSettings]
     public class OneShotKill : Feature, IOnSessionMemberChanged
     {
         public override string Name => "秒杀";
@@ -26,7 +25,7 @@ namespace Hikaria.AdminSystem.Features.Player
         public override FeatureGroup Group => EntryPoint.Groups.Player;
 
 
-        public static Dictionary<ulong, bool> OneShotKillLookup { get; set; } = new();
+        public static Dictionary<ulong, bool> OneShotKillLookup = new();
 
         public override void Init()
         {

@@ -5,7 +5,6 @@ using Hikaria.AdminSystem.Utility;
 using Hikaria.QC;
 using Player;
 using TheArchive.Core.Attributes;
-using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
 using TheArchive.Loader;
 using UnityEngine;

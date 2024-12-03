@@ -6,8 +6,9 @@ using UnityEngine;
 
 namespace Hikaria.AdminSystem.Features.Develop
 {
-    [DisallowInGameToggle]
+    [HideInModSettings]
     [EnableFeatureByDefault]
+    [DisallowInGameToggle]
     internal class Bootstrap : Feature
     {
         public override string Name => "Bootstrap";

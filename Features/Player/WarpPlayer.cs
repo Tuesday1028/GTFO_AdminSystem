@@ -14,9 +14,9 @@ using static Hikaria.AdminSystem.Features.Item.ItemLookup;
 
 namespace Hikaria.AdminSystem.Features.Player
 {
+    [HideInModSettings]
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
-    [DoNotSaveToConfig]
     public class WarpPlayer : Feature
     {
         public override string Name => "传送玩家";

@@ -10,9 +10,9 @@ using TheArchive.Core.FeaturesAPI;
 
 namespace Hikaria.AdminSystem.Features.InLevel
 {
+    [HideInModSettings]
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
-    [DoNotSaveToConfig]
     public class DoorInteraction : Feature
     {
         public override string Name => "操作门";

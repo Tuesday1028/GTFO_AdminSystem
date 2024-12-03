@@ -1,5 +1,4 @@
 ﻿using CellMenu;
-using Hikaria.AdminSystem.Utilities;
 using Hikaria.QC;
 using Player;
 using SNetwork;
@@ -29,14 +28,11 @@ namespace Hikaria.AdminSystem.Features.Misc
         public class SwapGearInLevelSettings
         {
             [FSDisplayName("解锁装备")]
-            [Command("SwapGearInLevel", "游戏内更换装备", MonoTargetType.Registry)]
-            public bool EnableSwapGearInLevel { get; set; } = true;
+            public bool EnableSwapGearInLevel { get => _enableSwapGearInLevel; set => _enableSwapGearInLevel = value; }
         }
 
-        public override void Init()
-        {
-            QuantumRegistry.RegisterObject(Settings);
-        }
+        [Command("SwapGearInLevel")]
+        private static bool _enableSwapGearInLevel = true;
 
 
         [ArchivePatch(typeof(CM_PlayerLobbyBar), nameof(CM_PlayerLobbyBar.HideLoadoutUI))]
@@ -44,7 +40,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         {
             private static void Prefix(ref bool hide)
             {
-                if (!Settings.EnableSwapGearInLevel)
+                if (!_enableSwapGearInLevel)
                 {
                     return;
                 }
@@ -60,7 +56,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         {
             private static void Prefix(CM_InventorySlotItem __instance, ref bool clickable)
             {
-                if (!Settings.EnableSwapGearInLevel)
+                if (!_enableSwapGearInLevel)
                 {
                     return;
                 }
@@ -77,7 +73,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         {
             private static bool Prefix()
             {
-                if (!Settings.EnableSwapGearInLevel)
+                if (!_enableSwapGearInLevel)
                 {
                     return true;
                 }
@@ -90,7 +86,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         {
             private static void Prefix()
             {
-                if (!Settings.EnableSwapGearInLevel || CurrentGameState != (int)eGameStateName.InLevel)
+                if (!_enableSwapGearInLevel || CurrentGameState != (int)eGameStateName.InLevel)
                 {
                     return;
                 }
@@ -104,7 +100,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         {
             private static void Postfix(PlayerSync __instance)
             {
-                if (!__instance.m_agent.Owner.IsLocal || !Settings.EnableSwapGearInLevel || CurrentGameState != (int)eGameStateName.InLevel || !WaitingForGearEquiped)
+                if (!__instance.m_agent.Owner.IsLocal || !_enableSwapGearInLevel || CurrentGameState != (int)eGameStateName.InLevel || !WaitingForGearEquiped)
                 {
                     return;
                 }

@@ -22,7 +22,6 @@ namespace Hikaria.AdminSystem.Features.Enemy
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
     [DoNotSaveToConfig]
-    [CommandPrefix("Enemy")]
     internal class EnemyMarker : Feature, IOnSessionMemberChanged, IOnRecallComplete
     {
         public override string Name => "敌人标记";
@@ -39,35 +38,37 @@ namespace Hikaria.AdminSystem.Features.Enemy
         public class EnemyMarkerSettings
         {
             [FSDisplayName("敌人标记")]
-            [Command("EnemyMarker", MonoTargetType.Registry)]
-            public bool EnableEnemyMarker
-            {
-                get
-                {
-                    return _enableEnemyMarker;
-                }
-                set
-                {
-                    _enableEnemyMarker = value;
-                    if (!value)
-                    {
-                        EnemyMarkerHandler.DoClear();
-                    }
-                }
-            }
+            public bool EnableEnemyMarker { get => _enableEnemyMarker; set => _enableEnemyMarker = value; }
 
             [FSDisplayName("标记最大区域间隔")]
-            [Command("MarkerRange", "敌人标记最大区域间隔")]
-            public int MaxDetectionNodeRange { get; set; } = 3;
+            public int MaxDetectionNodeRange { get => _maxDetectionNodeRange; set => _maxDetectionNodeRange = value; }
         }
 
-        private static bool _enableEnemyMarker = true;
+        [Command("EnemyMarker")]
+        private static bool _enableEnemyMarker
+        {
+            get
+            {
+                return _enemyMarker;
+            }
+            set
+            {
+                _enemyMarker = value;
+                if (!value)
+                {
+                    EnemyMarkerHandler.DoClear();
+                }
+            }
+        }
 
+        private static bool _enemyMarker;
+
+        [Command("MarkerRange", "敌人标记最大区域间隔")]
+        public static int _maxDetectionNodeRange = 3;
 
         public override void Init()
         {
             GameEventAPI.RegisterSelf(this);
-            QuantumRegistry.RegisterObject(Settings);
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<EnemyMarkerHandler>();
         }
 
@@ -119,13 +120,13 @@ namespace Hikaria.AdminSystem.Features.Enemy
                         {
                             try
                             {
-                                if (_enableEnemyMarker)
+                                if (_enemyMarker)
                                 {
                                     if (player.CourseNode == null)
                                     {
                                         break;
                                     }
-                                    foreach (var enemy in AIG_CourseGraph.GetReachableEnemiesInNodes(player.CourseNode, Settings.MaxDetectionNodeRange))
+                                    foreach (var enemy in AIG_CourseGraph.GetReachableEnemiesInNodes(player.CourseNode, _maxDetectionNodeRange))
                                     {
                                         if (MarkerLookup.ContainsKey(enemy.GlobalID))
                                         {
@@ -170,7 +171,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
                 var yielder = new WaitForSeconds(0.1f);
                 while (agent.Alive)
                 {
-                    if (AIG_CourseGraph.GetDistanceBetweenToNodes(player.CourseNode, agent.CourseNode) > Settings.MaxDetectionNodeRange)
+                    if (AIG_CourseGraph.GetDistanceBetweenToNodes(player.CourseNode, agent.CourseNode) > _maxDetectionNodeRange)
                     {
                         MarkerLookup.Remove(agent.GlobalID);
                         GuiManager.NavMarkerLayer.RemoveMarker(marker);

@@ -42,7 +42,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         }
 
         [Command("EnemyDetection")]
-        public static bool DisableEnemyPlayerDetection
+        private static bool DisableEnemyPlayerDetection
         {
             get
             {
@@ -963,7 +963,7 @@ namespace Hikaria.AdminSystem.Features.Misc
             ConsoleLogs.LogToConsole("已关闭所有警报");
         }
 
-        [Command("StopAllEnemyWaves", "停止当前所有刷怪")]
+        [Command("StopEnemyWaves", "停止当前所有刷怪")]
         private static void StopAllEnemyWaves()
         {
             if (!SNet.IsMaster)

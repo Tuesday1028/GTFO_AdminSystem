@@ -18,9 +18,7 @@ namespace Hikaria.AdminSystem.Features.Item
 {
     public class FogRepellerMarker : Feature, IOnRecallComplete, IOnSessionMemberChanged
     {
-        public override string Name => "Fog Repeller Markers";
-
-        public override string Description => "Add hud markers onto placed down fog repellers.";
+        public override string Name => "驱雾器标记";
 
         public override FeatureGroup Group => EntryPoint.Groups.Item;
 

@@ -24,23 +24,7 @@ public class FullBright : Feature
     public class FullBrightSettings
     {
         [FSDisplayName("启用")]
-        [Command("FullBright", "视野全亮", MonoTargetType.Registry)]
-        public bool Enabled
-        {
-            get
-            {
-                return _enabled;
-            }
-            set
-            {
-                _enabled = value;
-                if (SuperLight != null)
-                {
-                    SuperLight.enabled = _enabled;
-                }
-            }
-        }
-        public bool _enabled = false;
+        public bool Enabled { get => FullBright.Enabled; set => FullBright.Enabled = value; }
 
         [FSDisplayName("强度")]
         public float Intensity
@@ -121,10 +105,24 @@ public class FullBright : Feature
 
     private static EffectLight SuperLight;
 
-    public override void Init()
+    [Command("FullBright")]
+    private static bool Enabled
     {
-        QuantumRegistry.RegisterObject(Settings);
+        get
+        {
+            return _enabled;
+        }
+        set
+        {
+            _enabled = value;
+            if (SuperLight != null)
+            {
+                SuperLight.enabled = _enabled;
+            }
+        }
     }
+
+    private static bool _enabled;
 
     [ArchivePatch(typeof(LocalPlayerAgent), nameof(LocalPlayerAgent.Setup))] 
     private class LocalPlayerAgent__Setup__Patch
@@ -136,11 +134,10 @@ public class FullBright : Feature
                 __instance.gameObject.AddComponent<EffectLight>();
             }
             SuperLight = __instance.gameObject.GetComponent<EffectLight>();
-            Settings.Enabled = Settings.Enabled;
-            Settings.Range = Settings.Range;
-            Settings.Color = Settings.Color;
-            //Settings.Physical = Settings.Physical;
-            Settings.Intensity = Settings.Intensity;
+            SuperLight.enabled = Enabled;
+            SuperLight.Range = Settings.Range;
+            SuperLight.Color = Settings.Color;
+            SuperLight.Intensity = Settings.Intensity;
         }
     }
 }

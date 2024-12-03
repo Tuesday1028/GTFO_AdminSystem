@@ -27,24 +27,20 @@ namespace Hikaria.AdminSystem.Features.Player
         public class MapClickWarpSettings
         {
             [FSDisplayName("地图点击传送")]
-            [Command("MapClickWarp", MonoTargetType.Registry)]
-            public bool EnableMapClickWarp { get; set; }
+            public bool EnableMapClickWarp { get => _enableMapClickWarp; set => _enableMapClickWarp = value; }
         }
 
+        [Command("MapClickWarp")]
+        public static bool _enableMapClickWarp;
 
         public override FeatureGroup Group => EntryPoint.Groups.Player;
-
-        public override void Init()
-        {
-            QuantumRegistry.RegisterObject(Settings);
-        }
 
         [ArchivePatch(typeof(CM_PageMap), nameof(CM_PageMap.DrawWithPixels))]
         public class CM_LagePageMap__DrawWithPixels__Patch
         {
             private static void Postfix(SNet_Player player, Vector2 pos)
             {
-                if (!Settings.EnableMapClickWarp)
+                if (!_enableMapClickWarp)
                     return;
                 PlayerAgent playerAgent = player.PlayerAgent.Cast<PlayerAgent>();
                 Vector3 vector;
@@ -59,7 +55,7 @@ namespace Hikaria.AdminSystem.Features.Player
             eGameStateName current = (eGameStateName)state;
             if (current == eGameStateName.AfterLevel)
             {
-                Settings.EnableMapClickWarp = false;
+                _enableMapClickWarp = false;
             }
         }
     }

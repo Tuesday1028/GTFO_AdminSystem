@@ -4,7 +4,6 @@ using GameData;
 using Gear;
 using Hikaria.AdminSystem.Features.Player;
 using Hikaria.AdminSystem.Managers;
-using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.QC;
 using Player;
@@ -24,7 +23,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
 {
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
-    [DoNotSaveToConfig]
     public class WeaponAutoAim : Feature
     {
         public override string Name => "自瞄";
@@ -39,8 +37,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         public class WeaponAutoAimSettings
         {
             [FSDisplayName("启用自瞄")]
-            [Command("AutoAim", MonoTargetType.Registry)]
-            public bool EnableAutoAim { get; set; }
+            public bool EnableAutoAim { get => _enableAutoAim; set => _enableAutoAim = value; }
 
             [FSDisplayName("弹道修正")]
             public bool EnableTrajectoryRedirection { get; set; }
@@ -124,9 +121,11 @@ namespace Hikaria.AdminSystem.Features.Weapon
             }
         }
 
+        [Command("AutoAim")]
+        private static bool _enableAutoAim;
+
         public override void Init()
         {
-            QuantumRegistry.RegisterObject(Settings);
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<WeaponAutoAimHandler>();
         }
 
@@ -157,7 +156,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             private static void Postfix(BulletWeapon __instance)
             {
-                if (!Settings.EnableAutoAim)
+                if (!_enableAutoAim)
                     return;
                 if (GameStateManager.Current.m_currentStateName != eGameStateName.InLevel)
                 {
@@ -173,7 +172,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     weaponAutoAim = __instance.gameObject.AddComponent<WeaponAutoAimHandler>();
                 }
                 weaponAutoAim.Setup(__instance, __instance.Owner, __instance.Owner.FPSCamera);
-                weaponAutoAim.enabled = Settings.EnableAutoAim;
+                weaponAutoAim.enabled = _enableAutoAim;
             }
         }
 
@@ -206,7 +205,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             private static bool Prefix(PlayerEnemyCollision __instance, Vector3 pos, ref float __result)
             {
-                if (!Settings.EnableAutoAim)
+                if (!_enableAutoAim)
                     return true;
                 float num = 1f;
                 if (__instance.m_owner.CourseNode == null)
@@ -240,7 +239,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             private static void Prefix(Shotgun __instance)
             {
-                if (!Settings.EnableAutoAim)
+                if (!_enableAutoAim)
                     return;
                 if (__instance.Owner.IsLocallyOwned)
                     IsLocalShotgunFireShots = true;
@@ -248,7 +247,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             private static void Postfix(Shotgun __instance)
             {
-                if (!Settings.EnableAutoAim)
+                if (!_enableAutoAim)
                     return;
                 if (__instance.Owner.IsLocallyOwned)
                     IsLocalShotgunFireShots = false;
@@ -268,7 +267,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             private static void Prefix(ref global::Weapon.WeaponHitData weaponRayData, Vector3 originPos)
             {
-                if (!Settings.EnableAutoAim)
+                if (!_enableAutoAim)
                     return;
                 if (IsLocalShotgunFireShots) // 霰弹枪开火不会设置Owner
                 {
@@ -356,7 +355,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 get
                 {
-                    if (!Settings.EnableAutoAim)
+                    if (!_enableAutoAim)
                     {
                         return m_Owner.FPSCamera.CameraRayPos;
                     }
@@ -398,7 +397,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     m_PlayerCamera = camera.gameObject.GetComponent<Camera>();
                     SetupReticle();
                 }
-                enabled = Settings.EnableAutoAim;
+                enabled = _enableAutoAim;
             }
 
             public void DoClear()

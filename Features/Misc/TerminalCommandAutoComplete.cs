@@ -1,6 +1,5 @@
 ﻿using AK;
 using BepInEx.Unity.IL2CPP.Utils;
-using Hikaria.QC;
 using LevelGeneration;
 using System;
 using System.Collections;
@@ -14,7 +13,6 @@ using UnityEngine;
 namespace Hikaria.AdminSystem.Features.Misc
 {
     [EnableFeatureByDefault]
-    [DoNotSaveToConfig]
     [DisallowInGameToggle]
     public class TerminalCommandAutoComplete : Feature
     {
@@ -27,17 +25,10 @@ namespace Hikaria.AdminSystem.Features.Misc
 
         public class TerminalCommandAutoCompleteSettings
         {
-            [Command("TerminalAutoCommand", MonoTargetType.Registry)]
             [FSDisplayName("自动指令")]
             public bool EnableAutoCommand { get; set; }
-            [Command("DisableTerminalValidation", MonoTargetType.Registry)]
             [FSDisplayName("禁用指令验证")]
             public bool DisableCodeValiation { get; set; }
-        }
-
-        public override void Init()
-        {
-            QuantumRegistry.RegisterObject(Settings);
         }
 
         [ArchivePatch(typeof(LG_ComputerTerminalCommandInterpreter), nameof(LG_ComputerTerminalCommandInterpreter.EvaluateInput))]

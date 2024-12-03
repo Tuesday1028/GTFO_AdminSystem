@@ -1,5 +1,4 @@
-﻿using Hikaria.AdminSystem.Utilities;
-using Hikaria.QC;
+﻿using Hikaria.QC;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -7,7 +6,6 @@ using TheArchive.Core.FeaturesAPI;
 namespace Hikaria.AdminSystem.Features.Player
 {
     [EnableFeatureByDefault]
-    [DoNotSaveToConfig]
     public class NoCameraShake : Feature
     {
         public override string Name => "无视角抖动";
@@ -22,21 +20,18 @@ namespace Hikaria.AdminSystem.Features.Player
         public class NoCameraShakeSettings
         {
             [FSDisplayName("无视角抖动")]
-            [Command("NoCameraShake", MonoTargetType.Registry)]
-            public bool EnableNoCamerShake { get; set; }
+            public bool EnableNoCamerShake { get => _enableNoCamerShake; set => _enableNoCamerShake = value; }
         }
 
-        public override void Init()
-        {
-            QuantumRegistry.RegisterObject(Settings);
-        }
+        [Command("NoCameraShake")]
+        public static bool _enableNoCamerShake;
 
         [ArchivePatch(typeof(FPSCamera), nameof(FPSCamera.AddHitReact))]
         private class FPSCamera_AddHitReact_Patch
         {
             static bool Prefix()
             {
-                return !Settings.EnableNoCamerShake;
+                return !_enableNoCamerShake;
             }
         }
     }

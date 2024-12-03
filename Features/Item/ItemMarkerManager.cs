@@ -21,9 +21,9 @@ using UnityEngine;
 
 namespace Hikaria.AdminSystem.Features.Item
 {
-    [DisallowInGameToggle]
-    [DoNotSaveToConfig]
+    [HideInModSettings]
     [EnableFeatureByDefault]
+    [DisallowInGameToggle]
     public class ItemMarkerManager : Feature, IOnRecallComplete
     {
         public override string Name => "物品标记";
@@ -38,25 +38,25 @@ namespace Hikaria.AdminSystem.Features.Item
         public class ItemMarkerSettings
         {
             [FSDisplayName("物品标记")]
-            [Command("ItemMarker", MonoTargetType.Registry)]
-            public bool EnableItemMarker
+            public bool EnableItemMarker { get => _enableItemMarker; set => _enableItemMarker = value; }
+        }
+
+        [Command("ItemMarker")]
+        public static bool _enableItemMarker
+        {
+            get
             {
-                get
-                {
-                    return ItemMarker.MarkItems;
-                }
-                set
-                {
-                    ItemMarker.SetVisible(value);
-                }
+                return ItemMarker.MarkItems;
+            }
+            set
+            {
+                ItemMarker.SetVisible(value);
             }
         }
 
         public override void Init()
         {
             GameEventAPI.RegisterSelf(this);
-            QuantumRegistry.RegisterObject(Settings);
-
             LG_Factory.OnFactoryBuildDone += new Action(OnFactoryBuildDone);
         }
 

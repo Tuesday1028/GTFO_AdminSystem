@@ -188,7 +188,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
         public struct TerminalInLevelTag : IQcSuggestorTag
         {
-
+            public int ID { get; set; }
         }
 
         public sealed class TerminalInLevelAttribute : SuggestorTagAttribute
@@ -201,7 +201,46 @@ namespace Hikaria.AdminSystem.Features.InLevel
             }
         }
 
-        public class TerminalInLevelSuggestor : BasicCachedQcSuggestor<int>
+        public sealed class TerminalInLevelSuggestion : IQcSuggestion
+        {
+            private readonly int _id;
+            private readonly string _completion;
+            private readonly string _secondarySignature;
+
+            public string FullSignature => _id.ToString();
+            public string PrimarySignature => _id.ToString();
+            public string SecondarySignature => _secondarySignature;
+
+            public TerminalInLevelSuggestion(int id)
+            {
+                _id = id;
+                _secondarySignature = string.Empty;
+
+                _completion = _id.ToString();
+            }
+
+            public bool MatchesPrompt(string prompt)
+            {
+                return prompt == _id.ToString();
+            }
+
+            public string GetCompletion(string prompt)
+            {
+                return _completion;
+            }
+
+            public string GetCompletionTail(string prompt)
+            {
+                return string.Empty;
+            }
+
+            public SuggestionContext? GetInnerSuggestionContext(SuggestionContext context)
+            {
+                return null;
+            }
+        }
+
+        public sealed class TerminalInLevelSuggestor : BasicCachedQcSuggestor<int>
         {
             protected override bool CanProvideSuggestions(SuggestionContext context, SuggestorOptions options)
             {

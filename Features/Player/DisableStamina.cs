@@ -1,5 +1,4 @@
-﻿using Hikaria.AdminSystem.Utilities;
-using Hikaria.QC;
+﻿using Hikaria.QC;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.Attributes.Feature.Settings;
 using TheArchive.Core.FeaturesAPI;
@@ -18,30 +17,29 @@ namespace Hikaria.AdminSystem.Features.Player
         public override FeatureGroup Group => EntryPoint.Groups.Player;
 
         [FeatureConfig]
-        public static DisableStaminaSettings Settings { get; private set; }
+        public static DisableStaminaSettings Settings { get; set; }
 
         public class DisableStaminaSettings
         {
             [FSDisplayName("禁用心率")]
-            [Command("DisableStamina", MonoTargetType.Registry)]
-            public bool DisableStamina { get; set; }
+            public bool DisableStaminaSystem { get => _disableStaminaSystem; set => _disableStaminaSystem = value; }
 
             [FSDisplayName("禁用附近敌人对自身移动速度的影响")]
-            [Command("NearbyEnemyMoveSpeedMultiplier", MonoTargetType.Registry)]
-            public bool DisableNearByEnemyMoveSpeedMultiplier { get; set; }
+            public bool DisableNearByEnemyMoveSpeedMultiplier { get => _disableNearByEnemyMoveSpeedMultiplier; set => _disableNearByEnemyMoveSpeedMultiplier = value; }
         }
 
-        public override void Init()
-        {
-            QuantumRegistry.RegisterObject(Settings);
-        }
+        [Command("DisableStamina")]
+        private static bool _disableStaminaSystem;
+
+        [Command("NearbyEnemyMoveSpeedMultiplier")]
+        private static bool _disableNearByEnemyMoveSpeedMultiplier;
 
         [ArchivePatch(typeof(PlayerStamina), nameof(PlayerStamina.LateUpdate))]
         private class PlayerStamina__LateUpdate__Patch
         {
             private static void Postfix(PlayerStamina __instance)
             {
-                if (__instance.m_owner.Owner.IsLocal && Settings.DisableStamina)
+                if (__instance.m_owner.Owner.IsLocal && _disableStaminaSystem)
                 {
                     __instance.ResetStamina();
                 }
@@ -57,7 +55,7 @@ namespace Hikaria.AdminSystem.Features.Player
                 {
                     return;
                 }
-                if (Settings.DisableNearByEnemyMoveSpeedMultiplier)
+                if (_disableNearByEnemyMoveSpeedMultiplier)
                 {
                     __result = 1f;
                 }

@@ -23,10 +23,10 @@ namespace Hikaria.AdminSystem.Features.Misc
         public class ShotInAirSettings
         {
             [FSDisplayName("空中开枪")]
-            [Command("ShotInAir", "空中开枪", MonoTargetType.Registry)]
-            public bool EnableShotInAir { get; set; }
+            public bool EnableShotInAir { get => _enableShotInAir; set => _enableShotInAir = value; }
         }
 
+        [Command("ShotInAir")]
         private static bool _enableShotInAir;
 
         [ArchivePatch(typeof(PlayerLocomotion), nameof(PlayerLocomotion.IsInAir), null, ArchivePatch.PatchMethodType.Getter)]
@@ -34,7 +34,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         {
             private static bool Prefix(PlayerLocomotion __instance, ref bool __result)
             {
-                if (!__instance.m_owner.Owner.IsLocal || !Settings.EnableShotInAir)
+                if (!__instance.m_owner.Owner.IsLocal || !_enableShotInAir)
                 {
                     return true;
                 }

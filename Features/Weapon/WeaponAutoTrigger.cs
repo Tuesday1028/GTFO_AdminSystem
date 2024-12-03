@@ -3,7 +3,6 @@ using Enemies;
 using GameData;
 using Gear;
 using Hikaria.AdminSystem.Managers;
-using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.QC;
 using System.Collections.Generic;
@@ -33,8 +32,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             [FSDisplayName("状态")]
             [FSDescription("枪械处于瞄准状态并瞄准敌人时自动开火")]
-            [Command("AutoTrigger", MonoTargetType.Registry)]
-            public bool Enabled { get; set; }
+            public bool Enabled { get => _enabled; set => _enabled = value; }
 
             [FSDisplayName("暂停自动扳机按键")]
             [FSDescription("按下后可暂停自动扳机，松开后恢复")]
@@ -78,6 +76,9 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 }
             }
         }
+
+        [Command("AutoTrigger")]
+        private static bool _enabled;
 
         private static WeaponAutoTriggerPreference CurrentWeaponPref;
 
@@ -128,11 +129,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
         }
 
         private static bool IsWieldBulletWeapon;
-
-        public override void Init()
-        {
-            QuantumRegistry.RegisterObject(Settings);
-        }
 
         [ArchivePatch(typeof(BulletWeaponArchetype), nameof(BulletWeaponArchetype.OnWield))]
         private class BulletWeaponArchetype__OnWield__Patch
@@ -198,7 +194,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             private static void Prefix(BulletWeaponArchetype __instance)
             {
-                if (!Settings.Enabled)
+                if (!_enabled)
                     return;
 
                 var owner = __instance.m_owner;
@@ -412,7 +408,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             private static void Postfix(BulletWeaponArchetype __instance)
             {
-                if (!Settings.Enabled)
+                if (!_enabled)
                     return;
 
                 var owner = __instance.m_owner;

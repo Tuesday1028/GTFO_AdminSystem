@@ -1,6 +1,5 @@
 ﻿using GameData;
 using Gear;
-using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.QC;
 using Player;
@@ -12,9 +11,9 @@ using UnityEngine;
 
 namespace Hikaria.AdminSystem.Features.Weapon
 {
+    [HideInModSettings]
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
-    [DoNotSaveToConfig]
     internal class WeaponEnhancement : Feature
     {
         public override string Name => "武器增强";
@@ -28,86 +27,90 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
         public class WeaponEnhanceSettings
         {
-            [Command("InfClip", MonoTargetType.Registry)]
             [FSDisplayName("无限弹夹容量")]
-            public bool InfiniteClip { get; set; }
+            public bool InfiniteClip { get => _infiniteClip; set => _infiniteClip = value; }
 
-            [Command("ClearSight", MonoTargetType.Registry)]
             [FSDisplayName("清晰瞄具")]
             [FSDescription("去除枪械瞄具污渍, 加强热成像瞄具")]
-            public bool ClearSight { get; set; }
+            public bool ClearSight { get => _clearSight; set => _clearSight = value; }
 
-            [Command("NoDamageFalloff", MonoTargetType.Registry)]
             [FSDisplayName("无伤害衰减")]
             [FSDescription("枪械伤害没有距离衰减")]
-            public bool NoDamageFalloff { get; set; }
+            public bool NoDamageFalloff { get => _noDamageFalloff; set => _noDamageFalloff = value; }
 
-            [Command("NoSpread", MonoTargetType.Registry)]
             [FSDisplayName("无弹道扩散")]
             [FSDescription("枪械弹道无扩散, 散弹子弹散步减小")]
-            public bool NoSpread { get; set; }
+            public bool NoSpread { get => _noSpread; set => _noSpread = value; }
 
-            [Command("NoRecoil", MonoTargetType.Registry)]
             [FSDisplayName("无后座")]
             [FSDescription("枪械无后坐力")]
-            public bool NoRecoil { get; set; }
+            public bool NoRecoil { get => _noRecoil; set => _noRecoil = value; }
 
-            private bool _wallHack;
 
-            [Command("WallHack", MonoTargetType.Registry)]
             [FSDisplayName("子弹穿墙")]
             [FSDescription("枪械子弹穿墙")]
-            public bool WallHack
-            {
-                get
-                {
-                    return _wallHack;
-                }
-                set
-                {
-                    _wallHack = value;
-                    LayerManager.MASK_BULLETWEAPON_PIERCING_PASS = _wallHack ? EnemyDamagableLayerMask : BulletPiercingPassMask;
-                    LayerManager.MASK_BULLETWEAPON_RAY = _wallHack ? EnemyDamagableLayerMask : BulletWeaponRayMask;
-                }
-            }
+            public bool WallHack { get => EnableWallHack; set => EnableWallHack = value; }
 
-            [Command("SilentWeapon", MonoTargetType.Registry)]
             [FSDisplayName("无声枪")]
             [FSDescription("枪械无开火声音, 即不惊怪(仅客机可用)")]
-            public bool SilentWeapon { get; set; }
+            public bool SilentWeapon { get => _silentWeapon; set => _silentWeapon = value; }
 
-            [Command("AutoReload", MonoTargetType.Registry)]
             [FSDisplayName("自动上弹")]
             [FSDescription("优先消耗后备弹药")]
-            public bool AutoReload { get; set; }
+            public bool AutoReload { get => _autoReload; set => _autoReload = value; }
 
-            [Command("IgnoreLimbMaxHealthClamp", MonoTargetType.Registry)]
             [FSDisplayName("特殊部位伤害溢出")]
             [FSDescription("启用后可以在特殊部位单次打出超过最大生命值上限的伤害")]
-            public bool IgnoreLimbMaxHealthClamp { get; set; }
+            public bool IgnoreLimbMaxHealthClamp { get => _ignoreLimbMaxHealthClamp; set => _ignoreLimbMaxHealthClamp = value; }
 
-            [Command("MultiLimbPierce", MonoTargetType.Registry)]
             [FSDisplayName("多部位穿透")]
             [FSDescription("启用后可以穿透同一敌人的多个部位")]
-            public bool MultiLimbPierce { get; set; }
-
-            /*
-            [FSHeader("特殊弹药")]
-            [FSDisplayName("爆炸子弹")]
-            public bool ExplosiveBullet { get; set; }
-            [FSDisplayName("爆炸子弹范围")]
-            [FSSlider(0f, 5f, FSSlider.SliderStyle.FloatTwoDecimal)]
-            public float ExplosiveBulletRadius { get; set; } = 0.5f;
-            [FSDisplayName("燃烧子弹")]
-            public bool IncendiaryBullet { get; set; }
-            */
+            public bool MultiLimbPierce { get => _multiLimbPierce; set => _multiLimbPierce = value; }
         }
 
+        [Command("InfClip")]
+        private static bool _infiniteClip;
 
-        public override void Init()
+        [Command("ClearSight")]
+        private static bool _clearSight;
+
+        [Command("NoDamageFalloff")]
+        private static bool _noDamageFalloff;
+
+        [Command("NoSpread")]
+        private static bool _noSpread;
+
+        [Command("NoRecoil")]
+        private static bool _noRecoil;
+
+        private static bool _enableWallHack;
+
+        [Command("WallHack")]
+        private static bool EnableWallHack
         {
-            QuantumRegistry.RegisterObject(Settings);
+            get
+            {
+                return _enableWallHack;
+            }
+            set
+            {
+                _enableWallHack = value;
+                LayerManager.MASK_BULLETWEAPON_PIERCING_PASS = _enableWallHack ? EnemyDamagableLayerMask : BulletPiercingPassMask;
+                LayerManager.MASK_BULLETWEAPON_RAY = _enableWallHack ? EnemyDamagableLayerMask : BulletWeaponRayMask;
+            }
         }
+
+        [Command("SilentWeapon")]
+        private static bool _silentWeapon;
+
+        [Command("AutoReload")]
+        private static bool _autoReload;
+
+        [Command("IgnoreLimbMaxHealthClamp")]
+        private static bool _ignoreLimbMaxHealthClamp;
+
+        [Command("MultiLimbPierce")]
+        private static bool _multiLimbPierce;
 
         public override void OnGameDataInitialized()
         {
@@ -118,98 +121,13 @@ namespace Hikaria.AdminSystem.Features.Weapon
             BulletWeaponRayMask = LayerManager.MASK_BULLETWEAPON_RAY;
         }
 
-        /*
-        [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.BulletHit))]
-        private class BulletWeapon__BulletHit__Patch
-        {
-            private static bool Prefix(global::Weapon.WeaponHitData weaponRayData, bool doDamage, ref bool __result)
-            {
-                if (!Settings.ExplosiveBullet || !doDamage || !weaponRayData.owner.IsLocallyOwned)
-                {
-                    return true;
-                }
-                var position = weaponRayData.rayHit.point;
-                CellSound.Post(EVENTS.STICKYMINEEXPLODE, position);
-                DamageUtil.DoExplosionDamage(position, Settings.ExplosiveBulletRadius, weaponRayData.damage, LayerManager.MASK_EXPLOSION_TARGETS, LayerManager.MASK_EXPLOSION_BLOCKERS, true, weaponRayData.damage);
-                __result = (weaponRayData.rayHit.collider?.gameObject?.GetComponent<IDamageable>() ?? null) != null;
-                return false;
-            }
-        }
-
-        [ArchivePatch(typeof(Dam_EnemyDamageLimb), nameof(Dam_EnemyDamageLimb.BulletDamage))]
-        private class Dam_EnemyDamageLimb__BulletDamage__Patch
-        {
-            private static void Postfix(Dam_EnemyDamageLimb __instance, float dam, Agent sourceAgent)
-            {
-                if (!Settings.IncendiaryBullet || sourceAgent == null)
-                {
-                    return;
-                }
-                var player = sourceAgent.TryCast<PlayerAgent>();
-                if (player == null || !player.IsLocallyOwned)
-                {
-                    return;
-                }
-                var targetLevel = __instance.ApplyWeakspotAndArmorModifiers(dam, 1f) + __instance.m_base.m_heatLevel;
-                if (!SNet.IsMaster)
-                {
-                    pSetHeatLevel pSetHeatLevel = new();
-                    pSetHeatLevel.heatLevel.Set(targetLevel, 100f);
-                    __instance.m_base.m_setHeatLevelPacket.ReceiveAction.Invoke(pSetHeatLevel);
-                    __instance.m_base.m_setHeatLevelPacket.Send(pSetHeatLevel, SNet_ChannelType.GameNonCritical);
-                }
-                else
-                {
-                    __instance.m_base.SetHeatLevel(targetLevel);
-                }
-                __instance.m_base.OnHeatLevelUpdated();
-            }
-        }
-
-        [ArchivePatch(typeof(EnemyAgent), nameof(EnemyAgent.Setup))]
-        private class EnemyAgent__Setup__Patch
-        {
-            private static void Postfix(EnemyAgent __instance)
-            {
-                __instance.StartCoroutineManaged2(UpdateHeat(__instance.Damage).WrapToIl2Cpp());
-            }
-        }
-
-        private static IEnumerator UpdateHeat(Dam_EnemyDamageBase damageBase)
-        {
-            var yielder = new WaitForSeconds(damageBase.m_fireDamageDelay);
-            damageBase.m_heatLevel = 0f;
-            var agent = PlayerManager.GetLocalPlayerAgent();
-            while (true)
-            {
-                if (damageBase.m_heatLevel > 0f)
-                {
-                    if (!damageBase.OnFire)
-                    {
-                        damageBase.m_heatLevel = Mathf.Clamp(damageBase.m_heatLevel - damageBase.m_heatFalloffSpeed, 0f, 100f);
-                        damageBase.OnHeatLevelUpdated();
-                    }
-                    else
-                    {
-                        float num = damageBase.m_fireDamageMaxPerSecond * damageBase.m_fireDamageDelay * (damageBase.m_heatLevel / 100f);
-                        damageBase.FireDamage(num, agent);
-                        if (damageBase.Owner.Alive)
-                        {
-                            damageBase.Owner.Voice.PlayVoiceEvent(damageBase.Owner.EnemySFXData.SFX_ID_hurtSmall);
-                        }
-                    }
-                }
-                yield return yielder;
-            }
-        }
-        */
 
         [ArchivePatch(typeof(Dam_EnemyDamageLimb_Custom), nameof(Dam_EnemyDamageLimb_Custom.ApplyWeakspotAndArmorModifiers))]
         private static class Dam_EnemyDamageLimb_Custom__ApplyWeakspotAndArmorModifiers__Patch
         {
             private static bool Prefix(Dam_EnemyDamageLimb_Custom __instance, ref float __result, float dam, float precisionMulti = 1f)
             {
-                if (!Settings.IgnoreLimbMaxHealthClamp)
+                if (!_ignoreLimbMaxHealthClamp)
                     return true;
                 __result = dam * Mathf.Max(__instance.m_weakspotDamageMulti * precisionMulti, 1f) * __instance.m_armorDamageMulti;
                 return false;
@@ -221,7 +139,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             private static void Prefix(ref uint damageSearchID)
             {
-                if (Settings.MultiLimbPierce)
+                if (_multiLimbPierce)
                 {
                     damageSearchID = 0;
                 }
@@ -235,11 +153,11 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 if (!IsWeaponOwner(__instance))
                     return;
-                if (Settings.AutoReload)
+                if (_autoReload)
                 {
                     __instance.m_inventory.DoReload();
                 }
-                if (Settings.InfiniteClip)
+                if (_infiniteClip)
                 {
                     __instance.m_clip = __instance.ClipSize;
                     __instance.UpdateAmmoStatus();
@@ -254,11 +172,11 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 if (!IsWeaponOwner(__instance))
                     return;
-                if (Settings.AutoReload)
+                if (_autoReload)
                 {
                     __instance.m_inventory.DoReload();
                 }
-                if (Settings.InfiniteClip)
+                if (_infiniteClip)
                 {
                     __instance.m_clip = __instance.ClipSize;
                     __instance.UpdateAmmoStatus();
@@ -271,7 +189,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             static bool Prefix(PlayerSync __instance)
             {
-                if (!__instance.m_agent.Owner.IsLocal || !Settings.SilentWeapon)
+                if (!__instance.m_agent.Owner.IsLocal || !_silentWeapon)
                 {
                     return true;
                 }
@@ -284,7 +202,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         {
             static bool Prefix()
             {
-                return !Settings.NoRecoil;
+                return !_noRecoil;
             }
         }
 
@@ -312,19 +230,19 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 }
 
                 //无伤害衰减
-                if (Settings.NoDamageFalloff)
+                if (_noDamageFalloff)
                 {
                     __instance.ArchetypeData.DamageFalloff = FalloffBlocker;
                 }
 
                 //无后坐力
-                if (Settings.NoRecoil)
+                if (_noRecoil)
                 {
                     __instance.ArchetypeData.RecoilDataID = 0U;
                 }
 
                 //无弹道扩散
-                if (Settings.NoSpread)
+                if (_noSpread)
                 {
                     __instance.ArchetypeData.AimSpread = 0f;
                     __instance.ArchetypeData.HipFireSpread = 0f;
@@ -333,7 +251,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 }
 
                 //清晰瞄具
-                SetupClearSight(__instance.gameObject, Settings.ClearSight);
+                SetupClearSight(__instance.gameObject, _clearSight);
             }
         }
 
