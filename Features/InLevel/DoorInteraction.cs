@@ -1,4 +1,5 @@
-﻿using Hikaria.AdminSystem.Suggestions.Suggestors.Attributes;
+﻿using Hikaria.AdminSystem.Suggestion;
+using Hikaria.AdminSystem.Suggestions.Suggestors.Attributes;
 using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.QC;
@@ -122,7 +123,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
             }
         }
 
-        public class WeakDoorInLevelSuggestor : BasicCachedQcSuggestor<int>
+        public class WeakDoorInLevelSuggestor : BasicQcSuggestor<int>
         {
             protected override bool CanProvideSuggestions(SuggestionContext context, SuggestorOptions options)
             {
@@ -156,7 +157,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
             }
         }
 
-        public class SecurityDoorInLevelSuggestor : BasicCachedQcSuggestor<int>
+        public class SecurityDoorInLevelSuggestor : BasicQcSuggestor<int>
         {
             protected override bool CanProvideSuggestions(SuggestionContext context, SuggestorOptions options)
             {

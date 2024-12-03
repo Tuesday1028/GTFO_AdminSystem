@@ -1,7 +1,7 @@
-﻿using Agents;
-using AIGraph;
+﻿using AIGraph;
 using GameData;
 using Hikaria.AdminSystem.Extensions;
+using Hikaria.AdminSystem.Suggestion;
 using Hikaria.AdminSystem.Suggestion.Suggestors.Attributes;
 using Hikaria.AdminSystem.Suggestions.Suggestors.Attributes;
 using Hikaria.AdminSystem.Utilities;
@@ -547,7 +547,7 @@ namespace Hikaria.AdminSystem.Features.Item
             }
         }
 
-        public class ItemInLevelSuggestor : BasicCachedQcSuggestor<string>
+        public class ItemInLevelSuggestor : BasicQcSuggestor<string>
         {
             protected override bool CanProvideSuggestions(SuggestionContext context, SuggestorOptions options)
             {

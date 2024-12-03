@@ -1,4 +1,5 @@
-﻿using Hikaria.AdminSystem.Utilities;
+﻿using Hikaria.AdminSystem.Suggestion;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.QC;
 using Hikaria.QC.Actions;
@@ -240,7 +241,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
             }
         }
 
-        public sealed class TerminalInLevelSuggestor : BasicCachedQcSuggestor<int>
+        public sealed class TerminalInLevelSuggestor : BasicQcSuggestor<int>
         {
             protected override bool CanProvideSuggestions(SuggestionContext context, SuggestorOptions options)
             {

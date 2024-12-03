@@ -1,4 +1,5 @@
-﻿using Hikaria.AdminSystem.Utilities;
+﻿using Hikaria.AdminSystem.Suggestion;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.QC;
 using LevelGeneration;
 using System.Collections.Generic;
@@ -88,7 +89,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
             }
         }
 
-        public class ReactorInLevelSuggestor : BasicCachedQcSuggestor<int>
+        public class ReactorInLevelSuggestor : BasicQcSuggestor<int>
         {
             protected override bool CanProvideSuggestions(SuggestionContext context, SuggestorOptions options)
             {

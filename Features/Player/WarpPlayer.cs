@@ -1,4 +1,5 @@
 ﻿using Hikaria.AdminSystem.Features.Item;
+using Hikaria.AdminSystem.Suggestion;
 using Hikaria.AdminSystem.Suggestion.Suggestors.Attributes;
 using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
@@ -191,7 +192,7 @@ namespace Hikaria.AdminSystem.Features.Player
             }
         }
 
-        public class WarpStoredPositionSuggestor : BasicCachedQcSuggestor<string>
+        public class WarpStoredPositionSuggestor : BasicQcSuggestor<string>
         {
             protected override bool CanProvideSuggestions(SuggestionContext context, SuggestorOptions options)
             {
