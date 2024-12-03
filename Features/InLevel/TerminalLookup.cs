@@ -60,7 +60,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
             ConsoleLogs.LogToConsole($"<color=orange>TERMINAL_{id} </color><color=green> 解锁密码:{terminal.m_password}</color>");
         }
 
-        [Command("Uplinkcodes")]
+        [Command("UplinkCodes")]
         private static void GetTerminalUplinkCodes([TerminalInLevel] int id)
         {
             if (!TerminalsInLevel.TryGetValue(id, out var terminal) || terminal.UplinkPuzzle?.m_rounds?.Count == 0)
@@ -90,6 +90,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
                 return;
             }
             terminal.m_command.TryGetCommandName(TERM_Command.TerminalUplinkConnect, out var commandName);
+            LG_ComputerTerminalManager.WantToChangeTerminalState(terminal.SyncID, TERM_State.Awake, AdminUtils.LocalPlayerAgent);
             LG_ComputerTerminalManager.WantToSendTerminalCommand(terminal.SyncID, TERM_Command.TerminalUplinkConnect, $"{commandName} {terminal.UplinkPuzzle.TerminalUplinkIP}", terminal.UplinkPuzzle.TerminalUplinkIP, string.Empty);
         }
 

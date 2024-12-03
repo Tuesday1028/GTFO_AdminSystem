@@ -72,6 +72,8 @@ namespace Hikaria.AdminSystem.Features.Enemy
             {
                 do
                 {
+                    if (CurrentGameState != (int)eGameStateName.InLevel)
+                        yield break;
                     EnemyAgent.SpawnEnemy(id, pos, node, mode);
                     count--;
                     yield return yielder;

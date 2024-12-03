@@ -1,5 +1,6 @@
 ﻿using Agents;
 using Gear;
+using Hikaria.AdminSystem.Suggestion.Suggestors.Attributes;
 using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
@@ -33,7 +34,7 @@ namespace Hikaria.AdminSystem.Features.Player
         }
 
         [Command("OneShotKill", "一击必杀")]
-        private static void ToggleOneShotKill(int slot)
+        private static void ToggleOneShotKill([PlayerSlotIndex] int slot)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !OneShotKillLookup.TryGetValue(player.Owner.Lookup, out var enable))
             {
