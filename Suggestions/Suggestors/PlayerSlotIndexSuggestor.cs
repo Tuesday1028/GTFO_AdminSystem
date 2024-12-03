@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Hikaria.AdminSystem.Suggestion.Suggestors
 {
-    public sealed class PlayerSlotIndexSuggestor : BasicCachedQcSuggestor<int>
+    public sealed class PlayerSlotIndexSuggestor : BasicQcSuggestor<int>
     {
         protected override bool CanProvideSuggestions(SuggestionContext context, SuggestorOptions options)
         {

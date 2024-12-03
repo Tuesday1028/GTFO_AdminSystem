@@ -234,12 +234,12 @@ namespace Hikaria.AdminSystem.Features.Item
                 var itemInLevel = item.TryCast<ItemInLevel>();
                 if (itemInLevel == null)
                     return;
-                itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, SNet.LocalPlayer, new()
+            itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, playerAgent.Owner, new()
                 {
                     ammo = 100f,
                 });
                 itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.Pickup, playerAgent.Owner);
-            })), ItemMode.Pickup, playerAgent.Position, playerAgent.Rotation, playerAgent.CourseNode, playerAgent);
+            })), ItemMode.Pickup, playerAgent.Position, playerAgent.Rotation, playerAgent.CourseNode, localPlayer);
         }
 
         [Command("GiveItemByName")]
@@ -276,12 +276,12 @@ namespace Hikaria.AdminSystem.Features.Item
                 var itemInLevel = item.TryCast<ItemInLevel>();
                 if (itemInLevel == null)
                     return;
-                itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, SNet.LocalPlayer, new()
+                itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, playerAgent.Owner, new()
                 {
                     ammo = 100f,
                 });
                 itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.Pickup, playerAgent.Owner);
-            })), ItemMode.Pickup, playerAgent.Position, playerAgent.Rotation, playerAgent.CourseNode, playerAgent);
+            })), ItemMode.Pickup, playerAgent.Position, playerAgent.Rotation, playerAgent.CourseNode, localPlayer);
         }
 
         [Command("ListItemData")]

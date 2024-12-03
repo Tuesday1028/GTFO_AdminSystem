@@ -7,7 +7,7 @@ using TheArchive.Utilities;
 
 namespace Hikaria.AdminSystem.Suggestion.Suggestors
 {
-    public sealed class ZoneAliasSuggestor : BasicCachedQcSuggestor<int>
+    public sealed class ZoneAliasSuggestor : BasicQcSuggestor<int>
     {
         protected override bool CanProvideSuggestions(SuggestionContext context, SuggestorOptions options)
         {

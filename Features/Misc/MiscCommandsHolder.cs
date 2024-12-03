@@ -668,7 +668,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         }
 
         [Command("DropItem", "丢弃物品")]
-        private static void DropItem([PlayerSlotIndex] int slot, [Suggestions(InventorySlot.ResourcePack, InventorySlot.Consumable, InventorySlot.InLevelCarry)] InventorySlot itemSlot)
+        private static void DropItem([PlayerSlotIndex] int slot, InventorySlot itemSlot)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var targetPlayer))
             {
