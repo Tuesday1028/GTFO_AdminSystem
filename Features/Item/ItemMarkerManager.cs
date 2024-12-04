@@ -103,13 +103,18 @@ namespace Hikaria.AdminSystem.Features.Item
         [ArchivePatch(typeof(ItemReplicationManager), nameof(ItemReplicationManager.OnItemSpawn))]
         private class ItemReplicationManager__OnItemSpawn__Patch
         {
-            private static void Postfix(ItemReplicator replicator)
+            private static void Postfix(pItemSpawnData spawnData, ItemReplicator replicator)
             {
+                if (spawnData.mode != ItemMode.Pickup)
+                    return;
                 var item = replicator.Item?.TryCast<ItemInLevel>();
                 if (item == null)
                     return;
-                ItemMarker.RegisterItemInLevel(item, true);
-                ItemMarker._AllItemInLevels.Add(item);
+                if (ItemMarker._AllItemInLevels.Add(item))
+                {
+                    ItemMarker.RegisterItemInLevel(item, true);
+                    ItemMarker.UpdateDynamicItemMarkersVisiable();
+                }
             }
         }
 

@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.FeaturesAPI;
 using UnityEngine;
@@ -201,12 +202,17 @@ namespace Hikaria.AdminSystem.Features.Item
         }
 
         [Command("GiveItem")]
-        private static void GiveItem([ItemDataBlockID] uint id, [PlayerSlotIndex] int slot)
+        private static void GiveItem([PlayerSlotIndex] int slot, [ItemDataBlockID] uint id)
         {
             var block = ItemDataBlock.GetBlock(id);
             if (block == null)
             {
                 ConsoleLogs.LogToConsole($"不存在 ID 为 {id} 的物品", LogLevel.Error);
+                return;
+            }
+            if (block.PickupPrefabs.Count == 0)
+            {
+                ConsoleLogs.LogToConsole($"非法物品 {id}", LogLevel.Error);
                 return;
             }
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var playerAgent))
@@ -243,12 +249,17 @@ namespace Hikaria.AdminSystem.Features.Item
         }
 
         [Command("GiveItemByName")]
-        private static void GiveItemByName([ItemDataBlockName] string name, [PlayerSlotIndex] int slot)
+        private static void GiveItemByName([PlayerSlotIndex] int slot, [ItemDataBlockName] string name)
         {
             var block = ItemDataBlock.GetBlock(name);
             if (block == null)
             {
                 ConsoleLogs.LogToConsole($"不存在名称为 {name} 的物品", LogLevel.Error);
+                return;
+            }
+            if (block.PickupPrefabs.Count == 0)
+            {
+                ConsoleLogs.LogToConsole($"非法物品 {name}", LogLevel.Error);
                 return;
             }
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var playerAgent))
