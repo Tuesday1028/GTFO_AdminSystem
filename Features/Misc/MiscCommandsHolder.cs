@@ -844,7 +844,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         }
 
         [Command("GiveHealth", "给予玩家生命值")]
-        private static void GiveHealth([PlayerSlotIndex] int slot, [CommandParameterDescription("数量")] float amount)
+        private static void GiveHealth([PlayerSlotIndex] int slot, [CommandParameterDescription("数量")] float amount = 100f)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var playerAgent))
             {
@@ -857,7 +857,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         }
 
         [Command("GiveAmmo", "给予玩家武器弹药")]
-        private static void GiveAmmo([PlayerSlotIndex] int slot, [CommandParameterDescription("数量")] float amount)
+        private static void GiveAmmo([PlayerSlotIndex] int slot, [CommandParameterDescription("数量")] float amount = 100f)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var playerAgent))
             {
@@ -870,7 +870,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         }
 
         [Command("GiveDisinfection", "给予玩家消毒")]
-        private static void GiveDisinfection([PlayerSlotIndex] int slot, [CommandParameterDescription("数量")] float amount)
+        private static void GiveDisinfection([PlayerSlotIndex] int slot, [CommandParameterDescription("数量")] float amount = 100f)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var playerAgent))
             {
@@ -883,7 +883,7 @@ namespace Hikaria.AdminSystem.Features.Misc
         }
 
         [Command("GiveTool", "给予玩家工具弹药")]
-        private static void GiveTool([PlayerSlotIndex] int slot, [CommandParameterDescription("数量")] float amount)
+        private static void GiveTool([PlayerSlotIndex] int slot, [CommandParameterDescription("数量")] float amount = 100f)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var playerAgent))
             {
@@ -1105,5 +1105,8 @@ namespace Hikaria.AdminSystem.Features.Misc
                 ConsoleLogs.LogToConsole($"已{(GameEventAPI.IsGamePaused ? "暂停" : "继续")}游戏");
             }
         }
+
+        [Command("FastElevator")]
+        public static bool FastElevator { get => Global.FastElevator; set => Global.FastElevator = value; }
     }
 }

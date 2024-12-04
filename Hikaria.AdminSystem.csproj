@@ -27,9 +27,6 @@
     <Optimize>True</Optimize>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\GTFO\BepInEx\core\0Harmony.dll</HintPath>
-    </Reference>
     <Reference Include="BepInEx.Core">
       <HintPath>..\..\..\Program Files (x86)\Steam\steamapps\common\GTFO\BepInEx\core\BepInEx.Core.dll</HintPath>
     </Reference>
