@@ -86,12 +86,12 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 get
                 {
-                    return EnemyDataHelper.ArmorMultiThreshold;
+                    return EnemyDamageDataHelper.ArmorMultiThreshold;
                 }
                 set
                 {
-                    EnemyDataHelper.ArmorMultiThreshold = value;
-                    EnemyDataHelper.ClearGeneratedEnemyDamageData();
+                    EnemyDamageDataHelper.ArmorMultiThreshold = value;
+                    EnemyDamageDataHelper.ClearGeneratedEnemyDamageData();
                 }
             }
 
@@ -528,7 +528,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     return;
                 }
 
-                EnemyDataHelper.EnemyDamageData data = EnemyDataHelper.GetOrGenerateEnemyDamageData(m_Target);
+                EnemyDamageDataHelper.EnemyDamageData data = EnemyDamageDataHelper.GetOrGenerateEnemyDamageData(m_Target);
 
                 if (data.IsImmortal)
                 {

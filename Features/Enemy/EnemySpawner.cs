@@ -20,6 +20,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
     [DoNotSaveToConfig]
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
+    [HideInModSettings]
     public class EnemySpawner : Feature
     {
         public override string Name => "刷怪";

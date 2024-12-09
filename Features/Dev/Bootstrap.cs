@@ -9,6 +9,7 @@ namespace Hikaria.AdminSystem.Features.Develop
     [HideInModSettings]
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
+    [DoNotSaveToConfig]
     internal class Bootstrap : Feature
     {
         public override string Name => "Bootstrap";

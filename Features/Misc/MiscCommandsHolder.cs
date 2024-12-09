@@ -10,7 +10,6 @@ using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
 using Hikaria.QC;
-using Hikaria.QC.Suggestors.Tags;
 using LevelGeneration;
 using Player;
 using SNetwork;
@@ -18,6 +17,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.FeaturesAPI;
 using UnityEngine;
@@ -255,9 +255,9 @@ namespace Hikaria.AdminSystem.Features.Misc
         //[Command("ChangeLookup", "修改识别码")]
         //private static void ChangeLookup(int slot)
         //{
-        //    if (AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player))
+        //    if (AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var _localPlayer))
         //    {
-        //        SNet.LocalPlayer.Lookup = player.Owner.Lookup;
+        //        SNet.LocalPlayer.Lookup = _localPlayer.Owner.Lookup;
         //    }
         //}
 
@@ -286,9 +286,9 @@ namespace Hikaria.AdminSystem.Features.Misc
                     {
                         if (enemy.AI.Mode == AgentMode.Agressive)
                         {
-                            if (SNet.IsMaster && enemy.Damage.IsImortal)
+                            if (SNet.IsMaster && enemy.Damage.IsImortal && !enemy.IsScout)
                                 enemy.Damage.IsImortal = false;
-                            enemy.Damage.MeleeDamage(float.MaxValue, null, enemy.transform.position, Vector3.up);
+                            enemy.Damage.MeleeDamage(float.MaxValue, null, enemy.Position, enemy.Forward);
                         }
                     }
                     msg = "惊醒";
@@ -296,18 +296,18 @@ namespace Hikaria.AdminSystem.Features.Misc
                 case EnemyChoiceType.Reachable:
                     foreach (var enemy in AIG_CourseGraph.GetReachableEnemiesInNodes(AdminUtils.LocalPlayerAgent.CourseNode, 100))
                     {
-                        if (SNet.IsMaster && enemy.Damage.IsImortal)
+                        if (SNet.IsMaster && enemy.Damage.IsImortal && !enemy.IsScout)
                             enemy.Damage.IsImortal = false;
-                        enemy.Damage.MeleeDamage(float.MaxValue, null, enemy.transform.position, Vector3.up);
+                        enemy.Damage.MeleeDamage(float.MaxValue, null, enemy.Position, enemy.Forward);
                     }
                     msg = "可到达";
                     break;
                 case EnemyChoiceType.All:
                     foreach (var enemy in UnityEngine.Object.FindObjectsOfType<EnemyAgent>())
                     {
-                        if (SNet.IsMaster && enemy.Damage.IsImortal)
+                        if (SNet.IsMaster && enemy.Damage.IsImortal && !enemy.IsScout)
                             enemy.Damage.IsImortal = false;
-                        enemy.Damage.MeleeDamage(float.MaxValue, null, enemy.transform.position, Vector3.up);
+                        enemy.Damage.MeleeDamage(float.MaxValue, null, enemy.Position, enemy.Forward);
                     }
                     msg = "所有";
                     break;
@@ -374,14 +374,14 @@ namespace Hikaria.AdminSystem.Features.Misc
         private static void ListEnemyData()
         {
             ConsoleLogs.LogToConsole("----------------------------------------------------------------");
-            foreach (uint id in EnemyDataHelper.EnemyDataBlockLookup.Keys)
+            foreach (uint id in EnemyDamageDataHelper.EnemyDataBlockLookup.Keys)
             {
-                ConsoleLogs.LogToConsole($"[{id}] {EnemyDataHelper.EnemyDataBlockLookup[id].name}");
+                ConsoleLogs.LogToConsole($"[{id}] {EnemyDamageDataHelper.EnemyDataBlockLookup[id].name}");
             }
             ConsoleLogs.LogToConsole("----------------------------------------------------------------");
         }
 
-        [Command("ListEnemiesInZone", "列出敌人")]
+        [Command("ListEnemiesInZone")]
         private static void ListEnemiesInZone([ZoneAlias] int alias)
         {
             if (GameStateManager.CurrentStateName != eGameStateName.InLevel)
@@ -426,18 +426,19 @@ namespace Hikaria.AdminSystem.Features.Misc
                 ConsoleLogs.LogToConsole($"ZONE_{alias}中没有敌人");
                 return;
             }
+            StringBuilder sb = new(500);
             enemiesInZone = enemiesInZone.OrderBy(x => x.Key.m_navInfo.UID).ToDictionary(x => x.Key, x => x.Value.OrderBy(y => y.Key).ToDictionary(y => y.Key, y => y.Value));
             Dictionary<string, int> total = new();
-            ConsoleLogs.LogToConsole("-------------------------------------------------------------------------");
-            ConsoleLogs.LogToConsole($"                           ZONE_{alias} 敌人统计");
+            sb.AppendLine("-------------------------------------------------------------------------");
+            sb.AppendLine($"                           ZONE_{alias} 敌人统计");
             foreach (LG_Area area in enemiesInZone.Keys)
             {
                 if (enemiesInZone[area].Count == 0)
                 {
                     continue;
                 }
-                ConsoleLogs.LogToConsole("-------------------------------------------------------------------------");
-                ConsoleLogs.LogToConsole($"{area.m_navInfo.GetFormattedText(LG_NavInfoFormat.Full_And_Number_With_Underscore)}:");
+                sb.AppendLine("-------------------------------------------------------------------------");
+                sb.AppendLine($"{area.m_navInfo.GetFormattedText(LG_NavInfoFormat.Full_And_Number_With_Underscore)}:");
                 foreach (string enemyName in enemiesInZone[area].Keys)
                 {
                     if (!total.ContainsKey(enemyName))
@@ -448,24 +449,25 @@ namespace Hikaria.AdminSystem.Features.Misc
                     {
                         total[enemyName] += enemiesInZone[area][enemyName];
                     }
-                    ConsoleLogs.LogToConsole($"           敌人:{enemyName.FormatInLength(35)}数量:{enemiesInZone[area][enemyName]}");
+                    sb.AppendLine($"           敌人:{enemyName.PadRight(35)}数量:{enemiesInZone[area][enemyName]}");
                 }
             }
 
-            ConsoleLogs.LogToConsole("-------------------------------------------------------------------------");
-            ConsoleLogs.LogToConsole("总计:");
+            sb.AppendLine("-------------------------------------------------------------------------");
+            sb.AppendLine("总计:");
             if (total.Count == 0)
             {
-                ConsoleLogs.LogToConsole("           没有敌人");
+                sb.AppendLine("           没有敌人");
             }
             else
             {
                 foreach (string enemyName in total.Keys)
                 {
-                    ConsoleLogs.LogToConsole($"           敌人:{enemyName.FormatInLength(35)}数量:{total[enemyName]}");
+                    sb.AppendLine($"           敌人:{enemyName.PadRight(35)}数量:{total[enemyName]}");
                 }
             }
-            ConsoleLogs.LogToConsole("-------------------------------------------------------------------------");
+            sb.AppendLine("-------------------------------------------------------------------------");
+            ConsoleLogs.LogToConsole(sb.ToString());
         }
 
         [Command("SetEnemyTarget", "设置敌人目标")]
@@ -815,7 +817,7 @@ namespace Hikaria.AdminSystem.Features.Misc
                         }, SNet_ChannelType.SessionOrderCritical, player);
 
                         /*
-                        pPlayerData_Session forceJoinLobbyData = player.Session;
+                        pPlayerData_Session forceJoinLobbyData = _localPlayer.Session;
                         forceJoinLobbyData.playerSlotIndex = 100;
                         SNet.Sync.m_playerSessionPacket.Send(forceJoinLobbyData, SNet_ChannelType.GameOrderCritical, SNet.Master);
                         */
@@ -825,18 +827,18 @@ namespace Hikaria.AdminSystem.Features.Misc
                         migrationReportData.hasNewMaster = true;
                         migrationReportData.NewMaster.SetPlayer(SNet.LocalPlayer);
                         migrationReportData.type = MigrationReportType.NoAction;
-                        SNet.MasterManagement.m_migrationReportPacket.Send(migrationReportData, SNet_ChannelType.SessionOrderCritical, player);
+                        SNet.MasterManagement.m_migrationReportPacket.Send(migrationReportData, SNet_ChannelType.SessionOrderCritical, _localPlayer);
 
                         pSessionMemberStateChange forceJoinLobbyData = new();
-                        forceJoinLobbyData.player.SetPlayer(SNet.Master);
+                        forceJoinLobbyData._localPlayer.SetPlayer(SNet.Master);
                         forceJoinLobbyData.reason = SNet_PlayerEventReason.None;
                         forceJoinLobbyData.type = SessionMemberChangeType.Kicked;
-                        SNet.SessionHub.m_masterSessionMemberChangePacket.Send(forceJoinLobbyData, SNet_ChannelType.SessionOrderCritical, player);
+                        SNet.SessionHub.m_masterSessionMemberChangePacket.Send(forceJoinLobbyData, SNet_ChannelType.SessionOrderCritical, _localPlayer);
 
                         SNet.SessionHub.m_masterSessionAnswerPacket.Send(new pMasterAnswer()
                         {
                             answer = pMasterSessionAnswerType.LeaveLobby
-                        }, SNet_ChannelType.SessionOrderCritical, player);
+                        }, SNet_ChannelType.SessionOrderCritical, _localPlayer);
                         */
                     }
                 }
@@ -958,21 +960,21 @@ namespace Hikaria.AdminSystem.Features.Misc
         //        ConsoleLogs.LogToConsole("不在大厅内", LogLevel.Error);
         //        return;
         //    }
-        //    if (!SNet.Core.TryGetPlayer(lookup, out var player, true))
+        //    if (!SNet.Core.TryGetPlayer(lookup, out var _localPlayer, true))
         //    {
         //        ConsoleLogs.LogToConsole($"不存在玩家 {lookup}", LogLevel.Error);
         //        return;
         //    }
         //    pForceJoinLobby forceJoinLobbyData = new() { lobbyID = SNet.Lobby.Identifier.ID };
-        //    SNet.SessionHub.m_forceJoinLobby.Send(forceJoinLobbyData, SNet_ChannelType.SessionOrderCritical, player);
+        //    SNet.SessionHub.m_forceJoinLobby.Send(forceJoinLobbyData, SNet_ChannelType.SessionOrderCritical, _localPlayer);
         //    pWhoIsMasterAnswer whoIsMasterAnswerData = new pWhoIsMasterAnswer
         //    {
         //        lobbyId = SNet.Lobby.Identifier.ID,
         //        sessionKey = SNet.SessionHub.SessionID
         //    };
-        //    SNet.MasterManagement.m_whoIsMasterAnswerPacket.Send(whoIsMasterAnswerData, SNet_ChannelType.SessionOrderCritical, player);
-        //    SNet.Lobby.TryCast<SNet_Lobby_STEAM>().PlayerJoined(player, new() { m_SteamID = player.Lookup });
-        //    ConsoleLogs.LogToConsole($"已强制邀请玩家: {player.NickName}");
+        //    SNet.MasterManagement.m_whoIsMasterAnswerPacket.Send(whoIsMasterAnswerData, SNet_ChannelType.SessionOrderCritical, _localPlayer);
+        //    SNet.Lobby.TryCast<SNet_Lobby_STEAM>().PlayerJoined(_localPlayer, new() { m_SteamID = _localPlayer.Lookup });
+        //    ConsoleLogs.LogToConsole($"已强制邀请玩家: {_localPlayer.NickName}");
         //}
 
 

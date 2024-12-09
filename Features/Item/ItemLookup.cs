@@ -1,7 +1,6 @@
 ﻿using AIGraph;
 using GameData;
 using Hikaria.AdminSystem.Extensions;
-using Hikaria.AdminSystem.Suggestion;
 using Hikaria.AdminSystem.Suggestion.Suggestors.Attributes;
 using Hikaria.AdminSystem.Suggestions.Suggestors.Attributes;
 using Hikaria.AdminSystem.Utilities;
@@ -15,7 +14,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Xml.Linq;
 using TheArchive.Core.Attributes;
 using TheArchive.Core.FeaturesAPI;
 using UnityEngine;
@@ -25,6 +23,7 @@ namespace Hikaria.AdminSystem.Features.Item
     [DoNotSaveToConfig]
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
+    [HideInModSettings]
     public class ItemLookup : Feature
     {
         public override string Name => "物品";
@@ -130,6 +129,13 @@ namespace Hikaria.AdminSystem.Features.Item
             float maxAmmo = block.ConsumableAmmoMax;
             if (slot == InventorySlot.ResourcePack)
                 maxAmmo = 100f;
+            var itemMode = mode switch
+            {
+                SpawnItemMode.Pickup => ItemMode.Pickup,
+                SpawnItemMode.Instance => ItemMode.Instance,
+                _ => ItemMode.Pickup
+            };
+            var localPlayer = AdminUtils.LocalPlayerAgent;
             pItemData data = new()
             {
                 custom = new pItemData_Custom
@@ -139,19 +145,15 @@ namespace Hikaria.AdminSystem.Features.Item
                     byteState = 0
                 },
                 itemID_gearCRC = block.persistentID,
-                slot = slot
+                slot = slot,
+                originLayer = localPlayer.CourseNode.LayerType
             };
-            var itemMode = mode switch
-            {
-                SpawnItemMode.Pickup => ItemMode.Pickup,
-                SpawnItemMode.Instance => ItemMode.Instance,
-                _ => ItemMode.Pickup
-            };
-            var localPlayer = AdminUtils.LocalPlayerAgent;
+            data.originCourseNode.Set(localPlayer.CourseNode);
             ItemReplicationManager.SpawnItem(data, DelegateSupport.ConvertDelegate<ItemReplicationManager.delItemCallback>(new Action<ISyncedItem, PlayerAgent>((item, player) => {
                 var itemInLevel = item.TryCast<ItemInLevel>();
                 if (itemInLevel == null)
                     return;
+                itemInLevel.CourseNode ??= localPlayer.CourseNode;
                 itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, SNet.LocalPlayer, new()
                 {
                     ammo = maxAmmo,
@@ -172,6 +174,14 @@ namespace Hikaria.AdminSystem.Features.Item
             float maxAmmo = block.ConsumableAmmoMax;
             if (slot == InventorySlot.ResourcePack)
                 maxAmmo = 100f;
+
+            var itemMode = mode switch
+            {
+                SpawnItemMode.Pickup => ItemMode.Pickup,
+                SpawnItemMode.Instance => ItemMode.Instance,
+                _ => ItemMode.Pickup
+            };
+            var localPlayer = AdminUtils.LocalPlayerAgent;
             pItemData data = new()
             {
                 custom = new pItemData_Custom
@@ -181,19 +191,15 @@ namespace Hikaria.AdminSystem.Features.Item
                     byteState = 0
                 },
                 itemID_gearCRC = block.persistentID,
-                slot = slot
+                slot = slot,
+                originLayer = localPlayer.CourseNode.LayerType
             };
-            var itemMode = mode switch
-            {
-                SpawnItemMode.Pickup => ItemMode.Pickup,
-                SpawnItemMode.Instance => ItemMode.Instance,
-                _ => ItemMode.Pickup
-            };
-            var localPlayer = AdminUtils.LocalPlayerAgent;
+            data.originCourseNode.Set(localPlayer.CourseNode);
             ItemReplicationManager.SpawnItem(data, DelegateSupport.ConvertDelegate<ItemReplicationManager.delItemCallback>(new Action<ISyncedItem, PlayerAgent>((item, player) => {
                 var itemInLevel = item.TryCast<ItemInLevel>();
                 if (itemInLevel == null)
                     return;
+                itemInLevel.CourseNode ??= localPlayer.CourseNode;
                 itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, SNet.LocalPlayer, new()
                 {
                     ammo = maxAmmo,
@@ -224,6 +230,7 @@ namespace Hikaria.AdminSystem.Features.Item
             float maxAmmo = block.ConsumableAmmoMax;
             if (itemSlot == InventorySlot.ResourcePack)
                 maxAmmo = 100f;
+            var localPlayer = AdminUtils.LocalPlayerAgent;
             pItemData data = new()
             {
                 custom = new pItemData_Custom
@@ -233,14 +240,17 @@ namespace Hikaria.AdminSystem.Features.Item
                     byteState = 0
                 },
                 itemID_gearCRC = block.persistentID,
-                slot = itemSlot
+                slot = itemSlot,
+                originLayer = localPlayer.CourseNode.LayerType
             };
-            var localPlayer = AdminUtils.LocalPlayerAgent;
-            ItemReplicationManager.SpawnItem(data, DelegateSupport.ConvertDelegate<ItemReplicationManager.delItemCallback>(new Action<ISyncedItem, PlayerAgent>((item, player) => {
+            data.originCourseNode.Set(playerAgent.CourseNode);
+            ItemReplicationManager.SpawnItem(data, DelegateSupport.ConvertDelegate<ItemReplicationManager.delItemCallback>(new Action<ISyncedItem, PlayerAgent>((item, player) =>
+            {
                 var itemInLevel = item.TryCast<ItemInLevel>();
                 if (itemInLevel == null)
                     return;
-            itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, playerAgent.Owner, new()
+                itemInLevel.CourseNode ??= playerAgent.CourseNode;
+                itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, playerAgent.Owner, new()
                 {
                     ammo = maxAmmo,
                 });
@@ -271,6 +281,7 @@ namespace Hikaria.AdminSystem.Features.Item
             float maxAmmo = block.ConsumableAmmoMax;
             if (itemSlot == InventorySlot.ResourcePack)
                 maxAmmo = 100f;
+            var localPlayer = AdminUtils.LocalPlayerAgent;
             pItemData data = new()
             {
                 custom = new pItemData_Custom
@@ -280,13 +291,16 @@ namespace Hikaria.AdminSystem.Features.Item
                     byteState = 0
                 },
                 itemID_gearCRC = block.persistentID,
-                slot = itemSlot
+                slot = itemSlot,
+                originLayer = localPlayer.CourseNode.LayerType
             };
-            var localPlayer = AdminUtils.LocalPlayerAgent;
-            ItemReplicationManager.SpawnItem(data, DelegateSupport.ConvertDelegate<ItemReplicationManager.delItemCallback>(new Action<ISyncedItem, PlayerAgent>((item, player) => {
+            data.originCourseNode.Set(playerAgent.CourseNode);
+            ItemReplicationManager.SpawnItem(data, DelegateSupport.ConvertDelegate<ItemReplicationManager.delItemCallback>(new Action<ISyncedItem, PlayerAgent>((item, player) =>
+            {
                 var itemInLevel = item.TryCast<ItemInLevel>();
                 if (itemInLevel == null)
                     return;
+                itemInLevel.CourseNode ??= playerAgent.CourseNode;
                 itemInLevel.internalSync.AttemptPickupInteraction(ePickupItemInteractionType.UpdateCustomData, playerAgent.Owner, new()
                 {
                     ammo = maxAmmo,
@@ -328,7 +342,7 @@ namespace Hikaria.AdminSystem.Features.Item
         }
 
         [Command("ListItemsInZone")]
-        private static void ListItemsInZone([ZoneAlias] int alias)
+        private static void ListItemsInZone([ZoneAlias] int alias = -1)
         {
             if (CurrentGameState != (int)eGameStateName.InLevel)
             {
@@ -347,16 +361,17 @@ namespace Hikaria.AdminSystem.Features.Item
             }
             Dictionary<LG_Area, Dictionary<string, int>> resourcesInZone = new();
             Dictionary<LG_Area, Dictionary<string, int>> consumableInZone = new();
-            Dictionary<string, int> value = new();
             foreach (LG_Area area in zone.m_areas)
             {
-                if (!resourcesInZone.TryGetValue(area, out value))
+                if (!resourcesInZone.TryGetValue(area, out var resources))
                 {
-                    resourcesInZone.Add(area, value);
+                    resources = new();
+                    resourcesInZone.Add(area, resources);
                 }
-                if (!consumableInZone.TryGetValue(area, out value))
+                if (!consumableInZone.TryGetValue(area, out var consumables))
                 {
-                    consumableInZone.Add(area, value);
+                    consumables = new();
+                    consumableInZone.Add(area, consumables);
                 }
                 foreach (ItemInLevel item in area.m_courseNode.m_itemsInNode)
                 {
@@ -372,16 +387,16 @@ namespace Hikaria.AdminSystem.Features.Item
                     {
                         count /= 20;
 
-                        if (!value.TryAdd(itemName, count))
+                        if (!resources.TryAdd(itemName, count))
                         {
-                            value[itemName] += count;
+                            resources[itemName] += count;
                         }
                     }
                     else
                     {
-                        if (!value.TryAdd(itemName, count))
+                        if (!consumables.TryAdd(itemName, count))
                         {
-                            value[itemName] += count;
+                            consumables[itemName] += count;
                         }
                     }
                 }
@@ -390,6 +405,7 @@ namespace Hikaria.AdminSystem.Features.Item
             if (resourcesInZone.Count == 0 && consumableInZone.Count == 0)
             {
                 ConsoleLogs.LogToConsole($"ZONE_{alias}中没有资源", LogLevel.Error);
+                return;
             }
             resourcesInZone = resourcesInZone.OrderBy(x => x.Key.m_navInfo.UID).ToDictionary(x => x.Key, x => x.Value.OrderBy(y => y.Key).ToDictionary(y => y.Key, y => y.Value));
             consumableInZone = consumableInZone.OrderBy(x => x.Key.m_navInfo.UID).ToDictionary(x => x.Key, x => x.Value.OrderBy(y => y.Key).ToDictionary(y => y.Key, y => y.Value));
@@ -416,7 +432,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     {
                         totalResource[itemName] += resourcesInZone[area][itemName];
                     }
-                    ConsoleLogs.LogToConsole($"           资源包:{itemName.FormatInLength(35)}数量:{resourcesInZone[area][itemName]}次");
+                    ConsoleLogs.LogToConsole($"           资源包: {itemName.PadRight(36)}数量: {resourcesInZone[area][itemName]}次");
                 }
                 foreach (string itemName in consumableInZone[area].Keys)
                 {
@@ -428,7 +444,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     {
                         totalConsumable[itemName] += consumableInZone[area][itemName];
                     }
-                    ConsoleLogs.LogToConsole($"           可消耗品:{itemName.FormatInLength(35)}数量:{consumableInZone[area][itemName]}次");
+                    ConsoleLogs.LogToConsole($"           可消耗品: {itemName.PadRight(35)}数量: {consumableInZone[area][itemName]}次");
                 }
             }
 
@@ -444,11 +460,11 @@ namespace Hikaria.AdminSystem.Features.Item
                 totalConsumable = totalConsumable.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value);
                 foreach (string itemName in totalResource.Keys)
                 {
-                    ConsoleLogs.LogToConsole($"           资源包:{itemName.FormatInLength(35)}数量:{totalResource[itemName]}次");
+                    ConsoleLogs.LogToConsole($"           资源包:{itemName.PadRight(36)}数量:{totalResource[itemName]}次");
                 }
                 foreach (string itemName in totalConsumable.Keys)
                 {
-                    ConsoleLogs.LogToConsole($"           可消耗品:{itemName.FormatInLength(35)}数量:{totalConsumable[itemName]}次");
+                    ConsoleLogs.LogToConsole($"           可消耗品:{itemName.PadRight(35)}数量:{totalConsumable[itemName]}次");
                 }
             }
             ConsoleLogs.LogToConsole("-------------------------------------------------------------------------");
@@ -463,7 +479,7 @@ namespace Hikaria.AdminSystem.Features.Item
                 ConsoleLogs.LogToConsole($"不存在名为 {itemName} 的物品", LogLevel.Error);
                 return;
             }
-            iTerminalItem.Cast<LG_GenericTerminalItem>().PlayPing();
+            iTerminalItem.PlayPing();
         }
 
         [Command("ItemQuery")]
@@ -534,7 +550,7 @@ namespace Hikaria.AdminSystem.Features.Item
                     bool flag8 = (!flag3 || flag5) && (!flag4 || flag6);
                     if (flag7 || flag8)
                     {
-                        sb.AppendLine(terminalItem.TerminalItemKey.FormatInLength(25) + terminalItem.FloorItemType.ToString().FormatInLength(20) + terminalItem.FloorItemStatus.ToString().FormatInLength(20) + locationInfo);
+                        sb.AppendLine(terminalItem.TerminalItemKey.PadRight(25) + terminalItem.FloorItemType.ToString().PadRight(20) + terminalItem.FloorItemStatus.ToString().PadRight(20) + locationInfo);
                     }
                 }
             }

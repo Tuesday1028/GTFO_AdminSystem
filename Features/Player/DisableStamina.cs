@@ -39,7 +39,7 @@ namespace Hikaria.AdminSystem.Features.Player
         {
             private static void Postfix(PlayerStamina __instance)
             {
-                if (__instance.m_owner.Owner.IsLocal && _disableStaminaSystem)
+                if (__instance.m_owner.IsLocallyOwned && _disableStaminaSystem)
                 {
                     __instance.ResetStamina();
                 }
@@ -51,7 +51,7 @@ namespace Hikaria.AdminSystem.Features.Player
         {
             private static void Postfix(PlayerEnemyCollision __instance, ref float __result)
             {
-                if (!__instance.m_owner.Owner.IsLocal)
+                if (!__instance.m_owner.IsLocallyOwned)
                 {
                     return;
                 }

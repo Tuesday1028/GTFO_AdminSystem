@@ -7,7 +7,7 @@ using TheArchive.Interfaces;
 
 namespace Hikaria.AdminSystem.Managers
 {
-    public class EnemyDataHelper : InitSingletonBase<TranslateHelper>, IInitAfterGameDataInitialized
+    public class EnemyDamageDataHelper : InitSingletonBase<EnemyDamageDataHelper>, IInitAfterGameDataInitialized
     {
         public static Dictionary<uint, EnemyDataBlock> EnemyDataBlockLookup { get; set; } = new();
 

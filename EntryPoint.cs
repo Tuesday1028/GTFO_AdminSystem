@@ -63,6 +63,9 @@ public class EntryPoint : IArchiveModule
 
             Dev.SetLanguage(Language.Chinese, "开发者选项");
             Dev.SetLanguage(Language.English, "Develop");
+
+            Visual.SetLanguage(Language.Chinese, "可视化");
+            Visual.SetLanguage(Language.English, "Visual");
         }
 
         public static FeatureGroup ModuleGroup => FeatureGroups.GetOrCreateModuleGroup("Admin System", new()
@@ -84,6 +87,8 @@ public class EntryPoint : IArchiveModule
 
         public static FeatureGroup InLevel => ModuleGroup.GetOrCreateSubGroup("InLevel");
 
-        public static FeatureGroup Dev => ModuleGroup.GetOrCreateSubGroup("Develop");
+        public static FeatureGroup Dev => ModuleGroup.GetOrCreateSubGroup("Develop", true);
+
+        public static FeatureGroup Visual => ModuleGroup.GetOrCreateSubGroup("Visual");
     }
 }

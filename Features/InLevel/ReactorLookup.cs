@@ -12,6 +12,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
     [DisallowInGameToggle]
     [EnableFeatureByDefault]
     [DoNotSaveToConfig]
+    [HideInModSettings]
     [CommandPrefix("Reactor")]
     public class ReactorLookup : Feature
     {
@@ -124,7 +125,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
 
                 if (ReactorsInLevel.TryGetValue(id, out var reactor))
                 {
-                    _secondarySignature = $" ({reactor.m_currentState.status})";
+                    _secondarySignature = $" ZONE_{reactor.SpawnNode.m_zone.Alias}, {reactor.m_currentState.status}";
                 }
                 _completion = _id.ToString();
             }

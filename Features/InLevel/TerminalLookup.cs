@@ -15,6 +15,7 @@ namespace Hikaria.AdminSystem.Features.InLevel
     [DoNotSaveToConfig]
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
+    [HideInModSettings]
     [CommandPrefix("Terminal")]
     public class TerminalLookup : Feature
     {
