@@ -90,7 +90,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
             //NormalOnly = 2
         }
 
-        private static CustomSetting<Dictionary<uint, WeaponAutoTriggerPreference>> PreferencesLookup = new("WeaponAutoTriggerPreferences.json", new());
+        private static CustomSettings<Dictionary<uint, WeaponAutoTriggerPreference>> PreferencesLookup = new("WeaponAutoTriggerPreferences.json", new());
 
         public class WeaponAutoTriggerPreference
         {

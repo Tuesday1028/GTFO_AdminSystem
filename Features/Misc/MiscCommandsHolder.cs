@@ -930,8 +930,8 @@ namespace Hikaria.AdminSystem.Features.Misc
             ConsoleLogs.LogToConsole($"{playerAgent.PlayerName} 已补充资源");
         }
 
-        [Command("GiveAllResources", "给予所有玩家资源")]
-        private static void GiveAllResources()
+        [Command("GiveResourcesAll", "给予所有玩家资源")]
+        private static void GiveResourcesAll()
         {
             foreach (var playerAgent in PlayerManager.PlayerAgentsInLevel)
             {

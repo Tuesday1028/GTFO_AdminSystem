@@ -131,7 +131,7 @@ namespace Hikaria.AdminSystem.Features.Player
         }
 
         [Command("WarpToItem")]
-        private static void WarpPlayerToItem([PlayerSlotIndex] int slot, [ItemInLevel] string itemName)
+        private static void WarpPlayerToItem([PlayerSlotIndex] int slot, [TerminalItemKey] string itemName)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var playerAgent) || ItemLookup.ItemsInLevel.TryGetValue(itemName.ToUpperInvariant(), out var item))
             {
@@ -149,7 +149,7 @@ namespace Hikaria.AdminSystem.Features.Player
         }
 
         [Command("WarpAllToItem")]
-        private static void WarpAllPlayersToItem([ItemInLevel] string itemName)
+        private static void WarpAllPlayersToItem([TerminalItemKey] string itemName)
         {
             if (ItemLookup.ItemsInLevel.TryGetValue(itemName.ToUpperInvariant(), out var item))
             {

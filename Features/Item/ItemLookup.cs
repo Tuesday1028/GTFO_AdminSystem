@@ -1,6 +1,5 @@
 ﻿using AIGraph;
 using GameData;
-using Hikaria.AdminSystem.Extensions;
 using Hikaria.AdminSystem.Suggestion.Suggestors.Attributes;
 using Hikaria.AdminSystem.Suggestions.Suggestors.Attributes;
 using Hikaria.AdminSystem.Utilities;
@@ -32,17 +31,16 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public static Dictionary<string, ItemInLevel> ItemsInLevel { get; set; } = new();
 
-        [ArchivePatch(typeof(ItemSpawnManager), nameof(ItemSpawnManager.SpawnItem))]
-        private class ItemSpawnManager__SpawnItem__Patch
+        [ArchivePatch(typeof(LG_GenericTerminalItem), nameof(LG_GenericTerminalItem.Setup))]
+        private class LG_GenericTerminalItem__Setup__Patch
         {
-            private static void Postfix(global::Item __result)
+            private static void Postfix(LG_GenericTerminalItem __instance)
             {
-                var itemInLevel = __result.TryCast<ItemInLevel>();
-                if (itemInLevel == null) return;
-                string[] array = itemInLevel.ToString().Split(' ');
-                var key = array[1].ToUpperInvariant();
+                var itemInLevel = __instance.GetComponentInParent<ItemInLevel>();
+                if (itemInLevel == null)
+                    return;
+                var key = __instance.TerminalItemKey.ToUpperInvariant();
                 ItemsInLevel[key] = itemInLevel;
-
                 var sync = itemInLevel.GetSyncComponent()?.TryCast<LG_PickupItem_Sync>();
                 if (sync == null)
                     return;
@@ -69,7 +67,7 @@ namespace Hikaria.AdminSystem.Features.Item
         }
 
         [Command("PickupItem")]
-        private static void PlayerPickupItem([PlayerSlotIndex] int slot, [ItemInLevel] string itemName)
+        private static void PlayerPickupItem([PlayerSlotIndex] int slot, [TerminalItemKey] string itemName)
         {
             itemName = itemName.ToUpperInvariant();
             SNet_Player playerInSlot = SNet.Slots.GetPlayerInSlot(slot - 1);
@@ -471,7 +469,7 @@ namespace Hikaria.AdminSystem.Features.Item
         }
 
         [Command("ItemPing")]
-        private static void PingItem([ItemInLevel] string itemName)
+        private static void PingItem([TerminalItemKey] string itemName)
         {
             itemName = itemName.ToUpperInvariant();
             if (!LG_LevelInteractionManager.TryGetTerminalInterface(itemName, AdminUtils.LocalPlayerAgent.DimensionIndex, out iTerminalItem iTerminalItem))
@@ -483,7 +481,7 @@ namespace Hikaria.AdminSystem.Features.Item
         }
 
         [Command("ItemQuery")]
-        private static void QueryItem([ItemInLevel] string itemName)
+        private static void QueryItem([TerminalItemKey] string itemName)
         {
             itemName = itemName.ToUpperInvariant();
             eDimensionIndex dimensionIndex = AdminUtils.LocalPlayerAgent.DimensionIndex;
@@ -564,7 +562,7 @@ namespace Hikaria.AdminSystem.Features.Item
 
         }
 
-        public sealed class ItemInLevelAttribute : SuggestorTagAttribute
+        public sealed class TerminalItemKeyAttribute : SuggestorTagAttribute
         {
             private readonly IQcSuggestorTag[] _tags = { new ItemInLevelTag() };
 
@@ -588,7 +586,10 @@ namespace Hikaria.AdminSystem.Features.Item
 
             protected override IEnumerable<string> GetItems(SuggestionContext context, SuggestorOptions options)
             {
-                return ItemsInLevel.Keys;
+                var keys = new List<string>();
+                foreach (var pair in LG_LevelInteractionManager.Current.m_terminalItemsByKeyString)
+                    keys.Add(pair.Key);
+                return keys;
             }
         }
     }

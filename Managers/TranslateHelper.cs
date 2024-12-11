@@ -18,7 +18,7 @@ namespace Hikaria.AdminSystem.Managers
 
         private static Dictionary<uint, string> EnemyID2NameLookup = new();
 
-        private static CustomSetting<List<EnemyIDNameData>> EnemyIDNames = new("EnemyIDNameLookup", new(), new Action<List<EnemyIDNameData>>((data) =>
+        private static CustomSettings<List<EnemyIDNameData>> EnemyIDNames = new("EnemyIDNameLookup", new(), new Action<List<EnemyIDNameData>>((data) =>
         {
             EnemyID2NameLookup.Clear();
             foreach (var item in data)
