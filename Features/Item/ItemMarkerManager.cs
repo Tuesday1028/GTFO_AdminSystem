@@ -199,6 +199,55 @@ namespace Hikaria.AdminSystem.Features.Item
             private static LG_Zone currentZone;
         }
 
+
+        [ArchivePatch(typeof(ItemSpawnManager), nameof(ItemSpawnManager.SpawnItem))]
+        private class ItemSpawnManager__SpawnItem__Patch
+        {
+            private static void Postfix(global::Item __result)
+            {
+                var itemInLevel = __result.TryCast<ItemInLevel>();
+                if (itemInLevel == null)
+                    return;
+                if (itemInLevel.CourseNode != null)
+                    return;
+                if (itemInLevel.internalSync.GetCurrentState().status != ePickupItemStatus.PlacedInLevel)
+                    return;
+
+                if (itemInLevel.Get_pItemData().originCourseNode.TryGet(out var node))
+                {
+                    itemInLevel.CourseNode = node;
+                    return;
+                }
+                var terminalItem = itemInLevel.GetComponent<iTerminalItem>();
+                if (terminalItem != null)
+                {
+                    itemInLevel.CourseNode = terminalItem.SpawnNode;
+                    return;
+                }
+                var pickupItem = itemInLevel.transform.parent?.parent?.GetComponentInChildren<LG_PickupItem>();
+                if (pickupItem != null)
+                {
+                    itemInLevel.CourseNode = pickupItem.SpawnNode;
+                    return;
+                }
+            }
+        }
+
+        [ArchivePatch(typeof(LG_ResourceContainer_Storage), nameof(LG_ResourceContainer_Storage.SetSpawnNode))]
+        private class LG_ResourceContainer_Storage__SetSpawnNode__Patch
+        {
+            private static void Postfix(LG_ResourceContainer_Storage __instance, GameObject obj, AIG_CourseNode spawnNode)
+            {
+                foreach (var item in obj.GetComponentsInChildren<ItemInLevel>())
+                {
+                    if (item.CourseNode == null && item.internalSync.GetCurrentState().status == ePickupItemStatus.PlacedInLevel)
+                    {
+                        item.CourseNode = spawnNode;
+                    }
+                }
+            }
+        }
+
         private class ItemMarker
         {
             public NavMarker Marker { get; private set; }
@@ -557,34 +606,31 @@ namespace Hikaria.AdminSystem.Features.Item
                         _AllItemInLevels.Remove(item);
                         continue;
                     }
-                    if (!item.CourseNode.m_itemsInNode.Contains(item))
-                    {
-                        item.CourseNode.m_itemsInNode.Add(item);
-                    }
                 }
             }
 
             private static void SetCourseNodeForItemInLevel(ItemInLevel item)
             {
                 if (item.CourseNode != null)
-                {
                     return;
-                }
-                if (item.internalSync != null)
+
+                if (item.internalSync == null)
+                    return;
+                var state = item.internalSync.GetCurrentState();
+                if (state.status != ePickupItemStatus.PlacedInLevel)
+                    return;
+
+                if (state.placement.node.TryGet(out var node))
                 {
-                    var state = item.internalSync.GetCurrentState();
-                    if (state.placement.node.TryGet(out var node) && state.status != ePickupItemStatus.PickedUp)
-                    {
-                        item.CourseNode = node;
-                        return;
-                    }
+                    item.CourseNode = node;
+                    return;
                 }
                 if (item.container != null)
                 {
                     item.CourseNode = item.container.m_core.SpawnNode;
                     return;
                 }
-                var pickupItem = item.transform.parent.parent.GetComponentInChildren<LG_PickupItem>();
+                var pickupItem = item.transform.parent?.parent?.GetComponentInChildren<LG_PickupItem>();
                 if (pickupItem != null)
                 {
                     item.CourseNode = pickupItem.SpawnNode;

@@ -3,6 +3,8 @@ using AIGraph;
 using AirNavigation;
 using Enemies;
 using Hikaria.AdminSystem.Utilities;
+using Hikaria.Core;
+using Hikaria.Core.Interfaces;
 using Hikaria.QC;
 using Player;
 using SNetwork;
@@ -20,7 +22,7 @@ namespace Hikaria.AdminSystem.Features.Visual
     [DisallowInGameToggle]
     [EnableFeatureByDefault]
     [DoNotSaveToConfig]
-    public class EnemyPathVisualizer : Feature
+    public class EnemyPathVisualizer : Feature, IOnMasterChanged
     {
         public override string Name => "敌人寻迹可视化";
 
@@ -86,8 +88,21 @@ namespace Hikaria.AdminSystem.Features.Visual
         private static VisualizerModeType _visualizerMode = VisualizerModeType.World;
         public override void Init()
         {
+            GameEventAPI.RegisterSelf(this);
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<EnemyPathVisualizerHandler>();
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<AroundEnemyUpdater>();
+        }
+
+        public void OnMasterChanged()
+        {
+            if (SNet.IsMaster)
+            {
+                foreach (var enemy in UnityEngine.Object.FindObjectsOfType<EnemyAgent>())
+                {
+                    if (enemy.GetComponent<EnemyPathVisualizerHandler>() == null)
+                        enemy.gameObject.AddComponent<EnemyPathVisualizerHandler>();
+                }
+            }
         }
 
         [ArchivePatch(typeof(EnemyAgent), nameof(EnemyAgent.Setup))]
@@ -95,6 +110,8 @@ namespace Hikaria.AdminSystem.Features.Visual
         {
             private static void Postfix(EnemyAgent __instance)
             {
+                if (!SNet.IsMaster)
+                    return;
                 if (__instance.GetComponent<EnemyPathVisualizerHandler>() == null)
                     __instance.gameObject.AddComponent<EnemyPathVisualizerHandler>();
             }
