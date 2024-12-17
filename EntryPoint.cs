@@ -6,6 +6,7 @@ using TheArchive.Core.Localization;
 
 namespace Hikaria.AdminSystem;
 
+[ArchiveDependency(ItemMarker.PluginInfo.GUID)]
 [ArchiveDependency(QC.PluginInfo.GUID)]
 [ArchiveDependency(Core.PluginInfo.GUID)]
 [ArchiveModule(PluginInfo.GUID, PluginInfo.NAME, PluginInfo.VERSION)]

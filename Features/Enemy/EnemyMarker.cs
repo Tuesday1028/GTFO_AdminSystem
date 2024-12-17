@@ -83,7 +83,7 @@ namespace Hikaria.AdminSystem.Features.Enemy
 
         public override void Init()
         {
-            GameEventAPI.RegisterSelf(this);
+            GameEventAPI.RegisterListener(this);
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<EnemyMarkerHandler>();
         }
 

@@ -30,13 +30,16 @@ namespace Hikaria.AdminSystem.Features.Visual
             public bool ForeseeBioscanPosition { get; set; }
         }
 
-        [ArchivePatch(typeof(CP_Holopath_Spline), nameof(CP_Holopath_Spline.DoRevealSpline))]
-        public class CP_Holopath_Spline__DoRevealSpline__Patch
+        private const float CircleWidth = 2f;
+        private const float LineWidth = 2f;
+
+        [ArchivePatch(typeof(CP_Holopath_Spline._DoRevealSpline_d__38), nameof(CP_Holopath_Spline._DoRevealSpline_d__38.MoveNext))]
+        public class CP_Holopath_Spline__DoRevealSpline_d__38__MoveNext__Patch
         {
-            private static void Prefix(ref float startProgress)
+            private static void Prefix(CP_Holopath_Spline._DoRevealSpline_d__38 __instance)
             {
                 if (Settings.FastSplineReveal)
-                    startProgress = 1f;
+                    __instance._timeToReveal_5__2 = 0f;
             }
         }
 
@@ -74,14 +77,15 @@ namespace Hikaria.AdminSystem.Features.Visual
                 var spline = core.m_spline.Cast<CP_Holopath_Spline>().CurvySpline;
                 var points = spline.GetApproximation(Space.World);
                 var count = points.Count;
+                var graphics = core.m_graphics.Cast<CP_Bioscan_Graphics>();
+                var scanCol = graphics.m_currentCol;
                 while (core.State.status == eBioscanStatus.SplineReveal)
                 {
                     if (Settings.ForeseeBioscanPosition)
                     {
                         for (int i = 0; i < count - 1; i++)
-                            Fig.DrawLine(points[i], points[i + 1], _splineCol, MaterialHelper.DefaultOverlayFaded, 1.25f);
-                        var graphics = core.m_graphics.Cast<CP_Bioscan_Graphics>();
-                        var scanCol = graphics.m_currentCol;
+                            Fig.DrawLine(points[i], points[i + 1], _splineCol, MaterialHelper.DefaultOverlayFaded, LineWidth);
+                        scanCol = graphics.m_currentCol;
                         if (core.m_hasAlarm)
                         {
                             if (graphics.m_colorsByMode.ContainsKey(eChainedPuzzleGraphicsColorMode.Alarm_Waiting))
@@ -89,7 +93,7 @@ namespace Hikaria.AdminSystem.Features.Visual
                         }
                         else if (graphics.m_colorsByMode.ContainsKey(eChainedPuzzleGraphicsColorMode.Waiting))
                             scanCol = graphics.m_colorsByMode[eChainedPuzzleGraphicsColorMode.Waiting];
-                        Fig.DrawCircle(graphics.transform.position, _rotation, graphics.m_radius, scanCol, MaterialHelper.DefaultOverlay, 1.25f, 96);
+                        Fig.DrawCircle(graphics.transform.position, _rotation, graphics.m_radius, scanCol, MaterialHelper.DefaultOverlay, CircleWidth, 96);
                     }
                     yield return null;
                 }
@@ -105,10 +109,10 @@ namespace Hikaria.AdminSystem.Features.Visual
                     {
                         for (int i = 0; i < count - 1; i++)
                         {
-                            FigExt.HighlightPoint(_camera, positions[i], string.Empty, _textSize, _color, _color, _color, MaterialHelper.DefaultOverlay, 0.2f, 0.2f, 0f);
-                            Fig.DrawDottedLine(positions[i], positions[i + 1], _colorTScan, MaterialHelper.DefaultOverlayFaded, 0.8f);
+                            FigExt.HighlightPoint(_camera, positions[i], string.Empty, _textSize, _color, _color, _color, MaterialHelper.DefaultOverlay, 0.4f, 0.2f, 0f);
+                            Fig.DrawLine(positions[i], positions[i + 1], _colorTScan, MaterialHelper.DefaultOverlayFaded, 1f);
                         }
-                        FigExt.HighlightPoint(_camera, positions[count - 1], string.Empty, _textSize, _color, _color, _color, MaterialHelper.DefaultOverlay, 0.2f, 0.2f, 0f);
+                        FigExt.HighlightPoint(_camera, positions[count - 1], string.Empty, _textSize, _color, _color, _color, MaterialHelper.DefaultOverlay, 0.4f, 0.2f, 0f);
                     }
                     yield return null;
                 }
@@ -134,18 +138,16 @@ namespace Hikaria.AdminSystem.Features.Visual
                     if (Settings.ForeseeBioscanPosition)
                     {
                         for (int i = 0; i < count - 1; i++)
-                            Fig.DrawLine(points[i], points[i + 1], _splineCol, MaterialHelper.DefaultOverlayFaded, 1.25f);
+                            Fig.DrawLine(points[i], points[i + 1], _splineCol, MaterialHelper.DefaultOverlayFaded, LineWidth);
                         foreach (var icore in core.m_childCores)
                         {
                             var ccore = icore.Cast<CP_Bioscan_Core>();
                             var graphics = ccore.m_graphics.Cast<CP_Bioscan_Graphics>();
-                            //var rot = Quaternion.LookRotation(graphics.m_textMeshRenderer.transform.position - _camera.transform.position, Vector3.up);
-                            //Fig.DrawText(graphics.m_textMeshRenderer.text, graphics.m_textMeshRenderer.transform.position, rot, _textSize);
                             var cspline = ccore.m_spline.Cast<CP_Holopath_Spline>().CurvySpline;
                             var cpoints = cspline.GetApproximation(Space.World);
                             var ccount = cpoints.Count;
                             for (int i = 0; i < ccount - 1; i++)
-                                Fig.DrawLine(cpoints[i], cpoints[i + 1], _splineCol, MaterialHelper.DefaultOverlayFaded, 1.25f);
+                                Fig.DrawLine(cpoints[i], cpoints[i + 1], _splineCol, MaterialHelper.DefaultOverlayFaded, LineWidth);
                             var scanCol = graphics.m_currentCol;
                             if (ccore.m_hasAlarm)
                             {
@@ -154,9 +156,10 @@ namespace Hikaria.AdminSystem.Features.Visual
                             }
                             else if (graphics.m_colorsByMode.ContainsKey(eChainedPuzzleGraphicsColorMode.Waiting))
                                 scanCol = graphics.m_colorsByMode[eChainedPuzzleGraphicsColorMode.Waiting];
-                            Fig.DrawCircle(graphics.transform.position, _rotation, graphics.m_radius, scanCol, MaterialHelper.DefaultOverlay, 1.25f, 96);
+                            Fig.DrawCircle(graphics.transform.position, _rotation, graphics.m_radius, scanCol, MaterialHelper.DefaultOverlay, CircleWidth, 96);
                         }
                     }
+
                     yield return null;
                 }
             }

@@ -88,7 +88,7 @@ namespace Hikaria.AdminSystem.Features.Visual
         private static VisualizerModeType _visualizerMode = VisualizerModeType.World;
         public override void Init()
         {
-            GameEventAPI.RegisterSelf(this);
+            GameEventAPI.RegisterListener(this);
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<EnemyPathVisualizerHandler>();
             LoaderWrapper.ClassInjector.RegisterTypeInIl2Cpp<AroundEnemyUpdater>();
         }

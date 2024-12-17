@@ -30,7 +30,7 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public override void Init()
         {
-            GameEventAPI.RegisterSelf(this);
+            GameEventAPI.RegisterListener(this);
         }
 
         [Command("OneShotKill", "一击必杀")]

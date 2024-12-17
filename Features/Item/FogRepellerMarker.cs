@@ -48,7 +48,7 @@ namespace Hikaria.AdminSystem.Features.Item
 
         public override void Init()
         {
-            GameEventAPI.RegisterSelf(this);
+            GameEventAPI.RegisterListener(this);
         }
 
 
