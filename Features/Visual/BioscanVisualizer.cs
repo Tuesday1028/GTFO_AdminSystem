@@ -1,6 +1,7 @@
 ﻿using ChainedPuzzles;
 using Hikaria.AdminSystem.Utilities;
 using Player;
+using SNetwork;
 using System.Collections;
 using System.Collections.Generic;
 using TheArchive.Core.Attributes;
@@ -38,6 +39,8 @@ namespace Hikaria.AdminSystem.Features.Visual
         {
             private static void Prefix(CP_Holopath_Spline._DoRevealSpline_d__38 __instance)
             {
+                if (!SNet.IsMaster)
+                    return;
                 if (Settings.FastSplineReveal)
                     __instance._timeToReveal_5__2 = 0f;
             }
