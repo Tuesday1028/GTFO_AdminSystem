@@ -8,6 +8,7 @@ namespace Hikaria.AdminSystem.Features.Item
 {
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
+    [DoNotSaveToConfig]
     public class ItemMarker : Feature
     {
         public override string Name => "物品标记";
@@ -24,16 +25,6 @@ namespace Hikaria.AdminSystem.Features.Item
         }
 
         [Command("ItemMarker")]
-        private static bool EnableItemMarker
-        {
-            get
-            {
-                return ItemMarkerManager.DevMode;
-            }
-            set
-            {
-                ItemMarkerManager.DevMode = value;
-            }
-        }
+        private static bool EnableItemMarker { get => ItemMarkerManager.DevMode; set => ItemMarkerManager.DevMode = value; }
     }
 }

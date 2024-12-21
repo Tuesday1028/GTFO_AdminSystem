@@ -14,7 +14,7 @@ namespace Hikaria.AdminSystem.Features.Visual
 {
     [EnableFeatureByDefault]
     [DisallowInGameToggle]
-    public class BioScanVisualizer : Feature
+    public class BioscanVisualizer : Feature
     {
         public override string Name => "生物扫描点位可视化";
 
@@ -77,17 +77,20 @@ namespace Hikaria.AdminSystem.Features.Visual
 
             private static IEnumerator DrawBioscan(CP_Bioscan_Core core)
             {
-                var spline = core.m_spline.Cast<CP_Holopath_Spline>().CurvySpline;
-                var points = spline.GetApproximation(Space.World);
-                var count = points.Count;
+                var spline = core.m_spline?.Cast<CP_Holopath_Spline>().CurvySpline;
+                var points = spline?.GetApproximation(Space.World);
+                var count = points?.Count;
                 var graphics = core.m_graphics.Cast<CP_Bioscan_Graphics>();
                 var scanCol = graphics.m_currentCol;
-                while (core.State.status == eBioscanStatus.SplineReveal)
+                while (CurrentGameState == (int)eGameStateName.InLevel && core.State.status == eBioscanStatus.SplineReveal)
                 {
                     if (Settings.ForeseeBioscanPosition)
                     {
-                        for (int i = 0; i < count - 1; i++)
-                            Fig.DrawLine(points[i], points[i + 1], _splineCol, MaterialHelper.DefaultOverlayFaded, LineWidth);
+                        if (spline != null)
+                        {
+                            for (int i = 0; i < count - 1; i++)
+                                Fig.DrawLine(points[i], points[i + 1], _splineCol, MaterialHelper.DefaultOverlayFaded, LineWidth);
+                        }
                         scanCol = graphics.m_currentCol;
                         if (core.m_hasAlarm)
                         {
@@ -106,7 +109,7 @@ namespace Hikaria.AdminSystem.Features.Visual
             {
                 int count = core.m_movingComp.ScanPositions.Count;
                 var positions = core.m_movingComp.ScanPositions;
-                while (core.State.status == eBioscanStatus.Waiting || core.State.status == eBioscanStatus.Scanning)
+                while (CurrentGameState == (int)eGameStateName.InLevel && (core.State.status == eBioscanStatus.Waiting || core.State.status == eBioscanStatus.Scanning))
                 {
                     if (Settings.ForeseeBioscanPosition)
                     {
