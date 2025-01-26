@@ -1,3 +1,3 @@
 ﻿### 前置插件
  - GTFO_TheArchive
- - DevConsole
+ - GTFO_QuantumConsole_

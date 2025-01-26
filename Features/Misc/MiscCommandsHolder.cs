@@ -37,7 +37,7 @@ namespace Hikaria.AdminSystem.Features.Misc
 
 
         [Command("WantToSay")]
-        private static void WantToSay(int playerID, uint eventID, uint inDialogID, uint startDialogID, uint subtitleId)
+        private static void WantToSay(int playerID, uint eventID, uint inDialogID = 0, uint startDialogID = 0, uint subtitleId = 0)
         {
             PlayerVoiceManager.WantToSayInternal(playerID - 1, eventID, inDialogID, startDialogID, subtitleId);
         }
