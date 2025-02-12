@@ -184,7 +184,6 @@ namespace Hikaria.AdminSystem.Features.Enemy
             private IEnumerator UpdateMarker(EnemyAgent agent, NavMarker marker)
             {
                 StringBuilder sb = new(100);
-                PlayerAgent targetPlayer = null;
                 var yielder = new WaitForSeconds(0.1f);
                 Color color;
                 while (agent.Alive)

@@ -1,4 +1,5 @@
-﻿using Hikaria.AdminSystem.Utilities;
+﻿using Hikaria.AdminSystem.Suggestion.Suggestors.Attributes;
+using Hikaria.AdminSystem.Utilities;
 using Hikaria.AdminSystem.Utility;
 using Hikaria.Core;
 using Hikaria.Core.Interfaces;
@@ -36,7 +37,7 @@ namespace Hikaria.AdminSystem.Features.Player
         }
 
         [Command("InfResource", "无限资源")]
-        private static void ToggleInfResource(int slot)
+        private static void ToggleInfResource([PlayerSlotIndex] int slot)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !InfResourceLookup.TryGetValue(player.Owner.Lookup, out var entry))
             {
@@ -49,7 +50,7 @@ namespace Hikaria.AdminSystem.Features.Player
 
 
         [Command("NoResource", "禁用资源")]
-        private static void ToggleNoResource(int slot)
+        private static void ToggleNoResource([PlayerSlotIndex] int slot)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !InfResourceLookup.TryGetValue(player.Owner.Lookup, out var entry))
             {
@@ -61,7 +62,7 @@ namespace Hikaria.AdminSystem.Features.Player
         }
 
         [Command("InfSentry", "无限哨戒炮")]
-        private static void ToggleInfSentry(int slot)
+        private static void ToggleInfSentry([PlayerSlotIndex] int slot)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !InfResourceLookup.TryGetValue(player.Owner.Lookup, out var entry))
             {
@@ -73,7 +74,7 @@ namespace Hikaria.AdminSystem.Features.Player
         }
 
         [Command("ForceDeploy", "强制部署")]
-        private static void ToggleForceDeploy(int slot)
+        private static void ToggleForceDeploy([PlayerSlotIndex] int slot)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !InfResourceLookup.TryGetValue(player.Owner.Lookup, out var entry))
             {

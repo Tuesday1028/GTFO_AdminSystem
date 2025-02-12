@@ -19,8 +19,6 @@ namespace Hikaria.AdminSystem.Features.Player
 
         public override string Description => "玩家通过点击地图传送到点击位置";
 
-        public override bool InlineSettingsIntoParentMenu => true;
-
         [FeatureConfig]
         public static MapClickWarpSettings Settings { get; set; }
 

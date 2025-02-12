@@ -52,7 +52,7 @@ namespace Hikaria.AdminSystem.Features.Player
         }
 
         [Command("IgnoreInfection")]
-        private static void ToggleIgnoreInfection(int slot)
+        private static void ToggleIgnoreInfection([PlayerSlotIndex] int slot)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !GodModeLookup.TryGetValue(player.Owner.Lookup, out var entry))
             {
@@ -64,7 +64,7 @@ namespace Hikaria.AdminSystem.Features.Player
         }
 
         [Command("CannotDie")]
-        private static void ToggleCannotDie(int slot)
+        private static void ToggleCannotDie([PlayerSlotIndex] int slot)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player) || !GodModeLookup.TryGetValue(player.Owner.Lookup, out var entry))
             {
@@ -75,7 +75,7 @@ namespace Hikaria.AdminSystem.Features.Player
             ConsoleLogs.LogToConsole($"已{(entry.CannotDie ? "启用" : "禁用")} {player.Owner.NickName} 免疫倒地");
         }
 
-        public override void OnGameStateChanged(int state)
+        public override void OnGameStateChanged([PlayerSlotIndex] int state)
         {
             eGameStateName current = (eGameStateName)state;
             if (current == eGameStateName.AfterLevel)

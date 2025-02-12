@@ -18,8 +18,6 @@ namespace Hikaria.AdminSystem.Features.Misc
 
         public override string Description => "允许玩家在游戏内更换装备";
 
-        public override bool InlineSettingsIntoParentMenu => true;
-
         public override FeatureGroup Group => EntryPoint.Groups.Misc;
 
         [FeatureConfig]
