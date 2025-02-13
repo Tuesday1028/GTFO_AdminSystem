@@ -8,6 +8,6 @@
 
         public const string VERSION = "3.3.0";
 
-        public const int REVISION = 10493;
+        public const int REVISION = 10500;
     }
 }

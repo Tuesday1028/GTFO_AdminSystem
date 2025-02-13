@@ -69,8 +69,8 @@ namespace Hikaria.AdminSystem.Features.Visual
 
             private static void Postfix(CP_Bioscan_Core __instance, eBioscanStatus status)
             {
-                if (__instance.IsMovable && (status == eBioscanStatus.Waiting || status == eBioscanStatus.Scanning))
-                    UnityMainThreadDispatcher.Enqueue(DrawTScan(__instance));
+                //if (__instance.IsMovable && (status == eBioscanStatus.Waiting || status == eBioscanStatus.Scanning))
+                //    UnityMainThreadDispatcher.Enqueue(DrawTScan(__instance));
                 if (status == eBioscanStatus.SplineReveal)
                     UnityMainThreadDispatcher.Enqueue(DrawBioscan(__instance));
             }

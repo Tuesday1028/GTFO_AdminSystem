@@ -499,7 +499,6 @@ namespace Hikaria.AdminSystem.Features.Item
                 locationText += $" Area_{node.m_area.m_navInfo.Suffix}";
             }
             itemDetails.Add("位置: " + locationText);
-            itemDetails.Add("----------------------------------------------------------------");
             foreach (string detailInfo in iTerminalItem.GetDetailedInfo(itemDetails))
             {
                 ConsoleLogs.LogToConsole(detailInfo);
