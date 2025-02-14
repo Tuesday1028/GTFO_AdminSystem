@@ -73,7 +73,7 @@ namespace Hikaria.AdminSystem.Features.Player
         }
 
         [ArchivePatch(typeof(LocalPlayerAgent), nameof(LocalPlayerAgent.Setup))]
-        private class LocalPlayerAgent_Setup_Patch
+        private class LocalPlayerAgent__Setup__Patch
         {
             private static void Postfix(LocalPlayerAgent __instance)
             {
@@ -95,7 +95,7 @@ namespace Hikaria.AdminSystem.Features.Player
             public static bool FreecamEnabled { get; private set; }
 
             private PlayerLocomotion _Locomotion;
-            private PlayerAgent _LocalPlayer;
+            private LocalPlayerAgent _LocalPlayer;
             private FPSCamera _FPSCam;
             private FPSCameraHolder _FPSCamHolder;
             private AIG_CourseNode _LastNode;
@@ -105,6 +105,14 @@ namespace Hikaria.AdminSystem.Features.Player
             private void Awake()
             {
                 Instance = this;
+                _LocalPlayer = AdminUtils.LocalPlayerAgent;
+                _Locomotion = _LocalPlayer.Locomotion;
+                _FPSCam = _LocalPlayer.FPSCamera;
+                _FPSCamHolder = _FPSCam.m_holder;
+            }
+
+            private void OnEnable()
+            {
                 _LocalPlayer = AdminUtils.LocalPlayerAgent;
                 _Locomotion = _LocalPlayer.Locomotion;
                 _FPSCam = _LocalPlayer.FPSCamera;
