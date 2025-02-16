@@ -39,9 +39,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
             [FSDisplayName("启用自瞄")]
             public bool EnableAutoAim { get => _enableAutoAim; set => _enableAutoAim = value; }
 
-            [FSDisplayName("弹道修正")]
-            public bool EnableTrajectoryRedirection { get; set; }
-
             [FSDisplayName("隔墙自瞄")]
             public bool WallHackAim { get; set; }
 
@@ -177,7 +174,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         }
 
         [ArchivePatch(typeof(BulletWeapon), nameof(BulletWeapon.OnUnWield))]
-        public class BulletWeapon__OnUnWield__Patch
+        private class BulletWeapon__OnUnWield__Patch
         {
             private static void Prefix(BulletWeapon __instance)
             {
@@ -199,63 +196,8 @@ namespace Hikaria.AdminSystem.Features.Weapon
             }
         }
 
-
-        [ArchivePatch(typeof(PlayerEnemyCollision), nameof(PlayerEnemyCollision.FindNearbyEnemiesMovementReduction))]
-        public class PlayerEnemyCollision__FindNearbyEnemiesMovementReduction__Patch
-        {
-            private static bool Prefix(PlayerEnemyCollision __instance, Vector3 pos, ref float __result)
-            {
-                if (!_enableAutoAim)
-                    return true;
-                float num = 1f;
-                if (__instance.m_owner.CourseNode == null)
-                {
-                    __result = num;
-                    return false;
-                }
-                __instance.m_enemies.Clear();
-                AIG_CourseNode.GetEnemiesInNodes(__instance.m_owner.CourseNode, Settings.AutoAimNodeRange, __instance.m_enemies);
-                for (int i = 0; i < __instance.m_enemies.Count; i++)
-                {
-                    EnemyAgent enemyAgent = __instance.m_enemies[i];
-                    Vector3 vector = enemyAgent.Position - pos;
-                    if (enemyAgent.Alive && vector.magnitude < enemyAgent.EnemyBalancingData.EnemyCollisionRadius)
-                    {
-                        float enemyCollisionPlayerMovementReduction = enemyAgent.EnemyBalancingData.EnemyCollisionPlayerMovementReduction;
-                        float num2 = num - enemyCollisionPlayerMovementReduction;
-                        float enemyCollisionMinimumMoveSpeedModifier = enemyAgent.EnemyBalancingData.EnemyCollisionMinimumMoveSpeedModifier;
-                        num = Mathf.Min(num, Mathf.Max(num2, enemyCollisionMinimumMoveSpeedModifier));
-                    }
-                }
-                __result = num;
-                return false;
-            }
-        }
-
-        static bool IsLocalShotgunFireShots;
-
-        [ArchivePatch(typeof(Shotgun), nameof(Shotgun.Fire))]
-        private class Shotgun__Fire__Patch
-        {
-            private static void Prefix(Shotgun __instance)
-            {
-                if (!_enableAutoAim)
-                    return;
-                if (__instance.Owner.IsLocallyOwned)
-                    IsLocalShotgunFireShots = true;
-            }
-
-            private static void Postfix(Shotgun __instance)
-            {
-                if (!_enableAutoAim)
-                    return;
-                if (__instance.Owner.IsLocallyOwned)
-                    IsLocalShotgunFireShots = false;
-            }
-        }
-
         [ArchivePatch(typeof(global::Weapon), nameof(global::Weapon.CastWeaponRay))]
-        public class Weapon__CastWeaponRay__Patch
+        private class Weapon__CastWeaponRay__Patch
         {
             public static Type[] ParameterTypes() => new Type[]
             {
@@ -269,40 +211,29 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 if (!_enableAutoAim)
                     return;
-                if (IsLocalShotgunFireShots) // 霰弹枪开火不会设置Owner
-                {
-                    weaponRayData.owner = AdminUtils.LocalPlayerAgent;
-                }
-                else if (!weaponRayData.owner?.IsLocallyOwned ?? true)
-                {
+                if (!weaponRayData.owner?.IsLocallyOwned ?? true)
                     return;
-                }
                 ArchetypeDataBlock archetypeData = weaponRayData.owner.Inventory.WieldedItem?.ArchetypeData ?? null;
                 if (archetypeData == null)
                     return;
-                if (!WeaponAutoAimHandler.TryGetInstance(archetypeData.persistentID, out WeaponAutoAimHandler weaponAutoAim))
+                if (!WeaponAutoAimHandler.TryGetInstance(archetypeData.persistentID, out var weaponAutoAim))
                 {
                     weaponAutoAim = weaponRayData.owner.Inventory.WieldedItem.GetComponent<WeaponAutoAimHandler>();
                     if (weaponAutoAim == null)
                         return;
                     WeaponAutoAimHandler.Register(archetypeData.persistentID, weaponAutoAim);
                 }
-                if (!Settings.EnableTrajectoryRedirection || weaponAutoAim.PauseAutoAim)
+                if (weaponAutoAim.PauseAutoAim)
                     return;
-                bool skipForceUpdate = false;
-                if (!weaponAutoAim.HasTarget)
+
+                if (weaponAutoAim.IsShotgun || (Settings.MagicBullet && weaponAutoAim.IsPiercingBullet))
                 {
-                    if (!IsLocalShotgunFireShots && !(Settings.MagicBullet && weaponAutoAim.IsPiercingBullet))
-                        return;
-                    weaponAutoAim.ForceUpdate(originPos);
                     if (!weaponAutoAim.HasTarget)
-                        return;
-                    skipForceUpdate = true;
+                        weaponAutoAim.ForceUpdate(originPos);
                 }
-                if (!skipForceUpdate && (IsLocalShotgunFireShots || (Settings.MagicBullet && weaponAutoAim.IsPiercingBullet)))
-                    weaponAutoAim.ForceUpdate(originPos);
                 if (!weaponAutoAim.HasTarget)
                     return;
+
                 if (!InputMapper.GetButtonKeyMouse(InputAction.Aim, eFocusState.FPS) && Settings.AutoFire != WeaponAutoAimSettings.AutoFireMode.FullyAuto)
                     return;
 
@@ -311,27 +242,12 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 weaponRayData.randomSpread = 0;
                 weaponRayData.angOffsetX = 0;
                 weaponRayData.angOffsetY = 0;
-                weaponRayData.maxRayDist = 2000f;
-                if (Settings.EnableTrajectoryRedirection)
-                {
-                    weaponRayData.fireDir = (weaponAutoAim.AimTargetPos - originPos).normalized;
-                }
-                if (!IsLocalShotgunFireShots)
-                {
-                    weaponAutoAim.TempIgnoreTargetEnemy();
-                }
-                weaponAutoAim.SetLastFireDir(IsLocalShotgunFireShots ? originalFireDir : weaponRayData.fireDir);
-            }
+                weaponRayData.fireDir = (weaponAutoAim.AimTargetPos - originPos).normalized;
+                weaponAutoAim.SetLastFireDir(weaponAutoAim.IsShotgun ? originalFireDir : weaponRayData.fireDir);
 
-            //private static void Postfix(ref global::Weapon.WeaponHitData weaponRayData)
-            //{
-            //    // 用于修正子弹击发特效的方向，击发特效在命中判定完成之后
-            //    if (fireDirModified)
-            //    {
-            //        weaponRayData.fireDir = weaponRayData.owner.FPSCamera.CameraRayDir;
-            //        fireDirModified = false;
-            //    }
-            //}
+                if (!weaponAutoAim.IsShotgun)
+                    weaponAutoAim.TempIgnoreTargetEnemy();
+            }
         }
 
         public class WeaponAutoAimHandler : MonoBehaviour
@@ -373,7 +289,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
             private void Awake()
             {
-                Current = this;
                 AllAutoAimInstances.Add(this);
             }
 
@@ -392,7 +307,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 if (m_Owner == null)
                 {
+                    weapon.MaxRayDist = 3000f;
                     m_BulletWeapon = weapon;
+                    m_IsShotgun = weapon.TryCast<Shotgun>() != null && weapon.ArchetypeData?.ShotgunBulletCount > 1;
+                    m_IsPiercingBullets = weapon.ArchetypeData?.PiercingBullets ?? false;
                     m_Owner = owner;
                     m_PlayerCamera = camera.gameObject.GetComponent<Camera>();
                     SetupReticle();
@@ -433,11 +351,12 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 UpdateTargetEnemy(m_Owner.FPSCamera.Position);
                 UpdateColor();
                 UpdateAutoFire();
-
-                IgnoredEnemies.Clear();
-                LastFireDir = Vector3.zero;
             }
 
+            private void LateUpdate()
+            {
+                LastFireDir = Vector3.zero;
+            }
 
             public void ForceUpdate(Vector3 sourcePos)
             {
@@ -477,13 +396,140 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     m_Reticle.AnimateScale(0f, 0.5f);
                     m_HasTarget = false;
                 }
+
+                m_IgnoredEnemies.Clear();
+
                 updateTick += Time.deltaTime;
                 if (updateTick >= 0.04f || force)
                 {
-                    UpdateAroundEnemy(sourcePos);
-                    UpdateBestEnemyTarget(sourcePos);
-                    UpdateTargetEnemyLimb(sourcePos);
                     updateTick = 0f;
+
+                    m_Target = null;
+                    m_TargetLimb = null;
+
+                    if (Settings.MagicBulletVisibleOnly)
+                        sourcePos = m_Owner.FPSCamera.Position;
+
+                    AIG_CourseNode.GetEnemiesInNodes(m_Owner.CourseNode, Settings.AutoAimNodeRange, m_Owner.EnemyCollision.m_enemies);
+                    float tempRange = float.MaxValue;
+                    foreach (var enemy in m_Owner.EnemyCollision.m_enemies)
+                    {
+                        if (m_IgnoredEnemies.Contains(enemy))
+                            continue;
+
+                        if (enemy.Damage.IsImortal)
+                            continue;
+
+                        if (!Settings.WallHackAim && !AdminUtils.CanSeeEnemyPlus(sourcePos, enemy))
+                            continue;
+
+                        if (IsPiercingBullet && Settings.MagicBullet && LastFireDir != Vector3.zero)
+                        {
+                            if (Math.Abs(Vector3.Angle(enemy.AimTarget.position - sourcePos, LastFireDir)) > Settings.MagicBulletMaxCorrectionAngle)
+                                continue;
+                        }
+                        switch (Settings.AimMode)
+                        {
+                            default:
+                            case WeaponAutoAimSettings.AutoAimMode.Crosshair:
+                                Vector3 scrPos = m_Owner.FPSCamera.m_camera.WorldToScreenPoint(enemy.AimTarget.position);
+                                Vector2 center = new(Screen.width / 2, Screen.height / 2);
+                                float distance = Vector3.Distance(scrPos, center);
+                                if (Settings.IgnoreAimRadius || (scrPos.z > 0 && distance <= Settings.AimRadius))
+                                {
+                                    if (distance < tempRange)
+                                    {
+                                        tempRange = distance;
+                                        m_Target = enemy;
+                                    }
+                                }
+                                break;
+                            case WeaponAutoAimSettings.AutoAimMode.Closest:
+                                float distance2 = Vector3.Distance(enemy.AimTarget.position, m_Owner.Position);
+                                Vector3 scrPos2 = m_Owner.FPSCamera.m_camera.WorldToScreenPoint(enemy.AimTarget.position);
+                                Vector2 center2 = new(Screen.width / 2, Screen.height / 2);
+                                float distance3 = Vector3.Distance(scrPos2, center2);
+                                if (Settings.IgnoreAimRadius || (scrPos2.z > 0 && distance3 <= Settings.AimRadius))
+                                {
+                                    if (distance2 < tempRange)
+                                    {
+                                        tempRange = distance2;
+                                        m_Target = enemy;
+                                    }
+                                }
+                                break;
+                        }
+                    }
+
+                    if (m_Target == null)
+                        return;
+
+                    var data = EnemyDamageDataHelper.GetOrGenerateEnemyDamageData(m_Target);
+                    if (data.IsImmortal)
+                    {
+                        if (OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var enable) && enable)
+                        {
+                            foreach (var index in data.Armorspots)
+                            {
+                                Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
+                                if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
+                                {
+                                    m_TargetLimb = limb;
+                                    return;
+                                }
+                            }
+                        }
+                        m_TargetLimb = null;
+                        return;
+                    }
+                    if (data.HasWeakSpot)
+                    {
+                        foreach (var index in data.Weakspots)
+                        {
+                            Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
+                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
+                            {
+                                m_TargetLimb = limb;
+                                return;
+                            }
+                        }
+                    }
+                    if (data.HasNormalSpot)
+                    {
+                        foreach (var index in data.Normalspots)
+                        {
+                            Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
+                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
+                            {
+                                m_TargetLimb = limb;
+                                return;
+                            }
+                        }
+                    }
+                    if (data.HasArmorSpot)
+                    {
+                        foreach (var index in data.Armorspots)
+                        {
+                            Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
+                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
+                            {
+                                m_TargetLimb = limb;
+                                return;
+                            }
+                        }
+                    }
+                    if (data.HasRealArmorSpot && OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var enable2) && enable2)
+                    {
+                        foreach (var index in data.RealArmorSpots)
+                        {
+                            Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
+                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
+                            {
+                                m_TargetLimb = limb;
+                                return;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -520,84 +566,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 m_Reticle.UpdateColorsWithAlphaMul(1f);
             }
 
-            private void UpdateTargetEnemyLimb(Vector3 sourcePos)
-            {
-                if (m_Target == null || PauseAutoAim)
-                {
-                    m_TargetLimb = null;
-                    return;
-                }
-
-                EnemyDamageDataHelper.EnemyDamageData data = EnemyDamageDataHelper.GetOrGenerateEnemyDamageData(m_Target);
-
-                if (data.IsImmortal)
-                {
-                    if (OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var enable) && enable)
-                    {
-                        foreach (var index in data.Armorspots)
-                        {
-                            Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
-                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
-                            {
-                                m_TargetLimb = limb;
-                                return;
-                            }
-                        }
-                    }
-                    m_TargetLimb = null;
-                    return;
-                }
-                if (data.HasWeakSpot)
-                {
-                    foreach (var index in data.Weakspots)
-                    {
-                        Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
-                        if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
-                        {
-                            m_TargetLimb = limb;
-                            return;
-                        }
-                    }
-                }
-                if (data.HasNormalSpot)
-                {
-                    foreach (var index in data.Normalspots)
-                    {
-                        Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
-                        if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
-                        {
-                            m_TargetLimb = limb;
-                            return;
-                        }
-                    }
-                }
-                if (data.HasArmorSpot)
-                {
-                    foreach (var index in data.Armorspots)
-                    {
-                        Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
-                        if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
-                        {
-                            m_TargetLimb = limb;
-                            return;
-                        }
-                    }
-                }
-                if (data.HasRealArmorSpot && OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var enable2) && enable2)
-                {
-                    foreach (var index in data.RealArmorSpots)
-                    {
-                        Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
-                        if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
-                        {
-                            m_TargetLimb = limb;
-                            return;
-                        }
-                    }
-                }
-                m_TargetLimb = null;
-            }
-
             private void UpdateAutoFire(bool force = false)
             {
                 if (PauseAutoAim)
@@ -616,95 +584,12 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 fireTimer = 0;
             }
 
-            private void UpdateBestEnemyTarget(Vector3 sourcePos)
-            {
-                if (AroundEnemies == null || AroundEnemies.Count == 0 || PauseAutoAim)
-                {
-                    m_Target = null;
-                    return;
-                }
-                EnemyAgent target = null;
-                float tempRange = 100000f;
-                foreach (EnemyAgent enemy in AroundEnemies)
-                {
-                    if (IsPiercingBullet && Settings.MagicBullet && LastFireDir != Vector3.zero)
-                    {
-                        float angle = Math.Abs(Vector3.Angle(enemy.AimTarget.position - sourcePos, LastFireDir));
-                        if (angle > Settings.MagicBulletMaxCorrectionAngle)
-                        {
-                            continue;
-                        }
-                    }
-                    switch (Settings.AimMode)
-                    {
-                        default:
-                        case WeaponAutoAimSettings.AutoAimMode.Crosshair:
-                            Vector3 scrPos = m_Owner.FPSCamera.m_camera.WorldToScreenPoint(enemy.AimTarget.position);
-                            Vector2 center = new(Screen.width / 2, Screen.height / 2);
-                            float distance = Vector3.Distance(scrPos, center);
-                            Vector3 vec = enemy.AimTarget.position - sourcePos;
-                            if (Settings.IgnoreAimRadius || (scrPos.z > 0 && distance <= Settings.AimRadius))
-                            {
-                                if (distance < tempRange)
-                                {
-                                    tempRange = distance;
-                                    target = enemy;
-                                }
-                            }
-                            break;
-                        case WeaponAutoAimSettings.AutoAimMode.Closest:
-                            float distance2 = Vector3.Distance(enemy.AimTarget.position, m_Owner.Position);
-                            Vector3 vec2 = enemy.AimTarget.position - m_Owner.FPSCamera.Position;
-                            Vector3 scrPos2 = m_Owner.FPSCamera.m_camera.WorldToScreenPoint(enemy.AimTarget.position);
-                            Vector2 center2 = new(Screen.width / 2, Screen.height / 2);
-                            float distance3 = Vector3.Distance(scrPos2, center2);
-                            if (Settings.IgnoreAimRadius || (scrPos2.z > 0 && distance3 <= Settings.AimRadius))
-                            {
-                                if (distance2 < tempRange)
-                                {
-                                    tempRange = distance2;
-                                    target = enemy;
-                                }
-                            }
-                            break;
-                    }
-                }
-                m_Target = target;
-            }
-
-            private void UpdateAroundEnemy(Vector3 sourcePos)
-            {
-                AroundEnemies.Clear();
-                if (PauseAutoAim)
-                    return;
-
-                if (Settings.MagicBulletVisibleOnly)
-                    sourcePos = m_Owner.FPSCamera.Position;
-
-                foreach (EnemyAgent enemy in m_Owner.EnemyCollision.m_enemies)
-                {
-                    if (IgnoredEnemies.Contains(enemy))
-                        continue;
-                    if (Settings.WallHackAim || AdminUtils.CanSeeEnemyPlus(sourcePos, enemy))
-                    {
-                        if (enemy.Alive && enemy.Damage.Health > 0f)
-                        {
-                            if (enemy.Damage.IsImortal)
-                            {
-                                continue;
-                            }
-                            AroundEnemies.Add(enemy);
-                        }
-                    }
-                }
-            }
-
             public void TempIgnoreTargetEnemy()
             {
                 if (m_Target == null)
                     return;
 
-                IgnoredEnemies.Add(m_Target);
+                m_IgnoredEnemies.Add(m_Target);
             }
 
             public void SetLastFireDir(Vector3 dir)
@@ -712,46 +597,31 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 LastFireDir = dir;
             }
 
-            public static WeaponAutoAimHandler Current { get; private set; }
-
-            public List<EnemyAgent> AroundEnemies { get; private set; } = new();
-
-            public bool IsPiercingBullet => m_BulletWeapon.ArchetypeData?.PiercingBullets ?? false;
-
-            private HashSet<EnemyAgent> IgnoredEnemies = new();
-
-            private GameObject m_ReticleHolder;
-
-            private CrosshairHitIndicator m_Reticle;
-
-            private EnemyAgent m_Target;
-
-            private Dam_EnemyDamageLimb m_TargetLimb;
-
-            private Camera m_PlayerCamera;
-
-            private bool m_HasTarget;
-
-            private BulletWeapon m_BulletWeapon;
-
-            private PlayerAgent m_Owner;
-
-            private Vector3 m_TargetedEulerAngles = new(0f, 0f, 45f);
-
-            private float fireTimer;
-
-            private Vector3 LastFireDir = Vector3.zero;
-
-            public static Dictionary<uint, WeaponAutoAimHandler> AutoAimInstances { get; private set; } = new();
-            public static HashSet<WeaponAutoAimHandler> AllAutoAimInstances { get; private set; } = new();
-
-            private float updateTick = 0.05f;
-
-            public bool HasTarget => m_Target != null && m_Target.Alive && m_TargetLimb != null;
-
+            public bool HasTarget => m_Target != null && m_Target.Alive && m_Target.Damage.Health > 0f && m_TargetLimb != null;
             public bool PauseAutoAim => ((!Settings.ReversePauseAutoAim && Input.GetKey(Settings.PauseAutoAimKey)) || (Settings.ReversePauseAutoAim && !Input.GetKey(Settings.PauseAutoAimKey)))
                 //&& m_BulletWeapon.AimButtonHeld 
                 && Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.Off;
+            public bool IsPiercingBullet => m_IsPiercingBullets;
+            public bool IsShotgun => m_IsShotgun;
+
+            private HashSet<EnemyAgent> m_IgnoredEnemies = new();
+            private GameObject m_ReticleHolder;
+            private CrosshairHitIndicator m_Reticle;
+            private EnemyAgent m_Target;
+            private Dam_EnemyDamageLimb m_TargetLimb;
+            private Camera m_PlayerCamera;
+            private bool m_HasTarget;
+            private bool m_IsShotgun;
+            private bool m_IsPiercingBullets;
+            private BulletWeapon m_BulletWeapon;
+            private PlayerAgent m_Owner;
+            private Vector3 m_TargetedEulerAngles = new(0f, 0f, 45f);
+            private float fireTimer;
+            private Vector3 LastFireDir = Vector3.zero;
+            private float updateTick;
+
+            public static Dictionary<uint, WeaponAutoAimHandler> AutoAimInstances { get; private set; } = new();
+            public static HashSet<WeaponAutoAimHandler> AllAutoAimInstances { get; private set; } = new();
         }
     }
 
