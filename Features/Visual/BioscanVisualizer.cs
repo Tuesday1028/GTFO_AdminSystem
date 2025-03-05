@@ -35,7 +35,7 @@ namespace Hikaria.AdminSystem.Features.Visual
         private const float LineWidth = 2f;
 
         [ArchivePatch(typeof(CP_Holopath_Spline._DoRevealSpline_d__38), nameof(CP_Holopath_Spline._DoRevealSpline_d__38.MoveNext))]
-        public class CP_Holopath_Spline__DoRevealSpline_d__38__MoveNext__Patch
+        private class CP_Holopath_Spline__DoRevealSpline_d__38__MoveNext__Patch
         {
             private static void Prefix(CP_Holopath_Spline._DoRevealSpline_d__38 __instance)
             {

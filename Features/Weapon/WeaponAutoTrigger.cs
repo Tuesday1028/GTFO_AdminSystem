@@ -264,6 +264,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 var shotgun = weapon.TryCast<Shotgun>();
                 bool isShotgun = shotgun != null;
                 float totalDamage = 0f;
+                float expectTotalDamage = 0f;
                 if (isShotgun)
                 {
                     var up = weapon.MuzzleAlign.up;
@@ -272,7 +273,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     float randomSpread = data.ShotgunBulletSpread;
                     float baseDamage = data.GetDamageWithBoosterEffect(owner, weapon.ItemDataBlock.inventorySlot);
                     baseDamage = AgentModifierManager.ApplyModifier(targetEnemy, AgentModifier.ProjectileResistance, baseDamage);
-                    float expectTotalDamage = baseDamage * data.ShotgunBulletCount * CurrentWeaponPref.ShotgunDamagePerFireThreshold;
+                    expectTotalDamage = baseDamage * data.ShotgunBulletCount * CurrentWeaponPref.ShotgunDamagePerFireThreshold;
                     float realDamage = 0f;
                     float tempFireDistance = 0f;
                     for (int i = 0; i < data.ShotgunBulletCount; i++)
@@ -324,18 +325,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
                         totalDamage += realDamage;
                     }
-
-                    if (targetEnemy.IsScout)
-                    {
-                        var scream = targetEnemy.Locomotion.ScoutScream;
-                        if (scream != null && scream.m_state != ES_ScoutScream.ScoutScreamState.Done)
-                            return;
-                    }
-
-                    if (totalDamage >= expectTotalDamage)
-                    {
-                        goto fire;
-                    }
                 }
                 else
                 {
@@ -358,10 +347,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     goto fire;
                 }
 
-                if (fireDistance > (data.DamageFalloff.y - data.DamageFalloff.x) * CurrentWeaponPref.DamageFalloffThreshold + data.DamageFalloff.x)
-                    return;
-
-                if (!isShotgun)
+                if (isShotgun)
                 {
                     if (targetEnemy.IsScout)
                     {
@@ -370,36 +356,49 @@ namespace Hikaria.AdminSystem.Features.Weapon
                             return;
                     }
 
-                    if (targetLimb.m_type == eLimbDamageType.Weakspot)
+                    if (totalDamage >= expectTotalDamage)
                     {
                         goto fire;
                     }
+                }
 
-                    if (CurrentWeaponPref.AutoTriggerLogic != AutoTriggerLogicType.WeakspotOnly)
+                if (fireDistance > (data.DamageFalloff.y - data.DamageFalloff.x) * CurrentWeaponPref.DamageFalloffThreshold + data.DamageFalloff.x)
+                    return;
+
+                if (targetEnemy.IsScout)
+                {
+                    var scream = targetEnemy.Locomotion.ScoutScream;
+                    if (scream != null && scream.m_state != ES_ScoutScream.ScoutScreamState.Done)
+                        return;
+                }
+
+                if (targetLimb.m_type == eLimbDamageType.Weakspot)
+                {
+                    goto fire;
+                }
+
+                if (CurrentWeaponPref.AutoTriggerLogic != AutoTriggerLogicType.WeakspotOnly)
+                {
+                    if (fireDistance <= Mathf.Min(CurrentWeaponPref.FalloffThreshold, data.DamageFalloff.x))
                     {
-                        if (fireDistance <= Mathf.Min(CurrentWeaponPref.FalloffThreshold, data.DamageFalloff.x))
-                        {
-                            goto fire;
-                        }
+                        goto fire;
                     }
+                }
 
-                    if (damageData.HasWeakSpot)
+                if (damageData.HasWeakSpot)
+                {
+                    if (!__instance.HasChargeup)
                     {
-                        if (!__instance.HasChargeup)
+                        foreach (var index in damageData.Weakspots.Keys)
                         {
-                            foreach (var index in damageData.Weakspots.Keys)
+                            var tempLimb = targetEnemy.Damage.DamageLimbs[index];
+                            if (!tempLimb.IsDestroyed && AdminUtils.CanFireHitObject(firePosition, tempLimb.gameObject))
                             {
-                                var tempLimb = targetEnemy.Damage.DamageLimbs[index];
-                                if (!tempLimb.IsDestroyed && AdminUtils.CanFireHitObject(firePosition, tempLimb.gameObject))
-                                {
-                                    return;
-                                }
+                                return;
                             }
                         }
                     }
-                    goto fire;
                 }
-                return;
             fire:
                 OverrideFireButton = true;
                 OverrideFireButtonPressed = true;

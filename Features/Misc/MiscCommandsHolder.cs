@@ -206,7 +206,7 @@ namespace Hikaria.AdminSystem.Features.Misc
                     if (iLG_ResourceContainer_Core != null)
                     {
                         LG_WeakResourceContainer container = iLG_ResourceContainer_Core.Cast<LG_WeakResourceContainer>();
-                        if (container != null && !container.ISOpen)
+                        if (container != null)
                         {
                             if (container.IsLocked())
                             {
@@ -470,7 +470,7 @@ namespace Hikaria.AdminSystem.Features.Misc
             ConsoleLogs.LogToConsole(sb.ToString());
         }
 
-        [Command("SetEnemyTarget", "设置敌人目标")]
+        [Command("EnemySetTarget", "设置敌人目标")]
         private static void SetEnemyTarget([PlayerSlotIndex] int slot, EnemyChoiceType choice = EnemyChoiceType.Awake)
         {
             if (!AdminUtils.TryGetPlayerAgentBySlotIndex(slot, out var player))

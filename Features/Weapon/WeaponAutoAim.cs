@@ -5,6 +5,7 @@ using Gear;
 using Hikaria.AdminSystem.Features.Player;
 using Hikaria.AdminSystem.Managers;
 using Hikaria.AdminSystem.Utility;
+using Hikaria.Core.Features.Fixes;
 using Hikaria.QC;
 using Player;
 using SNetwork;
@@ -228,8 +229,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
 
                 if (weaponAutoAim.IsShotgun || (Settings.MagicBullet && weaponAutoAim.IsPiercingBullet))
                 {
-                    if (!weaponAutoAim.HasTarget)
-                        weaponAutoAim.ForceUpdate(originPos);
+                    weaponAutoAim.ForceUpdate(originPos);
                 }
                 if (!weaponAutoAim.HasTarget)
                     return;
@@ -244,9 +244,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 weaponRayData.angOffsetY = 0;
                 weaponRayData.fireDir = (weaponAutoAim.AimTargetPos - originPos).normalized;
                 weaponAutoAim.SetLastFireDir(weaponAutoAim.IsShotgun ? originalFireDir : weaponRayData.fireDir);
-
-                if (!weaponAutoAim.IsShotgun)
-                    weaponAutoAim.TempIgnoreTargetEnemy();
             }
         }
 
@@ -277,7 +274,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     }
                     if (HasTarget)
                     {
-                        return m_TargetLimb.DamageTargetPos;
+                        return TargetLimb.DamageTargetPos;
                     }
                     //else if (m_Target != null)
                     //{
@@ -298,7 +295,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 if (m_Reticle != null)
                     m_Reticle.SetVisible(false, false);
                 m_HasTarget = false;
-                m_Target = null;
+                Target = null;
                 m_Reticle.SafeDestroy();
                 m_ReticleHolder.SafeDestroy();
             }
@@ -307,10 +304,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 if (m_Owner == null)
                 {
-                    weapon.MaxRayDist = 3000f;
+                    weapon.MaxRayDist = 1000f;
                     m_BulletWeapon = weapon;
-                    m_IsShotgun = weapon.TryCast<Shotgun>() != null && weapon.ArchetypeData?.ShotgunBulletCount > 1;
-                    m_IsPiercingBullets = weapon.ArchetypeData?.PiercingBullets ?? false;
+                    IsShotgun = weapon.TryCast<Shotgun>() != null && weapon.ArchetypeData?.ShotgunBulletCount > 1;
+                    IsPiercingBullet = weapon.ArchetypeData?.PiercingBullets ?? false;
                     m_Owner = owner;
                     m_PlayerCamera = camera.gameObject.GetComponent<Camera>();
                     SetupReticle();
@@ -321,9 +318,9 @@ namespace Hikaria.AdminSystem.Features.Weapon
             public void DoClear()
             {
                 if (m_Reticle != null)
-                    m_Reticle?.SetVisible(false, false);
+                    m_Reticle.SetVisible(false, false);
                 m_HasTarget = false;
-                m_Target = null;
+                Target = null;
                 Unregister(m_BulletWeapon.ArchetypeData.persistentID);
             }
 
@@ -370,15 +367,15 @@ namespace Hikaria.AdminSystem.Features.Weapon
             {
                 if (PauseAutoAim)
                 {
-                    m_Target = null;
-                    m_TargetLimb = null;
+                    Target = null;
+                    TargetLimb = null;
                     m_HasTarget = false;
                     m_Reticle.transform.localScale = Vector3.zero;
                     return;
                 }
-                if (m_Target != null && m_TargetLimb != null)
+                if (Target != null && TargetLimb != null)
                 {
-                    m_ReticleHolder.transform.position = m_PlayerCamera.WorldToScreenPoint(m_TargetLimb.DamageTargetPos);
+                    m_ReticleHolder.transform.position = m_PlayerCamera.WorldToScreenPoint(TargetLimb.DamageTargetPos);
                     if (!m_HasTarget)
                     {
                         m_Reticle.transform.localScale = Vector3.one * 2f;
@@ -391,21 +388,19 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 {
                     m_Reticle.transform.localEulerAngles += new Vector3(0f, 0f, 5f);
                 }
-                if (m_HasTarget && (m_Target == null || m_TargetLimb == null))
+                if (m_HasTarget && (Target == null || TargetLimb == null))
                 {
                     m_Reticle.AnimateScale(0f, 0.5f);
                     m_HasTarget = false;
                 }
-
-                m_IgnoredEnemies.Clear();
 
                 updateTick += Time.deltaTime;
                 if (updateTick >= 0.04f || force)
                 {
                     updateTick = 0f;
 
-                    m_Target = null;
-                    m_TargetLimb = null;
+                    Target = null;
+                    TargetLimb = null;
 
                     if (Settings.MagicBulletVisibleOnly)
                         sourcePos = m_Owner.FPSCamera.Position;
@@ -414,10 +409,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     float tempRange = float.MaxValue;
                     foreach (var enemy in m_Owner.EnemyCollision.m_enemies)
                     {
-                        if (m_IgnoredEnemies.Contains(enemy))
+                        if (DeadBodyFix.IsEnemyDead(enemy) || (IsPiercingBullet && m_BulletWeapon.m_damageSearchID > 0U && enemy.Damage.TempSearchID == m_BulletWeapon.m_damageSearchID))
                             continue;
 
-                        if (enemy.Damage.IsImortal)
+                        if (!enemy.Alive || enemy.Damage.Health <= 0f || enemy.Damage.IsImortal)
                             continue;
 
                         if (!Settings.WallHackAim && !AdminUtils.CanSeeEnemyPlus(sourcePos, enemy))
@@ -440,7 +435,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                                     if (distance < tempRange)
                                     {
                                         tempRange = distance;
-                                        m_Target = enemy;
+                                        Target = enemy;
                                     }
                                 }
                                 break;
@@ -454,42 +449,42 @@ namespace Hikaria.AdminSystem.Features.Weapon
                                     if (distance2 < tempRange)
                                     {
                                         tempRange = distance2;
-                                        m_Target = enemy;
+                                        Target = enemy;
                                     }
                                 }
                                 break;
                         }
                     }
 
-                    if (m_Target == null)
+                    if (Target == null)
                         return;
 
-                    var data = EnemyDamageDataHelper.GetOrGenerateEnemyDamageData(m_Target);
+                    var data = EnemyDamageDataHelper.GetOrGenerateEnemyDamageData(Target);
                     if (data.IsImmortal)
                     {
                         if (OneShotKill.OneShotKillLookup.TryGetValue(SNet.LocalPlayer.Lookup, out var enable) && enable)
                         {
                             foreach (var index in data.Armorspots)
                             {
-                                Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
+                                Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
                                 if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                                 {
-                                    m_TargetLimb = limb;
+                                    TargetLimb = limb;
                                     return;
                                 }
                             }
                         }
-                        m_TargetLimb = null;
+                        TargetLimb = null;
                         return;
                     }
                     if (data.HasWeakSpot)
                     {
                         foreach (var index in data.Weakspots)
                         {
-                            Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
+                            Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
                             if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                             {
-                                m_TargetLimb = limb;
+                                TargetLimb = limb;
                                 return;
                             }
                         }
@@ -498,10 +493,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     {
                         foreach (var index in data.Normalspots)
                         {
-                            Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
+                            Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
                             if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                             {
-                                m_TargetLimb = limb;
+                                TargetLimb = limb;
                                 return;
                             }
                         }
@@ -510,10 +505,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     {
                         foreach (var index in data.Armorspots)
                         {
-                            Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
+                            Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
                             if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                             {
-                                m_TargetLimb = limb;
+                                TargetLimb = limb;
                                 return;
                             }
                         }
@@ -522,10 +517,10 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     {
                         foreach (var index in data.RealArmorSpots)
                         {
-                            Dam_EnemyDamageLimb limb = m_Target.Damage.DamageLimbs[index.Key];
+                            Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
                             if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                             {
-                                m_TargetLimb = limb;
+                                TargetLimb = limb;
                                 return;
                             }
                         }
@@ -539,7 +534,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     return;
                 if (m_HasTarget)
                 {
-                    m_Reticle.m_hitColor = m_TargetLimb == null ? Settings.UnTargetedColor.ToUnityColor() : (m_TargetLimb.m_type == eLimbDamageType.Weakspot ? Settings.TargetedWeakspotColor.ToUnityColor() : Settings.TargetedColor.ToUnityColor());
+                    m_Reticle.m_hitColor = TargetLimb == null ? Settings.UnTargetedColor.ToUnityColor() : (TargetLimb.m_type == eLimbDamageType.Weakspot ? Settings.TargetedWeakspotColor.ToUnityColor() : Settings.TargetedColor.ToUnityColor());
                 }
                 else
                 {
@@ -584,35 +579,25 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 fireTimer = 0;
             }
 
-            public void TempIgnoreTargetEnemy()
-            {
-                if (m_Target == null)
-                    return;
-
-                m_IgnoredEnemies.Add(m_Target);
-            }
-
             public void SetLastFireDir(Vector3 dir)
             {
                 LastFireDir = dir;
             }
 
-            public bool HasTarget => m_Target != null && m_Target.Alive && m_Target.Damage.Health > 0f && m_TargetLimb != null;
+            public bool HasTarget => Target != null && !DeadBodyFix.IsEnemyDead(Target) && (!IsPiercingBullet || Target.Damage.TempSearchID != m_BulletWeapon.m_damageSearchID || m_BulletWeapon.m_damageSearchID == 0U) && TargetLimb != null;
+            public EnemyAgent Target { get; private set; }
+            public Dam_EnemyDamageLimb TargetLimb { get; private set; }
             public bool PauseAutoAim => ((!Settings.ReversePauseAutoAim && Input.GetKey(Settings.PauseAutoAimKey)) || (Settings.ReversePauseAutoAim && !Input.GetKey(Settings.PauseAutoAimKey)))
                 //&& m_BulletWeapon.AimButtonHeld 
                 && Settings.AutoFire == WeaponAutoAimSettings.AutoFireMode.Off;
-            public bool IsPiercingBullet => m_IsPiercingBullets;
-            public bool IsShotgun => m_IsShotgun;
+            public bool IsPiercingBullet { get; private set; }
+            public bool IsShotgun { get; private set; }
 
             private HashSet<EnemyAgent> m_IgnoredEnemies = new();
             private GameObject m_ReticleHolder;
             private CrosshairHitIndicator m_Reticle;
-            private EnemyAgent m_Target;
-            private Dam_EnemyDamageLimb m_TargetLimb;
             private Camera m_PlayerCamera;
             private bool m_HasTarget;
-            private bool m_IsShotgun;
-            private bool m_IsPiercingBullets;
             private BulletWeapon m_BulletWeapon;
             private PlayerAgent m_Owner;
             private Vector3 m_TargetedEulerAngles = new(0f, 0f, 45f);
