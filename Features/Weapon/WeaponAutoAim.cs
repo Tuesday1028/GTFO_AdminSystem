@@ -479,7 +479,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                         foreach (var index in data.Weakspots)
                         {
                             Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
-                            if (!limb.IsDestroyed && (Settings.WallHackAim || AdminUtils.CanFireHitObject(sourcePos, limb.gameObject)))
+                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                             {
                                 TargetLimb = limb;
                                 return;
@@ -491,7 +491,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                         foreach (var index in data.Normalspots)
                         {
                             Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
-                            if (!limb.IsDestroyed && (Settings.WallHackAim || AdminUtils.CanFireHitObject(sourcePos, limb.gameObject)))
+                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                             {
                                 TargetLimb = limb;
                                 return;
@@ -503,7 +503,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                         foreach (var index in data.Armorspots)
                         {
                             Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
-                            if (!limb.IsDestroyed && (Settings.WallHackAim || AdminUtils.CanFireHitObject(sourcePos, limb.gameObject)))
+                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                             {
                                 TargetLimb = limb;
                                 return;
@@ -515,7 +515,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                         foreach (var index in data.RealArmorSpots)
                         {
                             Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
-                            if (!limb.IsDestroyed && (Settings.WallHackAim || AdminUtils.CanFireHitObject(sourcePos, limb.gameObject)))
+                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
                             {
                                 TargetLimb = limb;
                                 return;
