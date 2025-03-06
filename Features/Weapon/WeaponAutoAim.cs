@@ -82,10 +82,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
             [FSDescription("默认值为0.1")]
             public float ArmorLimbDamageMultiThreshold
             {
-                get
-                {
-                    return EnemyDamageDataHelper.ArmorMultiThreshold;
-                }
+                get => EnemyDamageDataHelper.ArmorMultiThreshold;
                 set
                 {
                     EnemyDamageDataHelper.ArmorMultiThreshold = value;
@@ -130,7 +127,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
         public override void OnGameStateChanged(int state)
         {
             var stateName = (eGameStateName)state;
-            if (stateName == eGameStateName.AfterLevel || stateName == eGameStateName.NoLobby || stateName == eGameStateName.Lobby || stateName == eGameStateName.ExpeditionFail)
+            if (stateName is eGameStateName.AfterLevel or eGameStateName.NoLobby or eGameStateName.Lobby or eGameStateName.ExpeditionFail)
             {
                 foreach (var autoaim in WeaponAutoAimHandler.AllAutoAimInstances)
                 {
@@ -409,7 +406,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                     float tempRange = float.MaxValue;
                     foreach (var enemy in m_Owner.EnemyCollision.m_enemies)
                     {
-                        if (DeadBodyFix.IsEnemyDead(enemy) || (IsPiercingBullet && m_BulletWeapon.m_damageSearchID > 0U && enemy.Damage.TempSearchID == m_BulletWeapon.m_damageSearchID))
+                        if (DeadBodyFix.IsEnemyDead(enemy) || (force && IsPiercingBullet && m_BulletWeapon.m_damageSearchID > 0U && enemy.Damage.TempSearchID == m_BulletWeapon.m_damageSearchID))
                             continue;
 
                         if (!enemy.Alive || enemy.Damage.Health <= 0f || enemy.Damage.IsImortal)
@@ -467,7 +464,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                             foreach (var index in data.Armorspots)
                             {
                                 Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
-                                if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
+                                if (!limb.IsDestroyed && (Settings.WallHackAim || AdminUtils.CanFireHitObject(sourcePos, limb.gameObject)))
                                 {
                                     TargetLimb = limb;
                                     return;
@@ -482,7 +479,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                         foreach (var index in data.Weakspots)
                         {
                             Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
-                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
+                            if (!limb.IsDestroyed && (Settings.WallHackAim || AdminUtils.CanFireHitObject(sourcePos, limb.gameObject)))
                             {
                                 TargetLimb = limb;
                                 return;
@@ -494,7 +491,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                         foreach (var index in data.Normalspots)
                         {
                             Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
-                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
+                            if (!limb.IsDestroyed && (Settings.WallHackAim || AdminUtils.CanFireHitObject(sourcePos, limb.gameObject)))
                             {
                                 TargetLimb = limb;
                                 return;
@@ -506,7 +503,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                         foreach (var index in data.Armorspots)
                         {
                             Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
-                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
+                            if (!limb.IsDestroyed && (Settings.WallHackAim || AdminUtils.CanFireHitObject(sourcePos, limb.gameObject)))
                             {
                                 TargetLimb = limb;
                                 return;
@@ -518,7 +515,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                         foreach (var index in data.RealArmorSpots)
                         {
                             Dam_EnemyDamageLimb limb = Target.Damage.DamageLimbs[index.Key];
-                            if (!limb.IsDestroyed && AdminUtils.CanFireHitObject(sourcePos, limb.gameObject))
+                            if (!limb.IsDestroyed && (Settings.WallHackAim || AdminUtils.CanFireHitObject(sourcePos, limb.gameObject)))
                             {
                                 TargetLimb = limb;
                                 return;
@@ -584,7 +581,7 @@ namespace Hikaria.AdminSystem.Features.Weapon
                 LastFireDir = dir;
             }
 
-            public bool HasTarget => Target != null && !DeadBodyFix.IsEnemyDead(Target) && (!IsPiercingBullet || Target.Damage.TempSearchID != m_BulletWeapon.m_damageSearchID || m_BulletWeapon.m_damageSearchID == 0U) && TargetLimb != null;
+            public bool HasTarget => Target != null && !DeadBodyFix.IsEnemyDead(Target) && TargetLimb != null;
             public EnemyAgent Target { get; private set; }
             public Dam_EnemyDamageLimb TargetLimb { get; private set; }
             public bool PauseAutoAim => ((!Settings.ReversePauseAutoAim && Input.GetKey(Settings.PauseAutoAimKey)) || (Settings.ReversePauseAutoAim && !Input.GetKey(Settings.PauseAutoAimKey)))
@@ -593,7 +590,6 @@ namespace Hikaria.AdminSystem.Features.Weapon
             public bool IsPiercingBullet { get; private set; }
             public bool IsShotgun { get; private set; }
 
-            private HashSet<EnemyAgent> m_IgnoredEnemies = new();
             private GameObject m_ReticleHolder;
             private CrosshairHitIndicator m_Reticle;
             private Camera m_PlayerCamera;
